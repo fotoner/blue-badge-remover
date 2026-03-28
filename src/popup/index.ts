@@ -43,10 +43,15 @@ async function renderWhitelist(): Promise<void> {
 }
 
 async function renderSyncStatus(): Promise<void> {
-  const stored = await chrome.storage.local.get([STORAGE_KEYS.LAST_SYNC_AT]);
+  const stored = await chrome.storage.local.get([STORAGE_KEYS.LAST_SYNC_AT, STORAGE_KEYS.FOLLOW_LIST]);
   const lastSync = stored[STORAGE_KEYS.LAST_SYNC_AT] as string | null;
+  const followList = (stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? [];
   document.getElementById('sync-status')!.textContent =
     `마지막 동기화: ${lastSync ? new Date(lastSync).toLocaleString('ko-KR') : '-'}`;
+  const countEl = document.getElementById('follow-count');
+  if (countEl) {
+    countEl.textContent = `수집된 팔로우: ${followList.length}명`;
+  }
 }
 
 function bindEvents(): void {
@@ -66,16 +71,16 @@ function bindEvents(): void {
   });
 
   document.getElementById('sync-btn')!.addEventListener('click', async () => {
-    const btn = document.getElementById('sync-btn') as HTMLButtonElement;
-    btn.disabled = true;
-    btn.textContent = '동기화 중...';
-    try {
-      await chrome.runtime.sendMessage({ type: 'SYNC_FOLLOW_LIST' });
-      await renderSyncStatus();
-    } finally {
-      btn.disabled = false;
-      btn.textContent = '🔄 동기화';
+    // 팔로우 목록은 사용자가 x.com/following 페이지를 방문하면 자동 수집됨
+    // 버튼 클릭 시 해당 페이지를 새 탭으로 열어줌
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const currentTab = tabs[0];
+    if (currentTab?.id) {
+      await chrome.tabs.create({ url: 'https://x.com/following', active: true });
     }
+    const btn = document.getElementById('sync-btn') as HTMLButtonElement;
+    btn.textContent = '팔로잉 페이지에서 스크롤하세요';
+    setTimeout(() => { btn.textContent = '🔄 동기화'; }, 3000);
   });
 
   document.getElementById('whitelist-add')!.addEventListener('click', async () => {

@@ -8,6 +8,7 @@ const MESSAGE_TYPES = {
   TOKEN_DATA: 'BBR_TOKEN_DATA',
   USER_ID: 'BBR_USER_ID',
   CSRF_TOKEN: 'BBR_CSRF_TOKEN',
+  FOLLOW_DATA: 'BBR_FOLLOW_DATA',
 } as const;
 
 const X_GRAPHQL_ENDPOINTS = [
@@ -51,6 +52,9 @@ window.fetch = async function patchedFetch(
       const data = await cloned.json();
       extractBadgeData(data);
       extractViewerUserId(data);
+      if (url.includes('Following') || url.includes('following')) {
+        extractFollowData(data);
+      }
     } catch {
       // Parse failure — fallback mode will handle
     }
@@ -136,6 +140,39 @@ function findViewerId(obj: unknown): string | null {
   }
 
   return null;
+}
+
+function extractFollowData(data: unknown): void {
+  const userIds: string[] = [];
+  findFollowedUserIds(data, userIds);
+  if (userIds.length > 0) {
+    window.postMessage({
+      type: MESSAGE_TYPES.FOLLOW_DATA,
+      userIds,
+    }, '*');
+  }
+}
+
+function findFollowedUserIds(obj: unknown, result: string[]): void {
+  if (obj === null || typeof obj !== 'object') return;
+  const record = obj as Record<string, unknown>;
+
+  // X Following API 응답에서 user_results.result.rest_id 추출
+  if ('user_results' in record) {
+    const userResults = record['user_results'] as Record<string, unknown> | null;
+    const restId = (userResults?.['result'] as Record<string, unknown> | undefined)?.['rest_id'];
+    if (typeof restId === 'string') {
+      result.push(restId);
+    }
+  }
+
+  for (const value of Object.values(record)) {
+    if (Array.isArray(value)) {
+      value.forEach((item) => findFollowedUserIds(item, result));
+    } else if (typeof value === 'object') {
+      findFollowedUserIds(value, result);
+    }
+  }
 }
 
 function findUserObjects(obj: unknown, result: Array<Record<string, unknown>>): void {

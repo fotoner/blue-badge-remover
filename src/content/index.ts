@@ -59,10 +59,28 @@ function listenForMessages(): void {
       chrome.storage.local.set({ [STORAGE_KEYS.CSRF_TOKEN]: event.data.csrfToken });
     }
 
+    if (event.data?.type === MESSAGE_TYPES.FOLLOW_DATA) {
+      handleFollowData(event.data.userIds as string[]);
+    }
+
     if (event.data?.type === MESSAGE_TYPES.USER_ID) {
       handleUserIdMessage(event.data.userId as string);
     }
   });
+}
+
+async function handleFollowData(newUserIds: string[]): Promise<void> {
+  if (!newUserIds.length) return;
+  // 기존 팔로우 목록에 누적 (중복 제거)
+  const stored = await chrome.storage.local.get([STORAGE_KEYS.FOLLOW_LIST]);
+  const existing = (stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? [];
+  const merged = [...new Set([...existing, ...newUserIds])];
+  await chrome.storage.local.set({
+    [STORAGE_KEYS.FOLLOW_LIST]: merged,
+    [STORAGE_KEYS.LAST_SYNC_AT]: new Date().toISOString(),
+  });
+  followSet = new Set(merged);
+  logger.info('Follow data received from page', { newCount: newUserIds.length, totalCount: merged.length });
 }
 
 async function handleUserIdMessage(newUserId: string): Promise<void> {
