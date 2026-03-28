@@ -80,7 +80,7 @@ function bindEvents(): void {
     }
     const btn = document.getElementById('sync-btn') as HTMLButtonElement;
     btn.textContent = '팔로잉 페이지에서 스크롤하세요';
-    setTimeout(() => { btn.textContent = '🔄 동기화'; }, 3000);
+    setTimeout(() => { btn.textContent = '팔로잉 페이지 열기'; }, 3000);
   });
 
   document.getElementById('whitelist-add')!.addEventListener('click', async () => {

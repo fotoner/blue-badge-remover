@@ -8,54 +8,88 @@
 </head>
 <body>
   <div class="container">
-    <h1>Blue Badge Remover</h1>
+    <header class="header">
+      <h1>Blue Badge Remover</h1>
+      <p class="subtitle">X에서 수익성 파란 뱃지 계정을 숨깁니다</p>
+    </header>
 
-    <div class="section">
+    <div class="section master-toggle">
       <label class="toggle-row">
-        <span>마스터 ON/OFF</span>
+        <span class="label-primary">필터링</span>
         <input type="checkbox" id="enabled" checked>
       </label>
     </div>
 
     <div class="section">
       <h2>필터링 범위</h2>
-      <label class="toggle-row"><span>타임라인 (홈)</span><input type="checkbox" id="filter-timeline" checked></label>
-      <label class="toggle-row"><span>트윗 상세 (답글)</span><input type="checkbox" id="filter-replies" checked></label>
+      <p class="desc">파딱 트윗을 숨길 영역을 선택합니다</p>
+      <label class="toggle-row"><span>홈 타임라인</span><input type="checkbox" id="filter-timeline" checked></label>
+      <label class="toggle-row"><span>트윗 상세 / 답글</span><input type="checkbox" id="filter-replies" checked></label>
       <label class="toggle-row"><span>검색 결과</span><input type="checkbox" id="filter-search" checked></label>
     </div>
 
     <div class="section">
       <h2>숨김 방식</h2>
-      <label class="radio-row"><input type="radio" name="hideMode" value="remove" checked><span>완전 제거</span></label>
-      <label class="radio-row"><input type="radio" name="hideMode" value="collapse"><span>접힌 상태로 표시</span></label>
+      <label class="radio-row">
+        <input type="radio" name="hideMode" value="remove" checked>
+        <div>
+          <span>완전 제거</span>
+          <span class="desc">트윗을 타임라인에서 완전히 제거합니다</span>
+        </div>
+      </label>
+      <label class="radio-row">
+        <input type="radio" name="hideMode" value="collapse">
+        <div>
+          <span>접어서 표시</span>
+          <span class="desc">클릭하면 펼쳐볼 수 있도록 접어둡니다</span>
+        </div>
+      </label>
     </div>
 
     <div class="section">
       <h2>리트윗</h2>
-      <label class="toggle-row"><span>파딱 리트윗 숨김</span><input type="checkbox" id="retweetFilter" checked></label>
+      <p class="desc">팔로우가 파딱 트윗을 리트윗한 경우</p>
+      <label class="toggle-row">
+        <span>파딱 리트윗 숨기기</span>
+        <input type="checkbox" id="retweetFilter" checked>
+      </label>
     </div>
 
     <div class="section">
       <h2>인용 트윗</h2>
-      <label class="radio-row"><input type="radio" name="quoteMode" value="off" checked><span>필터링 안 함</span></label>
-      <label class="radio-row"><input type="radio" name="quoteMode" value="quote-only"><span>인용 부분만 숨김</span></label>
-      <label class="radio-row"><input type="radio" name="quoteMode" value="entire"><span>트윗 전체 숨김</span></label>
+      <p class="desc">파딱 트윗을 인용한 경우의 처리 방식</p>
+      <label class="radio-row">
+        <input type="radio" name="quoteMode" value="off" checked>
+        <span>필터링하지 않음</span>
+      </label>
+      <label class="radio-row">
+        <input type="radio" name="quoteMode" value="quote-only">
+        <span>인용 부분만 숨기기</span>
+      </label>
+      <label class="radio-row">
+        <input type="radio" name="quoteMode" value="entire">
+        <span>트윗 전체 숨기기</span>
+      </label>
     </div>
 
     <div class="section">
       <h2>팔로우 동기화</h2>
-      <p id="sync-status">마지막 동기화: -</p>
-      <p id="follow-count" style="color:#71767b;margin-bottom:8px;"></p>
-      <button id="sync-btn">🔄 팔로잉 페이지 열기</button>
-      <p style="color:#536471;font-size:11px;margin-top:4px;">팔로잉 페이지에서 스크롤하면 자동으로 수집됩니다</p>
+      <p class="desc">팔로우 중인 계정은 파딱이어도 숨기지 않습니다</p>
+      <div class="sync-info">
+        <span id="sync-status">마지막 동기화: -</span>
+        <span id="follow-count"></span>
+      </div>
+      <button id="sync-btn" class="btn-secondary">팔로잉 페이지 열기</button>
+      <p class="hint">팔로잉 페이지에서 스크롤하면 자동으로 수집됩니다</p>
     </div>
 
     <div class="section">
       <h2>화이트리스트</h2>
+      <p class="desc">파딱이어도 숨기지 않을 계정을 직접 추가합니다</p>
       <div id="whitelist-container"></div>
       <div class="add-row">
-        <input type="text" id="whitelist-input" placeholder="@핸들">
-        <button id="whitelist-add">추가</button>
+        <input type="text" id="whitelist-input" placeholder="@핸들 입력">
+        <button id="whitelist-add" class="btn-small">추가</button>
       </div>
     </div>
   </div>
