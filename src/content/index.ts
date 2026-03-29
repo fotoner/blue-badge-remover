@@ -40,6 +40,7 @@ async function init(): Promise<void> {
   setOnNavigate(handleNavigate);
   listenForNavigation();
   collectFollowsFromDOM(followCollectorDeps);
+  listenForFollowButtonClicks();
 
   setTimeout(() => {
     detectAndHandleAccountSwitch();
@@ -225,6 +226,27 @@ function processTweet(tweetEl: HTMLElement): void {
       }
     }
   }
+}
+
+function listenForFollowButtonClicks(): void {
+  // 팔로우 버튼 클릭 감지: aria-label="팔로우 @handle" 또는 "Following @handle"
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const button = target.closest('button[aria-label]');
+    if (!button) return;
+    const label = button.getAttribute('aria-label') ?? '';
+    const match = label.match(/^(?:팔로우|Follow)\s+@(\S+)$/i);
+    if (!match?.[1]) return;
+    const handle = match[1].toLowerCase();
+    // followSet에 추가 + storage에 저장
+    if (!followSet.has(handle)) {
+      followSet.add(handle);
+      void saveFollowHandles([handle], followCollectorDeps);
+      if (currentSettings.debugMode) logger.info('Follow button clicked, added to follow list', { handle });
+      // 배너가 있으면 제거 (방금 팔로우했으니까)
+      removeFadakBanner();
+    }
+  }, true);
 }
 
 function startObserving(): void {
