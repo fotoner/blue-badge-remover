@@ -14,6 +14,7 @@ export const DEFAULT_SETTINGS: Settings = {
   language: 'ko',
   keywordFilterEnabled: false,
   keywordCollectorEnabled: false,
+  defaultFilterEnabled: true,
 };
 
 export const STORAGE_KEYS = {

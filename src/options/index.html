@@ -14,7 +14,13 @@
     </header>
 
     <section class="section">
-      <h2>📋 내장 필터 <span class="readonly-badge">읽기 전용</span></h2>
+      <div class="section-header">
+        <h2>📋 내장 필터 <span class="readonly-badge">읽기 전용</span></h2>
+        <label class="toggle-label">
+          <span class="toggle-text">사용</span>
+          <input type="checkbox" id="default-filter-enabled" checked>
+        </label>
+      </div>
       <textarea id="builtin-filters" class="filter-textarea" readonly></textarea>
     </section>
 

@@ -12,6 +12,7 @@ export interface Settings {
   language: 'ko' | 'en' | 'ja';
   keywordFilterEnabled: boolean;
   keywordCollectorEnabled: boolean;
+  defaultFilterEnabled: boolean;
 }
 
 export interface CollectedFadak {

@@ -132,3 +132,25 @@ header h1 {
   font-size: 12px;
   color: #e7e9ea;
 }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.section-header h2 {
+  margin-bottom: 0;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #71767b;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}

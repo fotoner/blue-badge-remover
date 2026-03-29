@@ -3,7 +3,9 @@ import {
   getCustomFilterList,
   saveCustomFilterList,
   parseFilterList,
+  buildActiveRules,
 } from '@features/keyword-filter';
+import { getSettings, saveSettings } from '@features/settings';
 
 async function init(): Promise<void> {
   const builtinEl = document.getElementById('builtin-filters') as HTMLTextAreaElement;
@@ -11,19 +13,32 @@ async function init(): Promise<void> {
   const saveBtn = document.getElementById('save-btn') as HTMLButtonElement;
   const saveStatus = document.getElementById('save-status') as HTMLParagraphElement;
   const ruleStats = document.getElementById('rule-stats') as HTMLParagraphElement;
+  const defaultFilterToggle = document.getElementById('default-filter-enabled') as HTMLInputElement;
 
   builtinEl.value = DEFAULT_FILTER_LIST;
 
-  const customText = await getCustomFilterList();
-  customEl.value = customText;
+  const [customText, settings] = await Promise.all([
+    getCustomFilterList(),
+    getSettings(),
+  ]);
 
-  updateStats(DEFAULT_FILTER_LIST, customText, ruleStats);
+  customEl.value = customText;
+  defaultFilterToggle.checked = settings.defaultFilterEnabled;
+
+  updateStats(settings.defaultFilterEnabled, DEFAULT_FILTER_LIST, customText, ruleStats);
+
+  defaultFilterToggle.addEventListener('change', async () => {
+    const current = await getSettings();
+    const updated = { ...current, defaultFilterEnabled: defaultFilterToggle.checked };
+    await saveSettings(updated);
+    updateStats(defaultFilterToggle.checked, DEFAULT_FILTER_LIST, customEl.value, ruleStats);
+  });
 
   saveBtn.addEventListener('click', async () => {
     const text = customEl.value;
     try {
       await saveCustomFilterList(text);
-      updateStats(DEFAULT_FILTER_LIST, text, ruleStats);
+      updateStats(defaultFilterToggle.checked, DEFAULT_FILTER_LIST, text, ruleStats);
       saveStatus.textContent = '저장되었습니다.';
       saveStatus.className = 'save-status success';
     } catch {
@@ -37,12 +52,14 @@ async function init(): Promise<void> {
 }
 
 function updateStats(
+  defaultFilterEnabled: boolean,
   builtin: string,
   custom: string,
   el: HTMLParagraphElement,
 ): void {
-  const allRules = parseFilterList(builtin + '\n' + custom);
-  const nonEmptyNonComment = (builtin + '\n' + custom)
+  const combined = (defaultFilterEnabled ? builtin + '\n' : '') + custom;
+  const allRules = buildActiveRules(defaultFilterEnabled, builtin, custom);
+  const nonEmptyNonComment = combined
     .split('\n')
     .filter((l) => {
       const t = l.trim();

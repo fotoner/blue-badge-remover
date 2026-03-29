@@ -1,7 +1,7 @@
 // src/content/index.ts
 import { BadgeCache, parseBadgeInfo, detectBadgeSvg } from '@features/badge-detection';
 import { FeedObserver, shouldHideTweet, shouldHideRetweet, getQuoteAction, hideTweet, hideQuoteBlock, showTweet, setTweetHiderLanguage } from '@features/content-filter';
-import { ProfileCache, parseFilterList, matchesKeywordFilter, DEFAULT_FILTER_LIST, getCustomFilterList } from '@features/keyword-filter';
+import { ProfileCache, matchesKeywordFilter, DEFAULT_FILTER_LIST, getCustomFilterList, buildActiveRules } from '@features/keyword-filter';
 import { getCollectedFadaks, saveCollectedFadaks } from '@features/keyword-collector';
 import { getSettings } from '@features/settings';
 import { MESSAGE_TYPES, STORAGE_KEYS } from '@shared/constants';
@@ -77,7 +77,7 @@ async function flushCollector(): Promise<void> {
 
 async function loadFilterRules(): Promise<void> {
   const custom = await getCustomFilterList();
-  activeFilterRules = parseFilterList(DEFAULT_FILTER_LIST + '\n' + custom);
+  activeFilterRules = buildActiveRules(currentSettings.defaultFilterEnabled, DEFAULT_FILTER_LIST, custom);
 }
 
 async function init(): Promise<void> {
@@ -203,6 +203,14 @@ function listenForSettingsChanges(): void {
       if (modeChanged) {
         restoreHiddenTweets();
         reprocessExistingTweets();
+      }
+      const defaultFilterChanged =
+        prev.defaultFilterEnabled !== currentSettings.defaultFilterEnabled;
+      if (defaultFilterChanged) {
+        void loadFilterRules().then(() => {
+          restoreHiddenTweets();
+          reprocessExistingTweets();
+        });
       }
     }
     const followChange = changes[STORAGE_KEYS.FOLLOW_LIST];
