@@ -36,6 +36,14 @@ describe('getSettings', () => {
     const settings = await getSettings();
     expect(settings.enabled).toBe(false);
   });
+
+  it('should merge stored settings with defaults when fields are missing (migration)', async () => {
+    mockStorage['settings'] = { enabled: true };
+    const settings = await getSettings();
+    expect(settings.enabled).toBe(true);
+    expect(settings.keywordFilterEnabled).toBe(DEFAULT_SETTINGS.keywordFilterEnabled);
+    expect(settings.filterMode).toBe(DEFAULT_SETTINGS.filterMode);
+  });
 });
 
 describe('whitelist', () => {

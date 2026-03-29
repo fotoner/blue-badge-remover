@@ -113,13 +113,38 @@
     </div>
 
     <div class="section">
+      <label class="toggle-row">
+        <span data-i18n="keywordFilterBeta">[Beta] 키워드 필터</span>
+        <input type="checkbox" id="keywordFilterEnabled">
+      </label>
+      <div id="filter-mode-group" class="filter-mode-group">
+        <p class="desc" data-i18n="filterModeLabel">필터 모드</p>
+        <label class="radio-row">
+          <input type="radio" name="filterMode" value="all" checked>
+          <span data-i18n="filterModeAll">전체 숨김</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="filterMode" value="keyword">
+          <span data-i18n="filterModeKeyword">키워드만 숨김</span>
+        </label>
+        <button type="button" id="open-options-btn" class="btn-secondary btn-secondary--mt" data-i18n="advancedFilterSettings">고급 필터 설정</button>
+      </div>
+    </div>
+
+    <div class="section">
       <h2 data-i18n="developer">개발자</h2>
       <label class="toggle-row">
         <span data-i18n="debugMode">디버그 모드</span>
         <input type="checkbox" id="debugMode">
       </label>
       <p class="hint" data-i18n="debugModeHint">각 트윗에 처리 정보 라벨을 표시하고 콘솔에 로그를 출력합니다</p>
-      <p class="credit">made by <a href="https://x.com/fotoner_p" target="_blank">@fotoner_p</a></p>
+      <label class="toggle-row">
+        <span data-i18n="keywordCollector">키워드 수집</span>
+        <input type="checkbox" id="keywordCollectorEnabled">
+      </label>
+      <p class="hint" data-i18n="keywordCollectorHint">필터링되지 않은 파딱의 텍스트를 수집합니다 (키워드만 숨김 모드 전용)</p>
+      <button type="button" id="open-collector-btn" class="btn-secondary btn-secondary--mt" data-i18n="viewCollectedData">수집 데이터 보기</button>
+      <p class="credit">made by <a href="https://x.com/fotoner_p" target="_blank" rel="noopener">@fotoner_p</a></p>
     </div>
   </div>
 

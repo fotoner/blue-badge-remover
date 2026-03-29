@@ -9,12 +9,31 @@ const MESSAGE_TYPES = {
   USER_ID: 'BBR_USER_ID',
   CSRF_TOKEN: 'BBR_CSRF_TOKEN',
   FOLLOW_DATA: 'BBR_FOLLOW_DATA',
+  PROFILE_DATA: 'BBR_PROFILE_DATA',
+  CONTENT_READY: 'BBR_CONTENT_READY',
 } as const;
 
 const X_GRAPHQL_ENDPOINTS = [
   '/i/api/graphql/',
   '/i/api/2/',
 ] as const;
+
+let bbrDebugMode = false;
+
+// Cache profiles from API responses so they can be replayed after content script is ready
+const cachedProfiles: ProfileEntry[] = [];
+
+window.addEventListener('message', (event) => {
+  if (event.source !== window) return;
+  const data = event.data as Record<string, unknown>;
+  if (data?.type === 'BBR_SET_DEBUG') {
+    bbrDebugMode = !!(data.enabled);
+  }
+  // Content script signals it's ready — replay cached profiles so none are missed
+  if (data?.type === MESSAGE_TYPES.CONTENT_READY && cachedProfiles.length > 0) {
+    window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles: [...cachedProfiles] }, '*');
+  }
+});
 
 const originalFetch = window.fetch;
 
@@ -47,20 +66,16 @@ window.fetch = async function patchedFetch(
   // Intercept GraphQL responses
   const isGraphQL = X_GRAPHQL_ENDPOINTS.some((ep) => url.includes(ep));
   if (isGraphQL) {
-    // DEBUG: 모든 GraphQL URL 로깅
-    console.log('[BBR DEBUG] GraphQL URL:', url.split('?')[0]);
-
     try {
       const cloned = response.clone();
       const data = await cloned.json();
       extractBadgeData(data);
       extractViewerUserId(data);
+      const endpoint = url.split('/').slice(-2).join('/');
+      extractProfileData(data, endpoint);
 
-      // DEBUG: Following 관련 URL 확인
       const urlLower = url.toLowerCase();
       if (urlLower.includes('follow')) {
-        console.log('[BBR DEBUG] Follow-related URL detected:', url.split('?')[0]);
-        console.log('[BBR DEBUG] Follow response keys:', JSON.stringify(Object.keys(data?.data ?? data ?? {})));
         extractFollowData(data);
       }
     } catch {
@@ -69,6 +84,59 @@ window.fetch = async function patchedFetch(
   }
 
   return response;
+};
+
+// Also intercept XMLHttpRequest — X uses XHR for its API calls, not fetch
+const origXhrOpen = XMLHttpRequest.prototype.open;
+const origXhrSend = XMLHttpRequest.prototype.send;
+const origXhrSetHeader = XMLHttpRequest.prototype.setRequestHeader;
+
+XMLHttpRequest.prototype.open = function patchedXhrOpen(
+  method: string,
+  url: string | URL,
+  async?: boolean,
+  username?: string | null,
+  password?: string | null,
+) {
+  (this as XMLHttpRequest & { _bbrUrl: string })._bbrUrl =
+    typeof url === 'string' ? url : url.toString();
+  if (async === undefined) {
+    return origXhrOpen.call(this, method, url);
+  }
+  return origXhrOpen.call(this, method, url, async, username, password);
+};
+
+XMLHttpRequest.prototype.setRequestHeader = function patchedXhrSetHeader(name: string, value: string) {
+  if (name.toLowerCase() === 'authorization') {
+    window.postMessage({ type: MESSAGE_TYPES.TOKEN_DATA, token: value.replace('Bearer ', '') }, '*');
+  }
+  if (name.toLowerCase() === 'x-csrf-token') {
+    window.postMessage({ type: MESSAGE_TYPES.CSRF_TOKEN, csrfToken: value }, '*');
+  }
+  return origXhrSetHeader.call(this, name, value);
+};
+
+XMLHttpRequest.prototype.send = function patchedXhrSend(body?: Document | XMLHttpRequestBodyInit | null) {
+  const xhr = this as XMLHttpRequest & { _bbrUrl?: string };
+  const url = xhr._bbrUrl ?? '';
+  const isGraphQL = X_GRAPHQL_ENDPOINTS.some((ep) => url.includes(ep));
+  if (isGraphQL) {
+    xhr.addEventListener('load', function () {
+      try {
+        const data = JSON.parse(xhr.responseText) as unknown;
+        extractBadgeData(data);
+        extractViewerUserId(data);
+        const endpoint = url.split('/').slice(-2).join('/');
+        extractProfileData(data, endpoint);
+        if (url.toLowerCase().includes('follow')) {
+          extractFollowData(data);
+        }
+      } catch {
+        // Parse failure — fallback mode will handle
+      }
+    });
+  }
+  return origXhrSend.call(this, body);
 };
 
 function extractAuthHeader(init?: RequestInit): string | null {
@@ -153,7 +221,6 @@ function findViewerId(obj: unknown): string | null {
 function extractFollowData(data: unknown): void {
   const userIds: string[] = [];
   findFollowedUserIds(data, userIds);
-  console.log('[BBR DEBUG] extractFollowData found userIds:', userIds.length, userIds.slice(0, 5));
   if (userIds.length > 0) {
     window.postMessage({
       type: MESSAGE_TYPES.FOLLOW_DATA,
@@ -202,6 +269,73 @@ function findUserObjects(obj: unknown, result: Array<Record<string, unknown>>): 
       value.forEach((item) => findUserObjects(item, result));
     } else if (typeof value === 'object') {
       findUserObjects(value, result);
+    }
+  }
+}
+
+interface ProfileEntry {
+  userId: string;
+  handle: string;
+  displayName: string;
+  bio: string;
+}
+
+function extractProfileData(data: unknown, endpointHint?: string): void {
+  const profiles: ProfileEntry[] = [];
+  findProfileObjects(data, profiles);
+  if (profiles.length > 0) {
+    // Cache for replay when content script signals ready
+    for (const p of profiles) {
+      if (!cachedProfiles.some((c) => c.userId === p.userId)) {
+        cachedProfiles.push(p);
+      }
+    }
+    window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles }, '*');
+    if (bbrDebugMode) {
+      const withBio = profiles.filter((p) => p.bio);
+      const withoutBio = profiles.filter((p) => !p.bio);
+      console.log(
+        `[BBR INTERCEPTOR] ${endpointHint ?? 'unknown'}: ${profiles.length} profiles, ${withBio.length} with bio, ${withoutBio.length} without`,
+        withBio.length > 0 ? withBio.map((p) => `${p.handle}: "${p.bio.slice(0, 30)}"`) : '(none with bio)',
+      );
+    }
+  }
+}
+
+function findProfileObjects(obj: unknown, result: ProfileEntry[]): void {
+  if (obj === null || typeof obj !== 'object') return;
+  const record = obj as Record<string, unknown>;
+
+  if (
+    'rest_id' in record &&
+    'is_blue_verified' in record &&
+    'legacy' in record &&
+    typeof record['rest_id'] === 'string'
+  ) {
+    const legacy = record['legacy'] as Record<string, unknown> | null;
+    // X API moved screen_name/name from legacy to core in newer responses
+    const core = record['core'] as Record<string, unknown> | null;
+    if (legacy) {
+      const handle =
+        typeof legacy['screen_name'] === 'string' ? legacy['screen_name'] :
+        typeof core?.['screen_name'] === 'string' ? core['screen_name'] as string : '';
+      const displayName =
+        typeof legacy['name'] === 'string' ? legacy['name'] :
+        typeof core?.['name'] === 'string' ? core['name'] as string : '';
+      result.push({
+        userId: record['rest_id'] as string,
+        handle,
+        displayName,
+        bio: typeof legacy['description'] === 'string' ? legacy['description'] : '',
+      });
+    }
+  }
+
+  for (const value of Object.values(record)) {
+    if (Array.isArray(value)) {
+      value.forEach((item) => findProfileObjects(item, result));
+    } else if (typeof value === 'object') {
+      findProfileObjects(value, result);
     }
   }
 }

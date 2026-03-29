@@ -10,6 +10,8 @@ describe('fetch-interceptor constant sync', () => {
     expect(MESSAGE_TYPES.USER_ID).toBe('BBR_USER_ID');
     expect(MESSAGE_TYPES.CSRF_TOKEN).toBe('BBR_CSRF_TOKEN');
     expect(MESSAGE_TYPES.FOLLOW_DATA).toBe('BBR_FOLLOW_DATA');
+    expect(MESSAGE_TYPES.PROFILE_DATA).toBe('BBR_PROFILE_DATA');
+    expect(MESSAGE_TYPES.CONTENT_READY).toBe('BBR_CONTENT_READY');
   });
 
   it('X_GRAPHQL_ENDPOINTS should match shared constants', () => {

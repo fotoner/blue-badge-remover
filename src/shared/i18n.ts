@@ -52,7 +52,12 @@ type TranslationKeys =
   | 'hiddenQuoteTweet'
   | 'fadakProfileBanner'
   | 'feedback'
-  | 'feedbackDesc';
+  | 'feedbackDesc'
+  | 'keywordFilterBeta'
+  | 'filterModeLabel'
+  | 'filterModeAll'
+  | 'filterModeKeyword'
+  | 'advancedFilterSettings';
 
 type Translations = Record<TranslationKeys, string>;
 
@@ -105,6 +110,11 @@ const ko: Translations = {
   fadakProfileBanner: '@{handle}은(는) 파딱 계정입니다',
   feedback: '피드백 보내기',
   feedbackDesc: '버그 제보, 기능 제안 등 여러분의 피드백이 서비스 개선에 큰 도움이 됩니다',
+  keywordFilterBeta: '[Beta] 키워드 필터',
+  filterModeLabel: '필터 모드',
+  filterModeAll: '전체 숨김',
+  filterModeKeyword: '키워드만 숨김',
+  advancedFilterSettings: '고급 필터 설정',
 };
 
 const en: Translations = {
@@ -156,6 +166,11 @@ const en: Translations = {
   fadakProfileBanner: '@{handle} is a paid blue badge account',
   feedback: 'Send Feedback',
   feedbackDesc: 'Bug reports and feature suggestions help us improve the extension',
+  keywordFilterBeta: '[Beta] Keyword Filter',
+  filterModeLabel: 'Filter Mode',
+  filterModeAll: 'Hide All',
+  filterModeKeyword: 'Keyword Only',
+  advancedFilterSettings: 'Advanced Filter Settings',
 };
 
 const ja: Translations = {
@@ -207,6 +222,11 @@ const ja: Translations = {
   fadakProfileBanner: '@{handle}は課金バッジアカウントです',
   feedback: 'フィードバックを送る',
   feedbackDesc: 'バグ報告や機能提案は、サービス改善に大きく役立ちます',
+  keywordFilterBeta: '[Beta] キーワードフィルター',
+  filterModeLabel: 'フィルターモード',
+  filterModeAll: 'すべて非表示',
+  filterModeKeyword: 'キーワードのみ非表示',
+  advancedFilterSettings: '高度なフィルター設定',
 };
 
 const translations: Record<Language, Translations> = { ko, en, ja };

@@ -375,3 +375,13 @@ input[type="text"]::placeholder {
 .credit a:hover {
   text-decoration: underline;
 }
+
+/* Keyword filter beta section */
+.filter-mode-group {
+  display: none;
+  margin-top: 12px;
+}
+
+.btn-secondary--mt {
+  margin-top: 8px;
+}

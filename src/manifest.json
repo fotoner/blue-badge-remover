@@ -4,7 +4,8 @@
   "version": "1.0.2",
   "description": "__MSG_extDescription__",
   "default_locale": "ko",
-  "permissions": ["storage"],
+  "options_page": "src/options/index.html",
+  "permissions": ["storage", "unlimitedStorage"],
   "host_permissions": [
     "https://x.com/*",
     "https://api.x.com/*"
@@ -14,6 +15,12 @@
     "type": "module"
   },
   "content_scripts": [
+    {
+      "matches": ["https://x.com/*"],
+      "js": ["src/injected/fetch-interceptor.ts"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
     {
       "matches": ["https://x.com/*"],
       "js": ["src/content/index.ts"],
