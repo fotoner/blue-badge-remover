@@ -1,7 +1,7 @@
 # Blue Badge Remover
 
 <p align="center">
-  <img src="public/icons/icon128.png" alt="Blue Badge Remover" width="96">
+  <img src="public/icons/icon.svg" alt="Blue Badge Remover" width="96">
 </p>
 
 <p align="center">
@@ -15,7 +15,17 @@
   <img alt="License" src="https://img.shields.io/badge/License-MIT-green">
 </p>
 
+<p align="center">
+  <img src="docs/img/twitter-stat.png" alt="730K impressions, 10.1K retweets, 5.98K likes" width="520">
+</p>
+
 ---
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/img/screen.png" alt="Popup UI" width="340">
+</p>
 
 ## Features
 
@@ -32,10 +42,6 @@
 | **다국어** | 한국어 / English / 日本語 |
 | **디버그 모드** | 트윗별 처리 라벨 + 콘솔 로그 |
 
-## Screenshots
-
-> TODO: Popup UI 스크린샷 추가
-
 ## Install
 
 ### Chrome Web Store
@@ -45,13 +51,8 @@
 ### 개발 빌드
 
 ```bash
-# 의존성 설치
 npm install
-
-# 빌드
 npm run build
-
-# 테스트
 npm run test
 ```
 
@@ -63,8 +64,8 @@ npm run test
 ## Usage
 
 1. **x.com에 로그인**
-2. 익스텐션 아이콘 클릭 -> **Popup UI** 에서 설정
-3. **팔로우 동기화**: Popup에서 "팔로잉 페이지 열기" -> 스크롤하면 자동 수집
+2. 익스텐션 아이콘 클릭 -> Popup에서 설정
+3. **팔로우 동기화**: "팔로잉 페이지 열기" -> 스크롤하면 자동 수집
 4. **화이트리스트**: 예외 처리할 계정의 @핸들 추가
 
 ### 숨김 동작
@@ -84,7 +85,6 @@ x.com 페이지 로드
   +-- fetch interceptor 주입 (XHR 패치)
   |     +-- GraphQL 응답에서 뱃지 데이터 추출 (is_blue_verified + legacy.verified)
   |     +-- Following API 응답에서 팔로우 핸들 추출 (core.screen_name)
-  |     +-- Bearer 토큰 / CSRF 토큰 자동 추출
   |
   +-- MutationObserver로 새 트윗 감지
   |     +-- 작성자 핸들 추출 (socialContext 링크 건너뜀)
@@ -98,11 +98,10 @@ x.com 페이지 로드
 
 ## Tech Stack
 
-- **TypeScript** (strict mode, noUncheckedIndexedAccess)
+- **TypeScript** (strict mode)
 - **Chrome Extension** Manifest V3
-- **Vite** + **CRXJS** (빌드)
-- **Vitest** (테스트)
-- 바닐라 HTML/CSS (Popup UI)
+- **Vite** + **CRXJS**
+- **Vitest**
 
 ## Project Structure
 
@@ -117,8 +116,8 @@ src/
 │   ├── follow-list/         # 팔로우 동기화
 │   └── settings/            # Chrome Storage 래퍼
 ├── shared/
-│   ├── types/               # Settings, BadgeInfo 등
-│   ├── constants/            # 기본값, 스토리지 키
+│   ├── types/               # Settings, BadgeInfo
+│   ├── constants/           # 기본값, 스토리지 키
 │   ├── utils/               # 구조화 로거
 │   └── i18n.ts              # 다국어 번역
 public/
@@ -131,8 +130,9 @@ public/
 
 - 수집하는 데이터: 없음
 - 외부 서버 통신: 없음 (모든 처리가 로컬)
-- 토큰/쿠키: `chrome.storage.local`에만 저장, 외부 전송 없음
+- 인증 토큰 저장: 안 함
 - 권한: `storage` + `x.com` host permission만 사용
+- 상세: [PRIVACY_POLICY.md](PRIVACY_POLICY.md)
 
 ## License
 
