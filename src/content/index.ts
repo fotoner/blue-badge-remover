@@ -520,11 +520,12 @@ function showFadakProfileBanner(): void {
     const banner = document.createElement('div');
     banner.id = FADAK_BANNER_ID;
     banner.textContent = t('fadakProfileBanner', currentSettings.language, { handle: pathHandle });
-    banner.style.cssText = 'background:#F4212E;color:white;text-align:center;padding:8px 16px;font-size:13px;font-weight:500;position:sticky;top:0;z-index:10000;';
+    banner.style.cssText = 'background:#F4212E;color:white;text-align:center;padding:6px 16px;font-size:13px;font-weight:500;';
 
-    const primaryColumn = document.querySelector('[data-testid="primaryColumn"]');
-    if (primaryColumn) {
-      primaryColumn.prepend(banner);
+    // sticky 헤더 안에 삽입 (같은 sticky 블록에 포함되어야 함)
+    const stickyHeader = document.querySelector('[data-testid="primaryColumn"] > div > div:first-child');
+    if (stickyHeader) {
+      stickyHeader.appendChild(banner);
     }
   }, 1500);
 }
