@@ -49,7 +49,8 @@ type TranslationKeys =
   | 'hiddenTweetFadak'
   | 'hiddenTweetRetweet'
   | 'hiddenTweetQuoteEntire'
-  | 'hiddenQuoteTweet';
+  | 'hiddenQuoteTweet'
+  | 'fadakProfileBanner';
 
 type Translations = Record<TranslationKeys, string>;
 
@@ -99,6 +100,7 @@ const ko: Translations = {
   hiddenTweetRetweet: '{retweetedBy}님이 파딱 {handle}의 트윗을 리트윗했습니다 (클릭하여 펼치기)',
   hiddenTweetQuoteEntire: '{quotedBy}님이 파딱 {handle}을 인용한 트윗이 숨겨졌습니다 (클릭하여 펼치기)',
   hiddenQuoteTweet: '파딱 {handle}의 인용 트윗이 숨겨졌습니다 (클릭하여 펼치기)',
+  fadakProfileBanner: '@{handle}은(는) 파딱 계정입니다',
 };
 
 const en: Translations = {
@@ -147,6 +149,7 @@ const en: Translations = {
   hiddenTweetRetweet: 'Retweeted by {retweetedBy} from paid badge {handle} (click to expand)',
   hiddenTweetQuoteEntire: 'Quote of paid badge {handle} by {quotedBy} hidden (click to expand)',
   hiddenQuoteTweet: 'Quote tweet by paid badge {handle} hidden (click to expand)',
+  fadakProfileBanner: '@{handle} is a paid blue badge account',
 };
 
 const ja: Translations = {
@@ -195,6 +198,7 @@ const ja: Translations = {
   hiddenTweetRetweet: '{retweetedBy}が課金バッジ {handle}のツイートをリツイートしました (クリックで展開)',
   hiddenTweetQuoteEntire: '{quotedBy}が課金バッジ {handle}を引用したツイートが非表示になりました (クリックで展開)',
   hiddenQuoteTweet: '課金バッジ {handle}の引用ツイートが非表示になりました (クリックで展開)',
+  fadakProfileBanner: '@{handle}は課金バッジアカウントです',
 };
 
 const translations: Record<Language, Translations> = { ko, en, ja };

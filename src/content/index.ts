@@ -5,6 +5,7 @@ import { getSettings, getWhitelist } from '@features/settings';
 import { MESSAGE_TYPES, STORAGE_KEYS } from '@shared/constants';
 import type { Settings } from '@shared/types';
 import { logger } from '@shared/utils/logger';
+import { t } from '@shared/i18n';
 
 const badgeCache = new BadgeCache();
 let currentSettings: Settings;
@@ -34,8 +35,11 @@ async function init(): Promise<void> {
   startObserving();
   listenForNavigation();
   collectFollowsFromDOM();
-  // 프로필 링크가 렌더링된 후 계정 전환 감지
-  setTimeout(() => detectAndHandleAccountSwitch(), 3000);
+  // 프로필 링크가 렌더링된 후 계정 전환 감지 + 파딱 프로필 배너
+  setTimeout(() => {
+    detectAndHandleAccountSwitch();
+    showFadakProfileBanner();
+  }, 3000);
 
   if (currentSettings.debugMode) {
     const allStorage = await chrome.storage.local.get(null);
@@ -77,6 +81,10 @@ function listenForMessages(): void {
     // TOKEN/CSRF는 저장하지 않음 (보안 정책 준수 — 메모리에서만 사용)
 
     if (event.data?.type === MESSAGE_TYPES.FOLLOW_DATA) {
+      // 내 팔로잉 페이지에서만 수집 (다른 사람 팔로잉 무시)
+      const myHandle = getMyHandle();
+      const pathUser = window.location.pathname.split('/')[1]?.toLowerCase();
+      if (myHandle && pathUser && pathUser !== myHandle) return;
       const handles = event.data.handles as string[];
       if (handles?.length) {
         saveFollowHandles(handles);
@@ -108,7 +116,12 @@ async function saveFollowHandles(handles: string[]): Promise<void> {
 
 function collectFollowsFromDOM(): void {
   // Following 페이지에서 DOM 기반으로 팔로우 핸들 수집
+  // 내 팔로잉 페이지만 수집 (다른 사람 팔로잉은 무시)
   if (!window.location.pathname.includes('/following')) return;
+  const myHandle = getMyHandle();
+  if (!myHandle) return;
+  const pathUser = window.location.pathname.split('/')[1]?.toLowerCase();
+  if (pathUser && pathUser !== myHandle) return;
 
   const observer = new MutationObserver(() => {
     const handles: string[] = [];
@@ -182,6 +195,23 @@ function listenForSettingsChanges(): void {
       whitelistSet = new Set(whitelistChange.newValue as string[]);
     }
   });
+}
+
+function getMyHandle(): string | null {
+  const profileLink = document.querySelector('a[data-testid="AppTabBar_Profile_Link"]');
+  const href = profileLink?.getAttribute('href');
+  return href ? href.slice(1).toLowerCase() : null;
+}
+
+function isProfilePage(): boolean {
+  const path = window.location.pathname;
+  // /{handle} 형태이고 /home, /search, /notifications 등이 아닌 경우
+  const segments = path.split('/').filter(Boolean);
+  if (segments.length === 0) return false;
+  const reserved = ['home', 'explore', 'search', 'notifications', 'messages', 'i', 'settings', 'compose'];
+  if (reserved.includes(segments[0]!)) return false;
+  // /{handle} 또는 /{handle}/with_replies 등 — /status/가 없으면 프로필
+  return !path.includes('/status/') && !path.includes('/following') && !path.includes('/followers');
 }
 
 function getPageType(): PageType {
@@ -309,6 +339,9 @@ function checkFadak(userId: string, element: HTMLElement): boolean {
 }
 
 function processTweet(tweetEl: HTMLElement): void {
+  // 프로필 페이지에서는 필터링 안 함 (의도적으로 방문한 페이지)
+  if (isProfilePage()) return;
+
   const author = extractTweetAuthor(tweetEl);
   if (!author) return;
 
@@ -439,10 +472,11 @@ function listenForNavigation(): void {
 
 function onNavigate(): void {
   feedObserver.disconnect();
+  removeFadakBanner();
   requestAnimationFrame(() => {
     startObserving();
-    // 뒤로가기 시 기존 DOM에 이미 있는 트윗을 재처리
     reprocessExistingTweets();
+    showFadakProfileBanner();
   });
 }
 
@@ -458,6 +492,45 @@ function reprocessExistingTweets(): void {
       // 개별 트윗 에러 무시
     }
   });
+}
+
+const FADAK_BANNER_ID = 'bbr-fadak-profile-banner';
+
+function showFadakProfileBanner(): void {
+  if (!isProfilePage() || !currentSettings.enabled) return;
+  // 이미 배너가 있으면 스킵
+  if (document.getElementById(FADAK_BANNER_ID)) return;
+
+  // 프로필 페이지의 핸들 추출
+  const pathHandle = window.location.pathname.split('/')[1];
+  if (!pathHandle) return;
+
+  // 팔로우 중이면 배너 안 표시
+  if (isHandleFollowed(pathHandle)) return;
+
+  // 파딱인지 확인 (뱃지 SVG로)
+  setTimeout(() => {
+    const header = document.querySelector('[data-testid="primaryColumn"]') ?? document.querySelector('main');
+    if (!header) return;
+
+    // 프로필 영역에서 인증 뱃지 확인
+    const verifiedBadge = header.querySelector('[data-testid="icon-verified"]');
+    if (!verifiedBadge) return;
+
+    const banner = document.createElement('div');
+    banner.id = FADAK_BANNER_ID;
+    banner.textContent = t('fadakProfileBanner', currentSettings.language, { handle: pathHandle });
+    banner.style.cssText = 'background:#F4212E;color:white;text-align:center;padding:8px 16px;font-size:13px;font-weight:500;position:sticky;top:0;z-index:10000;';
+
+    const primaryColumn = document.querySelector('[data-testid="primaryColumn"]');
+    if (primaryColumn) {
+      primaryColumn.prepend(banner);
+    }
+  }, 1500);
+}
+
+function removeFadakBanner(): void {
+  document.getElementById(FADAK_BANNER_ID)?.remove();
 }
 
 interface DebugInfo {
