@@ -50,7 +50,9 @@ type TranslationKeys =
   | 'hiddenTweetRetweet'
   | 'hiddenTweetQuoteEntire'
   | 'hiddenQuoteTweet'
-  | 'fadakProfileBanner';
+  | 'fadakProfileBanner'
+  | 'feedback'
+  | 'feedbackDesc';
 
 type Translations = Record<TranslationKeys, string>;
 
@@ -101,6 +103,8 @@ const ko: Translations = {
   hiddenTweetQuoteEntire: '{quotedBy}님이 파딱 {handle}을 인용한 트윗이 숨겨졌습니다 (클릭하여 펼치기)',
   hiddenQuoteTweet: '파딱 {handle}의 인용 트윗이 숨겨졌습니다 (클릭하여 펼치기)',
   fadakProfileBanner: '@{handle}은(는) 파딱 계정입니다',
+  feedback: '피드백 보내기',
+  feedbackDesc: '버그 제보, 기능 제안 등 여러분의 피드백이 서비스 개선에 큰 도움이 됩니다',
 };
 
 const en: Translations = {
@@ -150,6 +154,8 @@ const en: Translations = {
   hiddenTweetQuoteEntire: 'Quote of paid badge {handle} by {quotedBy} hidden (click to expand)',
   hiddenQuoteTweet: 'Quote tweet by paid badge {handle} hidden (click to expand)',
   fadakProfileBanner: '@{handle} is a paid blue badge account',
+  feedback: 'Send Feedback',
+  feedbackDesc: 'Bug reports and feature suggestions help us improve the extension',
 };
 
 const ja: Translations = {
@@ -199,6 +205,8 @@ const ja: Translations = {
   hiddenTweetQuoteEntire: '{quotedBy}が課金バッジ {handle}を引用したツイートが非表示になりました (クリックで展開)',
   hiddenQuoteTweet: '課金バッジ {handle}の引用ツイートが非表示になりました (クリックで展開)',
   fadakProfileBanner: '@{handle}は課金バッジアカウントです',
+  feedback: 'フィードバックを送る',
+  feedbackDesc: 'バグ報告や機能提案は、サービス改善に大きく役立ちます',
 };
 
 const translations: Record<Language, Translations> = { ko, en, ja };

@@ -341,11 +341,30 @@ input[type="text"]::placeholder {
   background: rgba(244, 33, 46, 0.1);
 }
 
+.btn-feedback {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 10px;
+  margin-top: 10px;
+  background: #273340;
+  color: #e7e9ea;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.btn-feedback:hover {
+  background: #2f3d4c;
+}
+
 .credit {
   color: #536471;
   font-size: 11px;
   text-align: center;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .credit a {
