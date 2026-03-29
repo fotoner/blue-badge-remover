@@ -52,18 +52,22 @@ function renderSettings(): void {
 
 async function renderWhitelist(): Promise<void> {
   const container = document.getElementById('whitelist-container')!;
+  container.innerHTML = '';
   const list = await getWhitelist();
-  container.innerHTML = list
-    .map((handle) => `<div class="whitelist-item"><span>${handle}</span><button data-handle="${handle}">✕</button></div>`)
-    .join('');
-
-  container.querySelectorAll('button[data-handle]').forEach((btn) => {
+  for (const handle of list) {
+    const item = document.createElement('div');
+    item.className = 'whitelist-item';
+    const span = document.createElement('span');
+    span.textContent = handle;
+    const btn = document.createElement('button');
+    btn.textContent = '\u2715';
     btn.addEventListener('click', async () => {
-      const handle = btn.getAttribute('data-handle')!;
       await removeFromWhitelist(handle);
       await renderWhitelist();
     });
-  });
+    item.append(span, btn);
+    container.appendChild(item);
+  }
 }
 
 async function renderSyncStatus(): Promise<void> {
@@ -127,9 +131,9 @@ function bindEvents(): void {
 
   document.getElementById('whitelist-add')!.addEventListener('click', async () => {
     const input = document.getElementById('whitelist-input') as HTMLInputElement;
-    const handle = input.value.trim();
-    if (!handle) return;
-    const normalized = handle.startsWith('@') ? handle : `@${handle}`;
+    const handle = input.value.trim().replace(/^@/, '');
+    if (!handle || !/^[A-Za-z0-9_]{1,15}$/.test(handle)) return;
+    const normalized = `@${handle}`;
     await addToWhitelist(normalized);
     input.value = '';
     await renderWhitelist();

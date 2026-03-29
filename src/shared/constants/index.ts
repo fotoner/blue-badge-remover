@@ -20,8 +20,6 @@ export const STORAGE_KEYS = {
   FOLLOW_LIST: 'followList',
   FOLLOW_CACHE: 'followCache',
   CURRENT_USER_ID: 'currentUserId',
-  TOKEN: 'token',
-  CSRF_TOKEN: 'csrfToken',
   LAST_SYNC_AT: 'lastSyncAt',
 } as const;
 

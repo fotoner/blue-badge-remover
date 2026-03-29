@@ -144,30 +144,30 @@
     }
   }
 
-  function findViewerId(obj) {
-    if (obj === null || typeof obj !== 'object') return null;
+  function findViewerId(obj, depth) {
+    if ((depth || 0) > 20 || obj === null || typeof obj !== 'object') return null;
     if ('viewer' in obj) {
       var viewer = obj.viewer;
       if (viewer && typeof viewer.rest_id === 'string') return viewer.rest_id;
-      var nested = findViewerId(viewer);
+      var nested = findViewerId(viewer, (depth||0)+1);
       if (nested) return nested;
     }
     if ('viewer_v2' in obj) {
-      var n = findViewerId(obj.viewer_v2);
+      var n = findViewerId(obj.viewer_v2, (depth||0)+1);
       if (n) return n;
     }
     var wrappers = ['data', 'result', 'user'];
     for (var i = 0; i < wrappers.length; i++) {
       if (wrappers[i] in obj && typeof obj[wrappers[i]] === 'object') {
-        var r = findViewerId(obj[wrappers[i]]);
+        var r = findViewerId(obj[wrappers[i]], (depth||0)+1);
         if (r) return r;
       }
     }
     return null;
   }
 
-  function findFollowedIds(obj, result) {
-    if (obj === null || typeof obj !== 'object') return;
+  function findFollowedIds(obj, result, depth) {
+    if ((depth || 0) > 20 || obj === null || typeof obj !== 'object') return;
     if ('user_results' in obj) {
       var ur = obj.user_results;
       if (ur && ur.result && typeof ur.result.rest_id === 'string') {
@@ -181,15 +181,15 @@
     var values = Object.values(obj);
     for (var i = 0; i < values.length; i++) {
       if (Array.isArray(values[i])) {
-        values[i].forEach(function(item) { findFollowedIds(item, result); });
+        values[i].forEach(function(item) { findFollowedIds(item, result, (depth||0)+1); });
       } else if (typeof values[i] === 'object') {
-        findFollowedIds(values[i], result);
+        findFollowedIds(values[i], result, (depth||0)+1);
       }
     }
   }
 
-  function findUserObjects(obj, result) {
-    if (obj === null || typeof obj !== 'object') return;
+  function findUserObjects(obj, result, depth) {
+    if ((depth || 0) > 20 || obj === null || typeof obj !== 'object') return;
     if ('rest_id' in obj && 'is_blue_verified' in obj) {
       var screenName = obj.legacy && obj.legacy.screen_name;
       result.push({
@@ -203,9 +203,9 @@
     var values = Object.values(obj);
     for (var i = 0; i < values.length; i++) {
       if (Array.isArray(values[i])) {
-        values[i].forEach(function(item) { findUserObjects(item, result); });
+        values[i].forEach(function(item) { findUserObjects(item, result, (depth||0)+1); });
       } else if (typeof values[i] === 'object') {
-        findUserObjects(values[i], result);
+        findUserObjects(values[i], result, (depth||0)+1);
       }
     }
   }
