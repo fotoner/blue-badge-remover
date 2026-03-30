@@ -197,6 +197,12 @@ body {
   color: #e7e9ea;
 }
 
+.kw-heading-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .kw-toggle-group {
   display: flex;
   gap: 6px;

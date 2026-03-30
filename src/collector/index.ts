@@ -5,6 +5,7 @@ import type { CollectedFadak, FilterRule } from '@shared/types';
 let hideFiltered = false;
 let hideEnglish = false;
 let selectedKeyword: string | null = null;
+let topLimit = 30;
 let cachedList: CollectedFadak[] = [];
 let filterRules: FilterRule[] = [];
 
@@ -190,7 +191,7 @@ function renderKeywords(list: CollectedFadak[]): void {
       if (isEnglishToken(token)) counts.delete(token);
     }
   }
-  const top = topN(counts, 30);
+  const top = topN(counts, topLimit);
   const max = top[0]?.count ?? 1;
 
   section.style.display = 'block';
@@ -201,7 +202,7 @@ function renderKeywords(list: CollectedFadak[]): void {
 
   const heading = document.createElement('h2');
   heading.className = 'keywords-heading';
-  heading.textContent = '자주 사용되는 키워드 Top 30';
+  heading.textContent = `자주 사용되는 키워드 Top ${topLimit}`;
 
   const toggleBtn = document.createElement('button');
   toggleBtn.type = 'button';
@@ -225,7 +226,26 @@ function renderKeywords(list: CollectedFadak[]): void {
   toggleGroup.className = 'kw-toggle-group';
   toggleGroup.append(toggleBtn, toggleEnglishBtn);
 
-  headingRow.append(heading, toggleGroup);
+  const limitGroup = document.createElement('div');
+  limitGroup.className = 'kw-toggle-group';
+  for (const n of [30, 50, 100, 200]) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'kw-toggle' + (topLimit === n ? ' active' : '');
+    btn.textContent = String(n);
+    btn.addEventListener('click', () => {
+      topLimit = n;
+      selectedKeyword = null;
+      renderKeywords(cachedList);
+    });
+    limitGroup.appendChild(btn);
+  }
+
+  const headingControls = document.createElement('div');
+  headingControls.className = 'kw-heading-controls';
+  headingControls.append(limitGroup, toggleGroup);
+
+  headingRow.append(heading, headingControls);
   section.appendChild(headingRow);
 
   if (top.length === 0) {
