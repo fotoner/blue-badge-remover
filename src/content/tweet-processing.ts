@@ -15,27 +15,6 @@ export function extractTweetAuthor(tweetEl: HTMLElement): { handle: string; user
   return null;
 }
 
-/**
- * 리트윗에서 원저자(파딱)의 핸들을 추출한다.
- * extractTweetAuthor와 달리 socialContext(리트위터 링크)를 건너뛰고
- * 트윗 본문의 원저자 링크만 반환한다. 키워드 수집 전용.
- */
-export function extractOriginalAuthorHandle(tweetEl: HTMLElement): string | null {
-  const socialContext = tweetEl.querySelector('[data-testid="socialContext"]');
-  const allLinks = tweetEl.querySelectorAll('a[role="link"][href^="/"]');
-  for (const link of allLinks) {
-    if (socialContext?.contains(link)) continue;
-    const text = link.textContent ?? '';
-    if (/재게시함|Retweeted|reposted/i.test(text)) continue;
-    const href = link.getAttribute('href');
-    if (!href) continue;
-    const handle = href.slice(1).split('/')[0];
-    if (!handle || handle === 'i' || handle === 'hashtag' || href.includes('/status/') || href.includes('/photo/')) continue;
-    return handle;
-  }
-  return null;
-}
-
 export function extractRetweeterName(tweetEl: HTMLElement): string | null {
   const socialContext = tweetEl.querySelector('[data-testid="socialContext"]');
   if (!socialContext) return null;

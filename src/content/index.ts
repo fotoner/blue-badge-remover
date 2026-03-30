@@ -10,7 +10,7 @@ import { logger } from '@shared/utils/logger';
 import { showFadakProfileBanner, removeFadakBanner } from './fadak-banner';
 import { listenForNavigation, setOnNavigate } from './navigation';
 import { collectFollowsFromDOM, saveFollowHandles, removeFollowHandle, getMyHandle, disconnectFollowObserver, listenForFollowButtonClicks } from './follow-collector';
-import { extractTweetAuthor, extractOriginalAuthorHandle, extractRetweeterName, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, extractBioFromFiber, formatUserLabel, addDebugLabel } from './tweet-processing';
+import { extractTweetAuthor, extractRetweeterName, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, extractBioFromFiber, formatUserLabel, addDebugLabel } from './tweet-processing';
 import { isProfilePage, getPageType } from './page-utils';
 
 const badgeCache = new BadgeCache();
@@ -318,11 +318,8 @@ function processTweet(tweetEl: HTMLElement): void {
       const cachedProfile = profileCache.get(handle.toLowerCase());
       const fiberBio = cachedProfile?.bio || extractBioFromFiber(tweetEl, handle);
       if (currentSettings.keywordCollectorEnabled) {
-        // 리트윗의 경우 handle은 리트위터이므로, 원저자(파딱) 핸들을 별도 추출하여 수집
-        const originalHandle = extractOriginalAuthorHandle(tweetEl) ?? handle;
-        const originalKey = originalHandle.toLowerCase();
-        const originalProfile = profileCache.get(originalKey) ?? { handle: originalHandle, displayName: extractDisplayName(tweetEl, originalHandle) ?? originalHandle, bio: extractBioFromFiber(tweetEl, originalHandle) };
-        bufferCollectedFadak(originalKey, originalHandle, originalProfile.displayName, originalProfile.bio || fiberBio, extractTweetText(tweetEl));
+        const profile = cachedProfile ?? { handle, displayName: extractDisplayName(tweetEl, handle) ?? handle, bio: fiberBio };
+        bufferCollectedFadak(handle.toLowerCase(), handle, profile.displayName, profile.bio || fiberBio, extractTweetText(tweetEl));
       }
       if (currentSettings.keywordFilterEnabled) {
         const profile = cachedProfile ?? {
