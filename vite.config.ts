@@ -8,6 +8,14 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [crx({ manifest })],
+  build: {
+    rollupOptions: {
+      input: {
+        collector: resolve(__dirname, 'src/collector/index.html'),
+        whitelist: resolve(__dirname, 'src/whitelist/index.html'),
+      },
+    },
+  },
   resolve: {
     alias: {
       '@shared': resolve(__dirname, 'src/shared'),

@@ -1,4 +1,4 @@
-import { getSettings, saveSettings, getWhitelist, addToWhitelist, removeFromWhitelist } from '@features/settings';
+import { getSettings, saveSettings } from '@features/settings';
 import { STORAGE_KEYS } from '@shared/constants';
 import { t, type Language } from '@shared/i18n';
 import type { Settings } from '@shared/types';
@@ -9,7 +9,6 @@ async function init(): Promise<void> {
   settings = await getSettings();
   renderSettings();
   applyTranslations();
-  renderWhitelist();
   renderSyncStatus();
   bindEvents();
 }
@@ -48,26 +47,6 @@ function renderSettings(): void {
 
   const quoteModeRadio = document.querySelector(`input[name="quoteMode"][value="${settings.quoteMode}"]`) as HTMLInputElement | null;
   if (quoteModeRadio) quoteModeRadio.checked = true;
-}
-
-async function renderWhitelist(): Promise<void> {
-  const container = document.getElementById('whitelist-container')!;
-  container.innerHTML = '';
-  const list = await getWhitelist();
-  for (const handle of list) {
-    const item = document.createElement('div');
-    item.className = 'whitelist-item';
-    const span = document.createElement('span');
-    span.textContent = handle;
-    const btn = document.createElement('button');
-    btn.textContent = '\u2715';
-    btn.addEventListener('click', async () => {
-      await removeFromWhitelist(handle);
-      await renderWhitelist();
-    });
-    item.append(span, btn);
-    container.appendChild(item);
-  }
 }
 
 async function renderSyncStatus(): Promise<void> {
@@ -129,14 +108,8 @@ function bindEvents(): void {
     setTimeout(() => { btn.textContent = t('openFollowingPage', settings.language); }, 3000);
   });
 
-  document.getElementById('whitelist-add')!.addEventListener('click', async () => {
-    const input = document.getElementById('whitelist-input') as HTMLInputElement;
-    const handle = input.value.trim().replace(/^@/, '');
-    if (!handle || !/^[A-Za-z0-9_]{1,15}$/.test(handle)) return;
-    const normalized = `@${handle}`;
-    await addToWhitelist(normalized);
-    input.value = '';
-    await renderWhitelist();
+  document.getElementById('open-whitelist-btn')!.addEventListener('click', () => {
+    void chrome.tabs.create({ url: chrome.runtime.getURL('src/whitelist/index.html') });
   });
 
   document.getElementById('clear-cache-btn')!.addEventListener('click', async () => {

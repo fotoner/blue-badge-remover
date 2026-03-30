@@ -52,7 +52,10 @@ type TranslationKeys =
   | 'hiddenQuoteTweet'
   | 'fadakProfileBanner'
   | 'feedback'
-  | 'feedbackDesc';
+  | 'feedbackDesc'
+  | 'manageWhitelist'
+  | 'whitelistCount'
+  | 'whitelistEmpty';
 
 type Translations = Record<TranslationKeys, string>;
 
@@ -105,6 +108,9 @@ const ko: Translations = {
   fadakProfileBanner: '@{handle}은(는) 파딱 계정입니다',
   feedback: '피드백 보내기',
   feedbackDesc: '버그 제보, 기능 제안 등 여러분의 피드백이 서비스 개선에 큰 도움이 됩니다',
+  manageWhitelist: '화이트리스트 관리',
+  whitelistCount: '등록된 계정 ({count})',
+  whitelistEmpty: '등록된 계정이 없습니다',
 };
 
 const en: Translations = {
@@ -156,6 +162,9 @@ const en: Translations = {
   fadakProfileBanner: '@{handle} is a paid blue badge account',
   feedback: 'Send Feedback',
   feedbackDesc: 'Bug reports and feature suggestions help us improve the extension',
+  manageWhitelist: 'Manage Whitelist',
+  whitelistCount: 'Accounts ({count})',
+  whitelistEmpty: 'No accounts added',
 };
 
 const ja: Translations = {
@@ -207,6 +216,9 @@ const ja: Translations = {
   fadakProfileBanner: '@{handle}は課金バッジアカウントです',
   feedback: 'フィードバックを送る',
   feedbackDesc: 'バグ報告や機能提案は、サービス改善に大きく役立ちます',
+  manageWhitelist: 'ホワイトリスト管理',
+  whitelistCount: '登録済み ({count})',
+  whitelistEmpty: '登録なし',
 };
 
 const translations: Record<Language, Translations> = { ko, en, ja };
