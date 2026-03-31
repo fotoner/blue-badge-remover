@@ -8,7 +8,9 @@
   "permissions": ["storage", "unlimitedStorage"],
   "host_permissions": [
     "https://x.com/*",
-    "https://api.x.com/*"
+    "https://api.x.com/*",
+    "https://twitter.com/*",
+    "https://api.twitter.com/*"
   ],
   "background": {
     "service_worker": "src/background/index.ts",
@@ -16,13 +18,13 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://x.com/*"],
+      "matches": ["https://x.com/*", "https://twitter.com/*"],
       "js": ["src/injected/fetch-interceptor.ts"],
       "run_at": "document_start",
       "world": "MAIN"
     },
     {
-      "matches": ["https://x.com/*"],
+      "matches": ["https://x.com/*", "https://twitter.com/*"],
       "js": ["src/content/index.ts"],
       "run_at": "document_idle"
     }
@@ -43,7 +45,7 @@
   "web_accessible_resources": [
     {
       "resources": ["fetch-interceptor.js"],
-      "matches": ["https://x.com/*"]
+      "matches": ["https://x.com/*", "https://twitter.com/*"]
     }
   ]
 }

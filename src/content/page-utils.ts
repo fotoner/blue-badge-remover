@@ -15,6 +15,7 @@ export function isProfilePage(): boolean {
 
 export function getPageType(): PageType {
   const path = window.location.pathname;
+  if (path.includes('/i/bookmarks')) return 'bookmarks';
   if (path.includes('/search')) return 'search';
   if (path.includes('/status/')) return 'replies';
   return 'timeline';

@@ -10,6 +10,7 @@ async function init(): Promise<void> {
   renderSettings();
   applyTranslations();
   renderSyncStatus();
+  renderOnboarding();
   bindEvents();
 }
 
@@ -36,6 +37,7 @@ function renderSettings(): void {
   (document.getElementById('filter-timeline') as HTMLInputElement).checked = settings.filter.timeline;
   (document.getElementById('filter-replies') as HTMLInputElement).checked = settings.filter.replies;
   (document.getElementById('filter-search') as HTMLInputElement).checked = settings.filter.search;
+  (document.getElementById('filter-bookmarks') as HTMLInputElement).checked = settings.filter.bookmarks;
   (document.getElementById('retweetFilter') as HTMLInputElement).checked = settings.retweetFilter;
   (document.getElementById('debugMode') as HTMLInputElement).checked = settings.debugMode;
 
@@ -79,12 +81,32 @@ async function renderSyncStatus(): Promise<void> {
   }
 }
 
+async function renderOnboarding(): Promise<void> {
+  const banner = document.getElementById('onboarding-banner');
+  if (!banner) return;
+  try {
+    const result = await chrome.storage.local.get([
+      STORAGE_KEYS.FOLLOW_LIST,
+      STORAGE_KEYS.LAST_SYNC_AT,
+      'onboardingDismissed',
+    ]);
+    const followList = (result[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? [];
+    const lastSyncAt = result[STORAGE_KEYS.LAST_SYNC_AT] as string | null ?? null;
+    const dismissed = (result['onboardingDismissed'] as boolean | undefined) ?? false;
+
+    banner.style.display = followList.length === 0 && lastSyncAt === null && !dismissed ? 'block' : 'none';
+  } catch {
+    banner.style.display = 'none';
+  }
+}
+
 function bindEvents(): void {
   const save = async (): Promise<void> => {
     settings.enabled = (document.getElementById('enabled') as HTMLInputElement).checked;
     settings.filter.timeline = (document.getElementById('filter-timeline') as HTMLInputElement).checked;
     settings.filter.replies = (document.getElementById('filter-replies') as HTMLInputElement).checked;
     settings.filter.search = (document.getElementById('filter-search') as HTMLInputElement).checked;
+    settings.filter.bookmarks = (document.getElementById('filter-bookmarks') as HTMLInputElement).checked;
     settings.retweetFilter = (document.getElementById('retweetFilter') as HTMLInputElement).checked;
     settings.debugMode = (document.getElementById('debugMode') as HTMLInputElement).checked;
     settings.language = (document.getElementById('language') as HTMLSelectElement).value as Settings['language'];
@@ -135,8 +157,10 @@ function bindEvents(): void {
       [STORAGE_KEYS.FOLLOW_CACHE]: cache,
       [STORAGE_KEYS.FOLLOW_LIST]: [],
       [STORAGE_KEYS.LAST_SYNC_AT]: null,
+      onboardingDismissed: false,
     });
     await renderSyncStatus();
+    await renderOnboarding();
     const btn = document.getElementById('clear-cache-btn') as HTMLButtonElement;
     btn.textContent = t('clearCacheDone', settings.language);
     setTimeout(() => { btn.textContent = t('clearFollowCache', settings.language); }, 2000);
@@ -155,6 +179,23 @@ function bindEvents(): void {
 
   document.getElementById('open-collector-btn')!.addEventListener('click', () => {
     void chrome.tabs.create({ url: chrome.runtime.getURL('src/collector/index.html') });
+  });
+
+  document.getElementById('onboarding-dismiss')?.addEventListener('click', async () => {
+    await chrome.storage.local.set({ onboardingDismissed: true });
+    const banner = document.getElementById('onboarding-banner');
+    if (banner) banner.style.display = 'none';
+  });
+
+  document.getElementById('onboarding-cta')?.addEventListener('click', async () => {
+    await chrome.tabs.create({ url: 'https://x.com/following', active: true });
+  });
+
+  chrome.storage.onChanged.addListener((changes) => {
+    if (changes[STORAGE_KEYS.LAST_SYNC_AT]) {
+      const banner = document.getElementById('onboarding-banner');
+      if (banner) banner.style.display = 'none';
+    }
   });
 }
 

@@ -58,7 +58,16 @@ type TranslationKeys =
   | 'whitelistEmpty'
   | 'keywordFilterBeta'
   | 'keywordFilterBetaDesc'
-  | 'advancedFilterSettings';
+  | 'advancedFilterSettings'
+  | 'bookmarks'
+  | 'addToWhitelist'
+  | 'addedToWhitelist'
+  | 'onboardingBanner'
+  | 'onboardingCta'
+  | 'onboardingDismiss'
+  | 'followSyncBanner'
+  | 'onboardingSiteBanner'
+  | 'onboardingSiteCta';
 
 type Translations = Record<TranslationKeys, string>;
 
@@ -97,7 +106,7 @@ const ko: Translations = {
   scrollOnFollowingPage: '팔로잉 페이지에서 스크롤하세요',
   whitelist: '화이트리스트',
   whitelistDesc: '파딱이어도 숨기지 않을 계정을 직접 추가합니다',
-  whitelistPlaceholder: '@핸들 입력',
+  whitelistPlaceholder: '@아이디 입력',
   add: '추가',
   developer: '개발자',
   debugMode: '디버그 모드',
@@ -117,6 +126,15 @@ const ko: Translations = {
   keywordFilterBeta: '[Beta] 키워드 필터',
   keywordFilterBetaDesc: '모든 파딱이 아닌, 특정 키워드에 해당하는 바이오나 본문을 가지고 있는 글만 가립니다. 가끔 유용한 정보 파딱 등의 글을 보고 싶은 분들에게 추천입니다.',
   advancedFilterSettings: '고급 필터 설정',
+  bookmarks: '북마크',
+  addToWhitelist: '화이트리스트에 추가',
+  addedToWhitelist: '화이트리스트에 추가됨',
+  onboardingBanner: '팔로잉 목록을 동기화하면 팔로우 중인 계정이 필터링에서 제외됩니다.',
+  onboardingCta: '팔로잉 페이지 열기',
+  onboardingDismiss: '닫기',
+  followSyncBanner: '팔로우 목록을 동기화하려면 최하단까지 스크롤해주세요',
+  onboardingSiteBanner: '팔로우 중인 계정을 보호하려면 팔로우 동기화가 필요합니다',
+  onboardingSiteCta: '동기화하기',
 };
 
 const en: Translations = {
@@ -154,7 +172,7 @@ const en: Translations = {
   scrollOnFollowingPage: 'Scroll on the Following page',
   whitelist: 'Whitelist',
   whitelistDesc: 'Manually add accounts to never hide',
-  whitelistPlaceholder: 'Enter @handle',
+  whitelistPlaceholder: 'Enter @username',
   add: 'Add',
   developer: 'Developer',
   debugMode: 'Debug Mode',
@@ -174,6 +192,15 @@ const en: Translations = {
   keywordFilterBeta: '[Beta] Keyword Filter',
   keywordFilterBetaDesc: 'It does not hide all Paid badge posts, but only those containing specific keywords in the bio or the main text. This is recommended for users who occasionally want to see useful information from Paid badge holders.',
   advancedFilterSettings: 'Advanced Filter Settings',
+  bookmarks: 'Bookmarks',
+  addToWhitelist: 'Add to Whitelist',
+  addedToWhitelist: 'Added to Whitelist',
+  onboardingBanner: 'Sync your following list to exclude followed accounts from filtering.',
+  onboardingCta: 'Open Following Page',
+  onboardingDismiss: 'Dismiss',
+  followSyncBanner: 'Scroll to the bottom to sync your following list',
+  onboardingSiteBanner: 'Sync your follows to protect accounts you follow from being hidden',
+  onboardingSiteCta: 'Sync now',
 };
 
 const ja: Translations = {
@@ -211,7 +238,7 @@ const ja: Translations = {
   scrollOnFollowingPage: 'フォローページでスクロールしてください',
   whitelist: 'ホワイトリスト',
   whitelistDesc: '課金バッジでも非表示にしないアカウントを手動で追加します',
-  whitelistPlaceholder: '@ハンドルを入力',
+  whitelistPlaceholder: '@ユーザーIDを入力',
   add: '追加',
   developer: '開発者',
   debugMode: 'デバッグモード',
@@ -231,6 +258,15 @@ const ja: Translations = {
   keywordFilterBeta: '[Beta] キーワードフィルター',
   keywordFilterBetaDesc: 'すべての課金バッジの投稿を非表示にするのではなく、プロフィールや本文に特定のキーワードが含まれている投稿のみを非表示にします。時々、課金バッジユーザーによる有益な情報を確認したい方に適しています。',
   advancedFilterSettings: '高度なフィルター設定',
+  bookmarks: 'ブックマーク',
+  addToWhitelist: 'ホワイトリストに追加',
+  addedToWhitelist: 'ホワイトリストに追加済み',
+  onboardingBanner: 'フォローリストを同期すると、フォロー中のアカウントがフィルタリングから除外されます。',
+  onboardingCta: 'フォローページを開く',
+  onboardingDismiss: '閉じる',
+  followSyncBanner: 'フォローリストを同期するには一番下までスクロールしてください',
+  onboardingSiteBanner: 'フォロー中のアカウントを保護するにはフォロー同期が必要です',
+  onboardingSiteCta: '同期する',
 };
 
 const translations: Record<Language, Translations> = { ko, en, ja };

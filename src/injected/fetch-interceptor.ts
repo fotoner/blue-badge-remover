@@ -219,34 +219,40 @@ function findViewerId(obj: unknown): string | null {
 }
 
 function extractFollowData(data: unknown): void {
-  const userIds: string[] = [];
-  findFollowedUserIds(data, userIds);
-  if (userIds.length > 0) {
+  const handles: string[] = [];
+  findFollowedHandles(data, handles);
+  if (handles.length > 0) {
     window.postMessage({
       type: MESSAGE_TYPES.FOLLOW_DATA,
-      userIds,
+      handles,
     }, '*');
   }
 }
 
-function findFollowedUserIds(obj: unknown, result: string[]): void {
+function findFollowedHandles(obj: unknown, result: string[]): void {
   if (obj === null || typeof obj !== 'object') return;
   const record = obj as Record<string, unknown>;
 
-  // X Following API 응답에서 user_results.result.rest_id 추출
+  // X Following API 응답에서 screen_name 추출
   if ('user_results' in record) {
     const userResults = record['user_results'] as Record<string, unknown> | null;
-    const restId = (userResults?.['result'] as Record<string, unknown> | undefined)?.['rest_id'];
-    if (typeof restId === 'string') {
-      result.push(restId);
+    const userResult = userResults?.['result'] as Record<string, unknown> | undefined;
+    if (userResult) {
+      // screen_name은 legacy 또는 core에 있음
+      const legacy = userResult['legacy'] as Record<string, unknown> | undefined;
+      const core = (userResult['core'] as Record<string, unknown> | undefined)?.['user_results'] as Record<string, unknown> | undefined;
+      const screenName = legacy?.['screen_name'] ?? core?.['screen_name'];
+      if (typeof screenName === 'string') {
+        result.push(screenName.toLowerCase());
+      }
     }
   }
 
   for (const value of Object.values(record)) {
     if (Array.isArray(value)) {
-      value.forEach((item) => findFollowedUserIds(item, result));
+      value.forEach((item) => findFollowedHandles(item, result));
     } else if (typeof value === 'object') {
-      findFollowedUserIds(value, result);
+      findFollowedHandles(value, result);
     }
   }
 }

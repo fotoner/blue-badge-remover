@@ -1,6 +1,6 @@
 // tests/content/page-utils.test.ts
 import { describe, it, expect, beforeEach } from 'vitest';
-import { isProfilePage } from '../../src/content/page-utils';
+import { isProfilePage, getPageType } from '../../src/content/page-utils';
 
 function setPath(path: string): void {
   Object.defineProperty(window, 'location', {
@@ -62,5 +62,46 @@ describe('isProfilePage', () => {
   it('should return false for /followers paths', () => {
     setPath('/elonmusk/followers');
     expect(isProfilePage()).toBe(false);
+  });
+});
+
+describe('getPageType', () => {
+  beforeEach(() => {
+    setPath('/');
+  });
+
+  it('should return timeline for home page', () => {
+    setPath('/home');
+    expect(getPageType()).toBe('timeline');
+  });
+
+  it('should return timeline for root', () => {
+    setPath('/');
+    expect(getPageType()).toBe('timeline');
+  });
+
+  it('should return search for search page', () => {
+    setPath('/search');
+    expect(getPageType()).toBe('search');
+  });
+
+  it('should return replies for status page', () => {
+    setPath('/user/status/123456');
+    expect(getPageType()).toBe('replies');
+  });
+
+  it('should return bookmarks for /i/bookmarks', () => {
+    setPath('/i/bookmarks');
+    expect(getPageType()).toBe('bookmarks');
+  });
+
+  it('should return bookmarks for /i/bookmarks/folders subpath', () => {
+    setPath('/i/bookmarks/folders/123');
+    expect(getPageType()).toBe('bookmarks');
+  });
+
+  it('should return timeline for user profile', () => {
+    setPath('/fotoner');
+    expect(getPageType()).toBe('timeline');
   });
 });

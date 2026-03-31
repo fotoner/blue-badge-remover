@@ -1,9 +1,9 @@
 // src/content/index.ts
 import { BadgeCache, parseBadgeInfo, detectBadgeSvg } from '@features/badge-detection';
 import { FeedObserver, shouldHideTweet, shouldHideRetweet, getQuoteAction, hideTweet, hideQuoteBlock, showTweet, setTweetHiderLanguage } from '@features/content-filter';
-import { ProfileCache, matchesKeywordFilter, DEFAULT_FILTER_LIST, getCustomFilterList, buildActiveRules } from '@features/keyword-filter';
+import { ProfileCache, matchesKeywordFilter, DEFAULT_FILTER_LIST, getCustomFilterList, buildActiveRules, parseCategories, buildFilterTextFromCategories } from '@features/keyword-filter';
 import { getCollectedFadaks, saveCollectedFadaks } from '@features/keyword-collector';
-import { getSettings } from '@features/settings';
+import { getSettings, addToWhitelist } from '@features/settings';
 import { MESSAGE_TYPES, STORAGE_KEYS } from '@shared/constants';
 import type { CollectedFadak, FilterRule, Settings } from '@shared/types';
 import { logger } from '@shared/utils/logger';
@@ -12,6 +12,7 @@ import { listenForNavigation, setOnNavigate } from './navigation';
 import { collectFollowsFromDOM, saveFollowHandles, removeFollowHandle, getMyHandle, disconnectFollowObserver, listenForFollowButtonClicks } from './follow-collector';
 import { extractTweetAuthor, extractRetweeterName, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, extractBioFromFiber, formatUserLabel, addDebugLabel, hasBadgeInAuthorArea } from './tweet-processing';
 import { isProfilePage, getPageType } from './page-utils';
+import { t } from '@shared/i18n';
 
 const badgeCache = new BadgeCache();
 let currentSettings: Settings;
@@ -20,6 +21,7 @@ let whitelistSet = new Set<string>(); // @handle format
 let feedObserver: FeedObserver;
 const profileCache = new ProfileCache();
 let activeFilterRules: FilterRule[] = [];
+let currentUserHandle: string | null = null;
 
 // Keyword collector buffer — flushed to storage periodically and on navigation
 const collectorBuffer = new Map<string, CollectedFadak>();
@@ -76,8 +78,14 @@ async function flushCollector(): Promise<void> {
 }
 
 async function loadFilterRules(): Promise<void> {
-  const custom = await getCustomFilterList();
-  activeFilterRules = buildActiveRules(currentSettings.defaultFilterEnabled, DEFAULT_FILTER_LIST, custom);
+  const [custom, stored] = await Promise.all([
+    getCustomFilterList(),
+    chrome.storage.local.get([STORAGE_KEYS.DISABLED_FILTER_CATEGORIES]),
+  ]);
+  const disabledCategories = (stored[STORAGE_KEYS.DISABLED_FILTER_CATEGORIES] as string[] | undefined) ?? [];
+  const categories = parseCategories(DEFAULT_FILTER_LIST);
+  const activeBuiltinText = buildFilterTextFromCategories(categories, disabledCategories);
+  activeFilterRules = buildActiveRules(currentSettings.defaultFilterEnabled, activeBuiltinText, custom);
 }
 
 async function init(): Promise<void> {
@@ -86,6 +94,7 @@ async function init(): Promise<void> {
 
   const stored = await chrome.storage.local.get([STORAGE_KEYS.FOLLOW_LIST, STORAGE_KEYS.WHITELIST, STORAGE_KEYS.FOLLOW_CACHE, STORAGE_KEYS.CURRENT_USER_ID]);
   const currentAccount = (stored[STORAGE_KEYS.CURRENT_USER_ID] as string | null) ?? '';
+  currentUserHandle = currentAccount || null;
   const cache = (stored[STORAGE_KEYS.FOLLOW_CACHE] as Record<string, string[]> | undefined) ?? {};
   const cachedFollows = currentAccount ? (cache[currentAccount] ?? []) : ((stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? []);
   followSet = new Set(cachedFollows);
@@ -113,8 +122,13 @@ async function init(): Promise<void> {
   listenForFollowButtonClicks(followCollectorDeps);
 
   setTimeout(() => {
-    detectAndHandleAccountSwitch();
+    void detectAndHandleAccountSwitch();
+    if (!currentUserHandle) {
+      currentUserHandle = getMyHandle();
+    }
     showFadakProfileBanner(fadakBannerDeps);
+    void showOnboardingSiteBanner();
+    startAccountSwitchWatcher();
   }, 3000);
 
   if (currentSettings.debugMode) {
@@ -198,12 +212,24 @@ function listenForSettingsChanges(): void {
       if (prev.keywordCollectorEnabled && !currentSettings.keywordCollectorEnabled) {
         void flushCollector();
       }
-      const modeChanged =
-        prev.keywordFilterEnabled !== currentSettings.keywordFilterEnabled;
-      if (modeChanged) {
+
+      // 마스터 토글, 필터 스코프, 숨김 방식, 키워드 필터 등 변경 시 즉시 반영
+      const needsReprocess =
+        prev.enabled !== currentSettings.enabled ||
+        prev.keywordFilterEnabled !== currentSettings.keywordFilterEnabled ||
+        prev.retweetFilter !== currentSettings.retweetFilter ||
+        prev.hideMode !== currentSettings.hideMode ||
+        prev.quoteMode !== currentSettings.quoteMode ||
+        prev.filter.timeline !== currentSettings.filter.timeline ||
+        prev.filter.replies !== currentSettings.filter.replies ||
+        prev.filter.search !== currentSettings.filter.search ||
+        prev.filter.bookmarks !== currentSettings.filter.bookmarks;
+
+      if (needsReprocess) {
         restoreHiddenTweets();
         reprocessExistingTweets();
       }
+
       const defaultFilterChanged =
         prev.defaultFilterEnabled !== currentSettings.defaultFilterEnabled;
       if (defaultFilterChanged) {
@@ -228,11 +254,74 @@ function listenForSettingsChanges(): void {
         reprocessExistingTweets();
       });
     }
+    const categoryChange = changes[STORAGE_KEYS.DISABLED_FILTER_CATEGORIES];
+    if (categoryChange) {
+      void loadFilterRules().then(() => {
+        restoreHiddenTweets();
+        reprocessExistingTweets();
+      });
+    }
+    const syncChange = changes[STORAGE_KEYS.LAST_SYNC_AT];
+    if (syncChange) {
+      document.getElementById(ONBOARDING_SITE_BANNER_ID)?.remove();
+    }
   });
 }
 
 function isHandleFollowed(handle: string): boolean {
   return followSet.has(handle.toLowerCase());
+}
+
+const ONBOARDING_SITE_BANNER_ID = 'bbr-onboarding-site-banner';
+
+async function showOnboardingSiteBanner(): Promise<void> {
+  if (document.getElementById(ONBOARDING_SITE_BANNER_ID)) return;
+  if (!currentSettings.enabled) return;
+  if (window.location.pathname.includes('/following')) return;
+
+  const stored = await chrome.storage.local.get([
+    STORAGE_KEYS.FOLLOW_LIST,
+    STORAGE_KEYS.LAST_SYNC_AT,
+    'onboardingDismissed',
+  ]);
+  const followList = (stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? [];
+  const lastSyncAt = stored[STORAGE_KEYS.LAST_SYNC_AT] as string | null ?? null;
+  const dismissed = (stored['onboardingDismissed'] as boolean | undefined) ?? false;
+
+  if (followList.length > 0 || lastSyncAt !== null || dismissed) return;
+
+  const lang = currentSettings.language;
+  const primaryColumn = document.querySelector('[data-testid="primaryColumn"]');
+  if (!primaryColumn) return;
+  const header = primaryColumn.querySelector(':scope > div > div:first-child');
+  if (!header) return;
+
+  const banner = document.createElement('div');
+  banner.id = ONBOARDING_SITE_BANNER_ID;
+  banner.style.cssText = 'background:#E8850C;color:white;display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 20px;font-size:13px;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
+
+  const text = document.createElement('span');
+  text.textContent = t('onboardingSiteBanner', lang);
+  banner.appendChild(text);
+
+  const btn = document.createElement('button');
+  btn.textContent = t('onboardingSiteCta', lang);
+  btn.style.cssText = 'background:white;color:#E8850C;border:none;border-radius:16px;padding:5px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;';
+  btn.addEventListener('click', () => {
+    window.location.href = '/following';
+  });
+  banner.appendChild(btn);
+
+  const dismiss = document.createElement('button');
+  dismiss.textContent = '\u2715';
+  dismiss.style.cssText = 'background:none;border:none;color:white;font-size:16px;cursor:pointer;padding:0 2px;opacity:0.7;';
+  dismiss.addEventListener('click', async () => {
+    await chrome.storage.local.set({ onboardingDismissed: true });
+    banner.remove();
+  });
+  banner.appendChild(dismiss);
+
+  header.appendChild(banner);
 }
 
 function isHandleWhitelisted(handle: string): boolean {
@@ -244,6 +333,7 @@ const fadakBannerDeps = {
   isHandleFollowed,
   isHandleWhitelisted,
   getCurrentSettings: () => currentSettings,
+  addToWhitelist,
 };
 
 const followCollectorDeps = {
@@ -277,8 +367,24 @@ async function detectAndHandleAccountSwitch(): Promise<void> {
       [STORAGE_KEYS.FOLLOW_LIST]: cachedFollows,
     });
     followSet = new Set(cachedFollows);
+    currentUserHandle = currentHandle;
     if (currentSettings.debugMode) logger.info('Account switched', { from: savedHandle, to: currentHandle, cachedFollows: cachedFollows.length });
+
+    // 계정 전환 시 즉시 숨겨진 트윗 복원 + 재처리
+    restoreHiddenTweets();
+    reprocessExistingTweets();
   }
+}
+
+function startAccountSwitchWatcher(): void {
+  let lastHref = document.querySelector('a[data-testid="AppTabBar_Profile_Link"]')?.getAttribute('href') ?? '';
+  setInterval(() => {
+    const href = document.querySelector('a[data-testid="AppTabBar_Profile_Link"]')?.getAttribute('href') ?? '';
+    if (href && href !== lastHref) {
+      lastHref = href;
+      void detectAndHandleAccountSwitch();
+    }
+  }, 2000);
 }
 
 function checkFadak(userId: string, element: HTMLElement): boolean {
@@ -296,6 +402,10 @@ function processTweet(tweetEl: HTMLElement): void {
   if (!author) return;
 
   const { handle, userId } = author;
+
+  // 자기 자신의 트윗은 필터링하지 않음
+  if (currentUserHandle && handle.toLowerCase() === currentUserHandle.toLowerCase()) return;
+
   const isFadak = checkFadak(userId, tweetEl);
   const displayName = extractDisplayName(tweetEl, handle);
   const userLabel = formatUserLabel(handle, displayName);

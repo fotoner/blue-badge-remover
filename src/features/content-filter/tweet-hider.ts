@@ -4,6 +4,7 @@ import { t, type Language, DEFAULT_LANGUAGE } from '@shared/i18n';
 const ORIGINAL_CONTENT_KEY = 'data-bbr-original';
 const COLLAPSED_ATTR = 'data-bbr-collapsed';
 const HIDDEN_QUOTE_ATTR = 'data-bbr-hidden-quote';
+const STYLE_INJECTED_ATTR = 'data-bbr-styles';
 
 let currentLanguage: Language = DEFAULT_LANGUAGE;
 
@@ -22,6 +23,70 @@ export interface HideQuoteContext {
   handle?: string;
 }
 
+function injectStyles(): void {
+  if (document.querySelector(`[${STYLE_INJECTED_ATTR}]`)) return;
+  const style = document.createElement('style');
+  style.setAttribute(STYLE_INJECTED_ATTR, 'true');
+  style.textContent = `
+    .bbr-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 0;
+      margin: 0;
+      background: none;
+      border: none;
+      border-radius: 0;
+      color: #536471;
+      font-size: 13px;
+      cursor: pointer;
+      transition: color 0.15s;
+      user-select: none;
+      -webkit-user-select: none;
+      min-height: 48px;
+    }
+    .bbr-placeholder:hover {
+      color: #1d9bf0;
+    }
+    .bbr-placeholder-icon {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      opacity: 0.6;
+    }
+    .bbr-placeholder:hover .bbr-placeholder-icon {
+      opacity: 1;
+    }
+    .bbr-quote-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      height: 100%;
+      padding: 10px 12px;
+      background: none;
+      border: none;
+      border-radius: 0;
+      color: #536471;
+      font-size: 12px;
+      cursor: pointer;
+      transition: color 0.15s;
+      user-select: none;
+      -webkit-user-select: none;
+      min-height: 40px;
+    }
+    .bbr-quote-placeholder:hover {
+      color: #1d9bf0;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+const SHIELD_ICON = `<svg class="bbr-placeholder-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1L2 3.5v4c0 3.5 2.6 6.4 6 7.5 3.4-1.1 6-4 6-7.5v-4L8 1zm0 2.2l4 1.7v2.6c0 2.6-1.9 4.8-4 5.7-2.1-.9-4-3.1-4-5.7V4.9l4-1.7z"/></svg>`;
+
 export function hideTweet(element: HTMLElement, mode: 'remove' | 'collapse', context?: HideContext): void {
   if (element.hasAttribute(ORIGINAL_CONTENT_KEY)) return;
 
@@ -31,6 +96,7 @@ export function hideTweet(element: HTMLElement, mode: 'remove' | 'collapse', con
     return;
   }
 
+  injectStyles();
   element.setAttribute(ORIGINAL_CONTENT_KEY, 'collapsed');
   const originalChildren = Array.from(element.childNodes);
   originalChildren.forEach((child) => {
@@ -42,8 +108,13 @@ export function hideTweet(element: HTMLElement, mode: 'remove' | 'collapse', con
   const label = buildHideLabel(context);
   const placeholder = document.createElement('div');
   placeholder.setAttribute(COLLAPSED_ATTR, 'true');
-  placeholder.textContent = label;
-  placeholder.style.cssText = 'padding:12px;color:#71767b;cursor:pointer;text-align:center;font-size:13px;';
+  placeholder.className = 'bbr-placeholder';
+  placeholder.innerHTML = SHIELD_ICON;
+
+  const textSpan = document.createElement('span');
+  textSpan.textContent = label;
+  placeholder.appendChild(textSpan);
+
   placeholder.addEventListener('click', () => showTweet(element), { once: true });
   element.appendChild(placeholder);
 }
@@ -51,6 +122,7 @@ export function hideTweet(element: HTMLElement, mode: 'remove' | 'collapse', con
 export function hideQuoteBlock(quoteElement: HTMLElement, context?: HideQuoteContext): void {
   if (quoteElement.hasAttribute(HIDDEN_QUOTE_ATTR)) return;
 
+  injectStyles();
   quoteElement.setAttribute(HIDDEN_QUOTE_ATTR, 'true');
   const originalChildren = Array.from(quoteElement.childNodes);
   originalChildren.forEach((child) => {
@@ -62,8 +134,13 @@ export function hideQuoteBlock(quoteElement: HTMLElement, context?: HideQuoteCon
   const handle = context?.handle ?? '';
   const placeholder = document.createElement('div');
   placeholder.setAttribute(COLLAPSED_ATTR, 'true');
-  placeholder.textContent = t('hiddenQuoteTweet', currentLanguage, { handle });
-  placeholder.style.cssText = 'padding:8px 12px;color:#71767b;cursor:pointer;text-align:center;font-size:12px;';
+  placeholder.className = 'bbr-quote-placeholder';
+  placeholder.innerHTML = SHIELD_ICON;
+
+  const textSpan = document.createElement('span');
+  textSpan.textContent = t('hiddenQuoteTweet', currentLanguage, { handle });
+  placeholder.appendChild(textSpan);
+
   placeholder.addEventListener('click', () => showQuoteBlock(quoteElement), { once: true });
   quoteElement.appendChild(placeholder);
 }

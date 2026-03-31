@@ -2,6 +2,7 @@
 import { STORAGE_KEYS } from '@shared/constants';
 import type { Settings } from '@shared/types';
 import { logger } from '@shared/utils/logger';
+import { t, type Language } from '@shared/i18n';
 
 export interface FollowCollectorDeps {
   getCurrentSettings: () => Settings;
@@ -12,6 +13,7 @@ export interface FollowCollectorDeps {
 }
 
 let followObserver: MutationObserver | null = null;
+const SYNC_BANNER_ID = 'bbr-follow-sync-banner';
 
 export function getMyHandle(): string | null {
   const profileLink = document.querySelector('a[data-testid="AppTabBar_Profile_Link"]');
@@ -77,12 +79,26 @@ function extractHandlesFromDOM(): string[] {
 }
 
 export function collectFollowsFromDOM(deps: FollowCollectorDeps): void {
-  // Only collect from Following page, and only for my own following list
   if (!window.location.pathname.includes('/following')) return;
+
+  // 배너는 /following 진입 시 항상 표시
+  showSyncBanner(deps);
+
+  // myHandle이 아직 없으면 재시도
   const myHandle = getMyHandle();
-  if (!myHandle) return;
+  if (!myHandle) {
+    setTimeout(() => collectFollowsFromDOMInner(deps), 3000);
+    return;
+  }
+
+  collectFollowsFromDOMInner(deps);
+}
+
+function collectFollowsFromDOMInner(deps: FollowCollectorDeps): void {
+  const myHandle = getMyHandle();
   const pathUser = window.location.pathname.split('/')[1]?.toLowerCase();
-  if (pathUser && pathUser !== myHandle) return;
+  // myHandle이 있으면 본인 페이지인지 확인, 없으면 그냥 수집 진행
+  if (myHandle && pathUser && pathUser !== myHandle) return;
 
   disconnectFollowObserver();
 
@@ -104,11 +120,35 @@ export function collectFollowsFromDOM(deps: FollowCollectorDeps): void {
   }, 2000);
 }
 
+function showSyncBanner(deps: FollowCollectorDeps): void {
+  if (document.getElementById(SYNC_BANNER_ID)) return;
+  const lang = deps.getCurrentSettings().language;
+
+  const banner = document.createElement('div');
+  banner.id = SYNC_BANNER_ID;
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10000;background:#1d9bf0;color:white;text-align:center;padding:10px 16px;font-size:14px;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;';
+  banner.textContent = t('followSyncBanner', lang);
+
+  const dismiss = document.createElement('button');
+  dismiss.textContent = '\u2715';
+  dismiss.style.cssText = 'background:none;border:none;color:white;font-size:18px;cursor:pointer;padding:0 4px;margin-left:8px;opacity:0.7;';
+  dismiss.addEventListener('click', () => banner.remove());
+  banner.appendChild(dismiss);
+
+  document.body.appendChild(banner);
+
+  // 페이지 이탈 시 자동 제거
+  setTimeout(() => {
+    document.getElementById(SYNC_BANNER_ID)?.remove();
+  }, 60000);
+}
+
 export function disconnectFollowObserver(): void {
   if (followObserver) {
     followObserver.disconnect();
     followObserver = null;
   }
+  document.getElementById(SYNC_BANNER_ID)?.remove();
 }
 
 export function listenForFollowButtonClicks(deps: FollowCollectorDeps): void {

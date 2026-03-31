@@ -30,6 +30,14 @@
       </label>
     </div>
 
+    <div id="onboarding-banner" class="section onboarding-banner" style="display:none;background:#1d9bf0;border-radius:8px;padding:12px 16px;color:white;">
+      <p style="margin:0 0 8px 0;font-size:13px;" data-i18n="onboardingBanner">팔로잉 목록을 동기화하면 팔로우 중인 계정이 필터링에서 제외됩니다.</p>
+      <div style="display:flex;gap:8px;">
+        <button type="button" id="onboarding-cta" style="flex:1;background:white;color:#1d9bf0;border:none;border-radius:6px;padding:6px;font-size:13px;font-weight:600;cursor:pointer;" data-i18n="onboardingCta">팔로잉 페이지 열기</button>
+        <button type="button" id="onboarding-dismiss" style="background:transparent;color:white;border:1px solid rgba(255,255,255,0.5);border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer;" data-i18n="onboardingDismiss">닫기</button>
+      </div>
+    </div>
+
     <div class="section">
       <label class="toggle-row">
         <span data-i18n="keywordFilterBeta">[Beta] 키워드 필터</span>
@@ -47,6 +55,7 @@
       <label class="toggle-row"><span data-i18n="homeTimeline">홈 타임라인</span><input type="checkbox" id="filter-timeline" checked></label>
       <label class="toggle-row"><span data-i18n="tweetDetailReplies">트윗 상세 / 답글</span><input type="checkbox" id="filter-replies" checked></label>
       <label class="toggle-row"><span data-i18n="searchResults">검색 결과</span><input type="checkbox" id="filter-search" checked></label>
+      <label class="toggle-row"><span data-i18n="bookmarks">북마크</span><input type="checkbox" id="filter-bookmarks"></label>
     </div>
 
     <div class="section">

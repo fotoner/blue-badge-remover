@@ -60,6 +60,20 @@ describe('shouldHideTweet', () => {
     const ctx = { ...baseContext, pageType: 'search' as const };
     expect(shouldHideTweet(ctx)).toBe(true);
   });
+
+  it('should not hide on bookmarks page when bookmarks filter is off (default)', () => {
+    const ctx = { ...baseContext, pageType: 'bookmarks' as const };
+    expect(shouldHideTweet(ctx)).toBe(false);
+  });
+
+  it('should hide on bookmarks page when bookmarks filter is on', () => {
+    const settings: Settings = {
+      ...DEFAULT_SETTINGS,
+      filter: { ...DEFAULT_SETTINGS.filter, bookmarks: true },
+    };
+    const ctx = { ...baseContext, settings, pageType: 'bookmarks' as const };
+    expect(shouldHideTweet(ctx)).toBe(true);
+  });
 });
 
 describe('shouldHideRetweet', () => {

@@ -33,4 +33,33 @@ describe('detectBadgeSvg', () => {
     el.appendChild(svg);
     expect(detectBadgeSvg(el)).toBe(false);
   });
+
+  it('should return false for gold badge with alternate color', () => {
+    const el = document.createElement('div');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('data-testid', 'icon-verified');
+    svg.setAttribute('fill', '#D4A72C');
+    el.appendChild(svg);
+    expect(detectBadgeSvg(el)).toBe(false);
+  });
+
+  it('should return false when child path has gold fill', () => {
+    const el = document.createElement('div');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('data-testid', 'icon-verified');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('fill', '#E8B829');
+    svg.appendChild(path);
+    el.appendChild(svg);
+    expect(detectBadgeSvg(el)).toBe(false);
+  });
+
+  it('should return false for gold badge with linearGradient (actual X DOM)', () => {
+    const el = document.createElement('div');
+    el.innerHTML = `<svg viewBox="0 0 22 22" data-testid="icon-verified">
+      <g><linearGradient id="a"><stop offset="0" stop-color="#f4e72a"></stop><stop offset=".539" stop-color="#cd8105"></stop></linearGradient>
+      <path fill="url(#a)" d="M13 3L11 1"></path></g>
+    </svg>`;
+    expect(detectBadgeSvg(el)).toBe(false);
+  });
 });

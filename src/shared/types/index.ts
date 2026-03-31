@@ -4,6 +4,7 @@ export interface Settings {
     timeline: boolean;
     replies: boolean;
     search: boolean;
+    bookmarks: boolean;
   };
   hideMode: 'remove' | 'collapse';
   retweetFilter: boolean;

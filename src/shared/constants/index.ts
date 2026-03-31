@@ -6,6 +6,7 @@ export const DEFAULT_SETTINGS: Settings = {
     timeline: true,
     replies: true,
     search: true,
+    bookmarks: false,
   },
   hideMode: 'remove',
   retweetFilter: true,
@@ -26,6 +27,7 @@ export const STORAGE_KEYS = {
   LAST_SYNC_AT: 'lastSyncAt',
   CUSTOM_FILTER_LIST: 'customFilterList',
   COLLECTED_FADAKS: 'collectedFadaks',
+  DISABLED_FILTER_CATEGORIES: 'disabledFilterCategories',
 } as const;
 
 export const X_GRAPHQL_ENDPOINTS = [
