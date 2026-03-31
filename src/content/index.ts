@@ -136,7 +136,6 @@ async function init(): Promise<void> {
     console.log('[BBR STORAGE]', JSON.stringify({
       followCount: ((allStorage['followList'] as string[]) ?? []).length,
       whitelistCount: ((allStorage['whitelist'] as string[]) ?? []).length,
-      token: allStorage['token'] ? 'SET' : 'UNSET',
       lastSyncAt: allStorage['lastSyncAt'],
     }));
   }

@@ -31,7 +31,6 @@ export interface StorageSchema {
   whitelist: string[];
   followList: string[];
   currentUserId: string | null;
-  token: string | null;
   lastSyncAt: string | null;
   customFilterList: string;
 }
