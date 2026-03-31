@@ -3,7 +3,13 @@ import { DEFAULT_SETTINGS, STORAGE_KEYS } from '@shared/constants';
 
 export async function getSettings(): Promise<Settings> {
   const result = await chrome.storage.local.get([STORAGE_KEYS.SETTINGS]);
-  return (result[STORAGE_KEYS.SETTINGS] as Settings | undefined) ?? DEFAULT_SETTINGS;
+  const stored = result[STORAGE_KEYS.SETTINGS] as Partial<Settings> | undefined;
+  if (!stored) return DEFAULT_SETTINGS;
+  return {
+    ...DEFAULT_SETTINGS,
+    ...stored,
+    filter: { ...DEFAULT_SETTINGS.filter, ...stored.filter },
+  };
 }
 
 export async function saveSettings(settings: Settings): Promise<void> {
