@@ -12,6 +12,9 @@ export const DEFAULT_SETTINGS: Settings = {
   quoteMode: 'off',
   debugMode: false,
   language: 'ko',
+  keywordFilterEnabled: false,
+  keywordCollectorEnabled: false,
+  defaultFilterEnabled: true,
 };
 
 export const STORAGE_KEYS = {
@@ -21,6 +24,8 @@ export const STORAGE_KEYS = {
   FOLLOW_CACHE: 'followCache',
   CURRENT_USER_ID: 'currentUserId',
   LAST_SYNC_AT: 'lastSyncAt',
+  CUSTOM_FILTER_LIST: 'customFilterList',
+  COLLECTED_FADAKS: 'collectedFadaks',
 } as const;
 
 export const X_GRAPHQL_ENDPOINTS = [
@@ -34,4 +39,6 @@ export const MESSAGE_TYPES = {
   USER_ID: 'BBR_USER_ID',
   CSRF_TOKEN: 'BBR_CSRF_TOKEN',
   FOLLOW_DATA: 'BBR_FOLLOW_DATA',
+  PROFILE_DATA: 'BBR_PROFILE_DATA',
+  CONTENT_READY: 'BBR_CONTENT_READY',
 } as const;

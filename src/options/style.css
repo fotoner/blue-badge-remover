@@ -1,0 +1,156 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  color: #e7e9ea;
+  background: #15202b;
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+header {
+  margin-bottom: 32px;
+}
+
+header h1 {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.subtitle {
+  color: #71767b;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.section {
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(56, 68, 77, 0.5);
+}
+
+.section:last-child {
+  border-bottom: none;
+}
+
+.section h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.readonly-badge {
+  font-size: 11px;
+  font-weight: 400;
+  background: #273340;
+  border: 1px solid #38444d;
+  color: #71767b;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.filter-textarea {
+  width: 100%;
+  min-height: 120px;
+  background: #1e2732;
+  border: 1px solid #38444d;
+  color: #e7e9ea;
+  padding: 12px;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.filter-textarea:focus {
+  border-color: #1d9bf0;
+}
+
+.filter-textarea[readonly] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  resize: none;
+}
+
+.btn-primary {
+  margin-top: 12px;
+  background: #1d9bf0;
+  color: #fff;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-primary:hover {
+  background: #1a8cd8;
+}
+
+.save-status {
+  margin-top: 8px;
+  font-size: 13px;
+  min-height: 20px;
+}
+
+.save-status.success { color: #00ba7c; }
+.save-status.error { color: #f4212e; }
+
+.rule-stats {
+  color: #71767b;
+  font-size: 13px;
+}
+
+.guide ul {
+  padding-left: 20px;
+  color: #71767b;
+  font-size: 13px;
+}
+
+.guide ul li {
+  margin-bottom: 4px;
+}
+
+.guide code {
+  background: #273340;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #e7e9ea;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.section-header h2 {
+  margin-bottom: 0;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #71767b;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}

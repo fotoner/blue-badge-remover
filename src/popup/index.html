@@ -31,6 +31,17 @@
     </div>
 
     <div class="section">
+      <label class="toggle-row">
+        <span data-i18n="keywordFilterBeta">[Beta] 키워드 필터</span>
+        <input type="checkbox" id="keywordFilterEnabled">
+      </label>
+      <p class="hint" data-i18n="keywordFilterBetaDesc">모든 파딱이 아닌, 특정 키워드에 해당하는 바이오나 본문을 가지고 있는 글만 가립니다. 가끔 유용한 정보 파딱 등의 글을 보고 싶은 분들에게 추천입니다.</p>
+      <div id="filter-mode-group" class="filter-mode-group">
+        <button type="button" id="open-options-btn" class="btn-secondary" data-i18n="advancedFilterSettings">고급 필터 설정</button>
+      </div>
+    </div>
+
+    <div class="section">
       <h2 data-i18n="filterScope">필터링 범위</h2>
       <p class="desc" data-i18n="filterScopeDesc">파딱 트윗을 숨길 영역을 선택합니다</p>
       <label class="toggle-row"><span data-i18n="homeTimeline">홈 타임라인</span><input type="checkbox" id="filter-timeline" checked></label>
@@ -115,7 +126,13 @@
         <input type="checkbox" id="debugMode">
       </label>
       <p class="hint" data-i18n="debugModeHint">각 트윗에 처리 정보 라벨을 표시하고 콘솔에 로그를 출력합니다</p>
-      <p class="credit">made by <a href="https://x.com/fotoner_p" target="_blank">@fotoner_p</a></p>
+      <label class="toggle-row">
+        <span data-i18n="keywordCollector">키워드 수집</span>
+        <input type="checkbox" id="keywordCollectorEnabled">
+      </label>
+      <p class="hint" data-i18n="keywordCollectorHint">필터링되지 않은 파딱의 텍스트를 수집합니다 (키워드만 숨김 모드 전용)</p>
+      <button type="button" id="open-collector-btn" class="btn-secondary btn-secondary--mt" data-i18n="viewCollectedData">수집 데이터 보기</button>
+      <p class="credit">made by <a href="https://x.com/fotoner_p" target="_blank" rel="noopener">@fotoner_p</a></p>
     </div>
   </div>
 

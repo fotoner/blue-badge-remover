@@ -47,6 +47,13 @@ function renderSettings(): void {
 
   const quoteModeRadio = document.querySelector(`input[name="quoteMode"][value="${settings.quoteMode}"]`) as HTMLInputElement | null;
   if (quoteModeRadio) quoteModeRadio.checked = true;
+
+  (document.getElementById('keywordFilterEnabled') as HTMLInputElement).checked =
+    settings.keywordFilterEnabled;
+  (document.getElementById('keywordCollectorEnabled') as HTMLInputElement).checked =
+    settings.keywordCollectorEnabled;
+  const filterModeGroup = document.getElementById('filter-mode-group') as HTMLElement;
+  filterModeGroup.style.display = settings.keywordFilterEnabled ? 'block' : 'none';
 }
 
 async function renderSyncStatus(): Promise<void> {
@@ -83,6 +90,12 @@ function bindEvents(): void {
     settings.language = (document.getElementById('language') as HTMLSelectElement).value as Settings['language'];
     settings.hideMode = (document.querySelector('input[name="hideMode"]:checked') as HTMLInputElement).value as Settings['hideMode'];
     settings.quoteMode = (document.querySelector('input[name="quoteMode"]:checked') as HTMLInputElement).value as Settings['quoteMode'];
+    settings.keywordFilterEnabled = (
+      document.getElementById('keywordFilterEnabled') as HTMLInputElement
+    ).checked;
+    settings.keywordCollectorEnabled = (
+      document.getElementById('keywordCollectorEnabled') as HTMLInputElement
+    ).checked;
     await saveSettings(settings);
   };
 
@@ -127,6 +140,21 @@ function bindEvents(): void {
     const btn = document.getElementById('clear-cache-btn') as HTMLButtonElement;
     btn.textContent = t('clearCacheDone', settings.language);
     setTimeout(() => { btn.textContent = t('clearFollowCache', settings.language); }, 2000);
+  });
+
+  document.getElementById('keywordFilterEnabled')!.addEventListener('change', async () => {
+    const enabled = (document.getElementById('keywordFilterEnabled') as HTMLInputElement).checked;
+    const filterModeGroup = document.getElementById('filter-mode-group') as HTMLElement;
+    filterModeGroup.style.display = enabled ? 'block' : 'none';
+    await save();
+  });
+
+  document.getElementById('open-options-btn')!.addEventListener('click', () => {
+    chrome.runtime.openOptionsPage();
+  });
+
+  document.getElementById('open-collector-btn')!.addEventListener('click', () => {
+    void chrome.tabs.create({ url: chrome.runtime.getURL('src/collector/index.html') });
   });
 }
 

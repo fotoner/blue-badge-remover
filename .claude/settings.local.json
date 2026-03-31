@@ -35,7 +35,9 @@
       "mcp__playwright__browser_click",
       "Bash(ls /Users/fotone/dev/blue-badge-remover/src/shared/i18n*)",
       "Bash(ls /Users/fotone/dev/blue-badge-remover/src/shared/utils/i18n*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Skill(plan-design-review)",
+      "Bash(gh pr:*)"
     ]
   }
 }

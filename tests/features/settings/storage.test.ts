@@ -38,19 +38,15 @@ describe('getSettings', () => {
   });
 
   it('should fill missing top-level fields from defaults on upgrade', async () => {
-    // Simulate a stored object that is missing some keys (e.g. future fields added in v1.1.0)
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { debugMode, ...withoutDebugMode } = DEFAULT_SETTINGS;
     mockStorage['settings'] = withoutDebugMode;
     const settings = await getSettings();
-    // Existing fields preserved
     expect(settings.enabled).toBe(DEFAULT_SETTINGS.enabled);
-    // Missing field filled from default
     expect(settings.debugMode).toBe(DEFAULT_SETTINGS.debugMode);
   });
 
   it('should deep merge nested filter object', async () => {
-    // Stored settings have filter without a new sub-key
     const partial = {
       ...DEFAULT_SETTINGS,
       filter: { timeline: false, replies: true, search: false },
@@ -60,10 +56,16 @@ describe('getSettings', () => {
     expect(settings.filter.timeline).toBe(false);
     expect(settings.filter.replies).toBe(true);
     expect(settings.filter.search).toBe(false);
-    // All default filter keys should exist
     for (const key of Object.keys(DEFAULT_SETTINGS.filter)) {
       expect(settings.filter).toHaveProperty(key);
     }
+  });
+
+  it('should merge stored settings with defaults when fields are missing (migration)', async () => {
+    mockStorage['settings'] = { enabled: true };
+    const settings = await getSettings();
+    expect(settings.enabled).toBe(true);
+    expect(settings.keywordFilterEnabled).toBe(DEFAULT_SETTINGS.keywordFilterEnabled);
   });
 });
 
