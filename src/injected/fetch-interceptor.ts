@@ -49,10 +49,9 @@ window.fetch = async function patchedFetch(
     try {
       const cloned = response.clone();
       const data = await cloned.json();
-      extractBadgeData(data);
-      extractViewerUserId(data);
       const endpoint = url.split('/').slice(-2).join('/');
-      extractProfileData(data, endpoint);
+      extractBadgeData(data, endpoint);
+      extractViewerUserId(data);
 
       const urlLower = url.toLowerCase();
       if (urlLower.includes('follow')) {
@@ -93,10 +92,9 @@ XMLHttpRequest.prototype.send = function patchedXhrSend(body?: Document | XMLHtt
     xhr.addEventListener('load', function () {
       try {
         const data = JSON.parse(xhr.responseText) as unknown;
-        extractBadgeData(data);
-        extractViewerUserId(data);
         const endpoint = url.split('/').slice(-2).join('/');
-        extractProfileData(data, endpoint);
+        extractBadgeData(data, endpoint);
+        extractViewerUserId(data);
         if (url.toLowerCase().includes('follow')) {
           extractFollowData(data);
         }
@@ -108,7 +106,7 @@ XMLHttpRequest.prototype.send = function patchedXhrSend(body?: Document | XMLHtt
   return origXhrSend.call(this, body);
 };
 
-function extractBadgeData(data: unknown): void {
+function extractBadgeData(data: unknown, endpointHint?: string): void {
   const users: Array<Record<string, unknown>> = [];
   findUserObjects(data, users);
 
@@ -117,6 +115,46 @@ function extractBadgeData(data: unknown): void {
       type: MESSAGE_TYPES.BADGE_DATA,
       users,
     }, '*');
+
+    // Derive profiles from already-collected users — avoids a second full traversal
+    const profiles: ProfileEntry[] = [];
+    for (const user of users) {
+      const restId = user['rest_id'];
+      if (typeof restId !== 'string') continue;
+      const legacy = user['legacy'] as Record<string, unknown> | null;
+      if (!legacy) continue;
+      const core = user['core'] as Record<string, unknown> | null;
+      const handle =
+        typeof legacy['screen_name'] === 'string' ? legacy['screen_name'] :
+        typeof core?.['screen_name'] === 'string' ? core['screen_name'] as string : '';
+      const displayName =
+        typeof legacy['name'] === 'string' ? legacy['name'] :
+        typeof core?.['name'] === 'string' ? core['name'] as string : '';
+      profiles.push({
+        userId: restId,
+        handle,
+        displayName,
+        bio: typeof legacy['description'] === 'string' ? legacy['description'] : '',
+      });
+    }
+
+    if (profiles.length > 0) {
+      for (const p of profiles) {
+        if (!cachedProfiles.some((c) => c.userId === p.userId)) {
+          cachedProfiles.push(p);
+        }
+      }
+      window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles }, '*');
+
+      if (bbrDebugMode) {
+        const withBio = profiles.filter((p) => p.bio);
+        const withoutBio = profiles.filter((p) => !p.bio);
+        console.log(
+          `[BBR INTERCEPTOR] ${endpointHint ?? 'unknown'}: ${profiles.length} profiles, ${withBio.length} with bio, ${withoutBio.length} without`,
+          withBio.length > 0 ? withBio.map((p) => `${p.handle}: "${p.bio.slice(0, 30)}"`) : '(none with bio)',
+        );
+      }
+    }
   }
 }
 
@@ -208,6 +246,7 @@ function findUserObjects(obj: unknown, result: Array<Record<string, unknown>>): 
       is_blue_verified: record['is_blue_verified'],
       verified_type: record['verified_type'],
       legacy: record['legacy'],
+      core: record['core'],
     });
   }
 
@@ -227,66 +266,6 @@ interface ProfileEntry {
   bio: string;
 }
 
-function extractProfileData(data: unknown, endpointHint?: string): void {
-  const profiles: ProfileEntry[] = [];
-  findProfileObjects(data, profiles);
-  if (profiles.length > 0) {
-    // Cache for replay when content script signals ready
-    for (const p of profiles) {
-      if (!cachedProfiles.some((c) => c.userId === p.userId)) {
-        cachedProfiles.push(p);
-      }
-    }
-    window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles }, '*');
-
-    if (bbrDebugMode) {
-      const withBio = profiles.filter((p) => p.bio);
-      const withoutBio = profiles.filter((p) => !p.bio);
-      console.log(
-        `[BBR INTERCEPTOR] ${endpointHint ?? 'unknown'}: ${profiles.length} profiles, ${withBio.length} with bio, ${withoutBio.length} without`,
-        withBio.length > 0 ? withBio.map((p) => `${p.handle}: "${p.bio.slice(0, 30)}"`) : '(none with bio)',
-      );
-    }
-  }
-}
-
-function findProfileObjects(obj: unknown, result: ProfileEntry[]): void {
-  if (obj === null || typeof obj !== 'object') return;
-  const record = obj as Record<string, unknown>;
-
-  if (
-    'rest_id' in record &&
-    'is_blue_verified' in record &&
-    'legacy' in record &&
-    typeof record['rest_id'] === 'string'
-  ) {
-    const legacy = record['legacy'] as Record<string, unknown> | null;
-    // X API moved screen_name/name from legacy to core in newer responses
-    const core = record['core'] as Record<string, unknown> | null;
-    if (legacy) {
-      const handle =
-        typeof legacy['screen_name'] === 'string' ? legacy['screen_name'] :
-        typeof core?.['screen_name'] === 'string' ? core['screen_name'] as string : '';
-      const displayName =
-        typeof legacy['name'] === 'string' ? legacy['name'] :
-        typeof core?.['name'] === 'string' ? core['name'] as string : '';
-      result.push({
-        userId: record['rest_id'] as string,
-        handle,
-        displayName,
-        bio: typeof legacy['description'] === 'string' ? legacy['description'] : '',
-      });
-    }
-  }
-
-  for (const value of Object.values(record)) {
-    if (Array.isArray(value)) {
-      value.forEach((item) => findProfileObjects(item, result));
-    } else if (typeof value === 'object') {
-      findProfileObjects(value, result);
-    }
-  }
-}
 
 interface ArticleData {
   handle: string;
