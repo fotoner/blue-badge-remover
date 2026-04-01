@@ -5,6 +5,7 @@ import type { Settings } from '@shared/types';
 export const FADAK_BANNER_ID = 'bbr-fadak-profile-banner';
 const BANNER_STYLE_ATTR = 'data-bbr-banner-styles';
 let fadakBannerObserver: MutationObserver | null = null;
+let bannerResizeCleanup: (() => void) | null = null;
 
 export interface FadakBannerDeps {
   isProfilePage: () => boolean;
@@ -111,7 +112,29 @@ export function showFadakProfileBanner(deps: FadakBannerDeps): void {
     });
     banner.appendChild(btn);
 
-    stickyHeader.appendChild(banner);
+    const col = document.querySelector('[data-testid="primaryColumn"]') as HTMLElement | null;
+    const colRect = col?.getBoundingClientRect();
+    const headerRect = (stickyHeader as HTMLElement).getBoundingClientRect();
+    banner.style.cssText = [
+      'position:fixed',
+      `top:${headerRect.bottom}px`,
+      `left:${colRect?.left ?? 0}px`,
+      `width:${colRect?.width ?? 600}px`,
+      'z-index:9999',
+    ].join(';');
+
+    const reposition = (): void => {
+      const c = document.querySelector('[data-testid="primaryColumn"]') as HTMLElement | null;
+      const h = (stickyHeader as HTMLElement).getBoundingClientRect();
+      const cRect = c?.getBoundingClientRect();
+      banner.style.top = `${h.bottom}px`;
+      banner.style.left = `${cRect?.left ?? 0}px`;
+      banner.style.width = `${cRect?.width ?? 600}px`;
+    };
+    window.addEventListener('resize', reposition);
+    bannerResizeCleanup = () => window.removeEventListener('resize', reposition);
+
+    document.body.appendChild(banner);
     return true;
   }
 
@@ -132,6 +155,8 @@ export function showFadakProfileBanner(deps: FadakBannerDeps): void {
 
 export function removeFadakBanner(): void {
   document.getElementById(FADAK_BANNER_ID)?.remove();
+  bannerResizeCleanup?.();
+  bannerResizeCleanup = null;
   if (fadakBannerObserver) {
     fadakBannerObserver.disconnect();
     fadakBannerObserver = null;
