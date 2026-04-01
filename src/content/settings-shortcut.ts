@@ -32,6 +32,7 @@ export function injectSettingsShortcut(): void {
 let observer: MutationObserver | null = null;
 
 export function observeSettingsShortcut(): void {
+  if (!navigator.userAgent.includes('Firefox') || !navigator.userAgent.includes('Android')) return;
   injectSettingsShortcut();
   if (observer) return;
   observer = new MutationObserver(() => {
