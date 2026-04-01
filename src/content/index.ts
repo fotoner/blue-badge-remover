@@ -194,12 +194,13 @@ function listenForMessages(): void {
       const handles = event.data.handles as string[];
       const source = event.data.source as string | undefined;
       if (source) {
-        // Inline detection from API response — update followSet without storing to storage.
-        // Accumulate all follows within one tick, then reprocess once to avoid flicker.
+        // Inline fiber detection — update followSet immediately for this tick,
+        // and persist to storage as a rolling cache so follows survive page refreshes.
         if (handles?.length) {
           for (const h of handles) {
             followSet.add(h.toLowerCase());
           }
+          void saveFollowHandles(handles, followCollectorDeps);
           if (domFollowReprocessTimer !== null) clearTimeout(domFollowReprocessTimer);
           domFollowReprocessTimer = setTimeout(() => {
             domFollowReprocessTimer = null;
