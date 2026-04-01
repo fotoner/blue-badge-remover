@@ -187,7 +187,21 @@ function listenForMessages(): void {
         if (withBio.length > 0) console.log('[BBR PROFILE_DATA bios]', withBio.map((p) => `${p.handle}: ${p.bio.slice(0, 30)}`));
       }
       if (currentSettings.keywordFilterEnabled) {
-        reprocessExistingTweets();
+        const updatedHandles = new Set(
+          (event.data.profiles as Array<{ handle: string }>).map((p) => p.handle.toLowerCase()),
+        );
+        const feed = document.querySelector('main') ?? document.body;
+        feed.querySelectorAll('article[data-testid="tweet"]').forEach((tweet) => {
+          const author = extractTweetAuthor(tweet as HTMLElement);
+          if (author && updatedHandles.has(author.handle.toLowerCase())) {
+            tweet.querySelector('[data-bbr-debug]')?.remove();
+            try {
+              processTweet(tweet as HTMLElement);
+            } catch (e) {
+              if (currentSettings?.debugMode) console.error('[BBR] processTweet error', e);
+            }
+          }
+        });
       }
     }
 
