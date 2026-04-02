@@ -201,6 +201,10 @@ function listenForMessages(): void {
             followSet.add(h.toLowerCase());
           }
           void saveFollowHandles(handles, followCollectorDeps);
+          const pathHandle = window.location.pathname.split('/')[1]?.toLowerCase();
+          if (pathHandle && followSet.has(pathHandle)) {
+            removeFadakBanner();
+          }
           if (domFollowReprocessTimer !== null) clearTimeout(domFollowReprocessTimer);
           domFollowReprocessTimer = setTimeout(() => {
             domFollowReprocessTimer = null;
@@ -214,7 +218,10 @@ function listenForMessages(): void {
         const pathUser = window.location.pathname.split('/')[1]?.toLowerCase();
         if (myHandle && pathUser && pathUser !== myHandle) return;
         if (handles?.length) {
-          void saveFollowHandles(handles, followCollectorDeps);
+          void saveFollowHandles(handles, followCollectorDeps).then(() => {
+            restoreHiddenTweets();
+            reprocessExistingTweets();
+          });
         }
       }
     }
@@ -262,10 +269,16 @@ function listenForSettingsChanges(): void {
     const followChange = changes[STORAGE_KEYS.FOLLOW_LIST];
     if (followChange) {
       followSet = new Set(followChange.newValue as string[]);
+      const pathHandle = window.location.pathname.split('/')[1]?.toLowerCase();
+      if (pathHandle && followSet.has(pathHandle)) {
+        removeFadakBanner();
+      }
     }
     const whitelistChange = changes[STORAGE_KEYS.WHITELIST];
     if (whitelistChange) {
       whitelistSet = new Set(whitelistChange.newValue as string[]);
+      restoreHiddenTweets();
+      reprocessExistingTweets();
     }
     const filterListChange = changes[STORAGE_KEYS.CUSTOM_FILTER_LIST];
     if (filterListChange) {
