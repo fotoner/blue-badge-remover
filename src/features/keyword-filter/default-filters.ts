@@ -24,6 +24,8 @@ freedom
 곰돌이
 진핑
 FSD
+국민
+정부
 
 ! 경제
 BTC
