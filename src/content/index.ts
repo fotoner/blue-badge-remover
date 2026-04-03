@@ -2,12 +2,12 @@
 // Content script 진입점. 초기화 + 모듈 연결만 담당.
 import { FeedObserver, setTweetHiderLanguage } from '@features/content-filter';
 import { getSettings as loadSettings, addToWhitelist } from '@features/settings';
-import { MESSAGE_TYPES, STORAGE_KEYS } from '@shared/constants';
+import { MESSAGE_TYPES, STORAGE_KEYS, TIMINGS } from '@shared/constants';
 import { logger } from '@shared/utils/logger';
 import { showFadakProfileBanner, removeFadakBanner } from './fadak-banner';
 import { listenForNavigation, setOnNavigate } from './navigation';
 import { collectFollowsFromDOM, saveFollowHandles, disconnectFollowObserver, listenForFollowButtonClicks, getMyHandle } from './follow-collector';
-import { isProfilePage } from './page-utils';
+import { isProfilePage, getProfileLinkHref } from './page-utils';
 import { observeSettingsShortcut } from './settings-shortcut';
 import { setSettings, setFollowSet, setWhitelistSet, setCurrentUserHandle, getSettings, getFollowSet, getCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, profileCache, collectorBuffer } from './state';
 import { loadFilterRules, flushCollector } from './collector-buffer';
@@ -38,9 +38,7 @@ const followCollectorDeps = {
 };
 
 async function detectAndHandleAccountSwitch(): Promise<void> {
-  const profileLink = document.querySelector('a[data-testid="AppTabBar_Profile_Link"]');
-  if (!profileLink) return;
-  const href = profileLink.getAttribute('href');
+  const href = getProfileLinkHref();
   if (!href) return;
   const currentHandle = href.slice(1).toLowerCase();
   if (!currentHandle) return;
@@ -65,14 +63,14 @@ async function detectAndHandleAccountSwitch(): Promise<void> {
 }
 
 function startAccountSwitchWatcher(): void {
-  let lastHref = document.querySelector('a[data-testid="AppTabBar_Profile_Link"]')?.getAttribute('href') ?? '';
+  let lastHref = getProfileLinkHref() ?? '';
   setInterval(() => {
-    const href = document.querySelector('a[data-testid="AppTabBar_Profile_Link"]')?.getAttribute('href') ?? '';
+    const href = getProfileLinkHref() ?? '';
     if (href && href !== lastHref) {
       lastHref = href;
       void detectAndHandleAccountSwitch();
     }
-  }, 2000);
+  }, TIMINGS.ACCOUNT_SWITCH_POLL);
 }
 
 function startObserving(): void {
@@ -120,7 +118,7 @@ function waitForHoverCardBio(card: HTMLElement): void {
     if (tryExtractBioFromHoverCard(card)) inner.disconnect();
   });
   inner.observe(card, { childList: true, subtree: true });
-  setTimeout(() => inner.disconnect(), 3000);
+  setTimeout(() => inner.disconnect(), TIMINGS.HOVER_CARD_TIMEOUT);
 }
 
 function tryExtractBioFromHoverCard(card: HTMLElement): boolean {
@@ -166,7 +164,7 @@ async function init(): Promise<void> {
   setDebugFlag(settings.debugMode);
   listenForMessages(followCollectorDeps);
   listenForSettingsChanges(setDebugFlag);
-  setInterval(() => { if (getSettings().keywordCollectorEnabled) void flushCollector(); }, 5000);
+  setInterval(() => { if (getSettings().keywordCollectorEnabled) void flushCollector(); }, TIMINGS.COLLECTOR_FLUSH_INTERVAL);
 
   window.postMessage({ type: MESSAGE_TYPES.CONTENT_READY }, window.location.origin);
 
@@ -188,7 +186,7 @@ async function init(): Promise<void> {
     }
     showFadakProfileBanner(fadakBannerDeps);
     startAccountSwitchWatcher();
-  }, 3000);
+  }, TIMINGS.INITIAL_SETUP_DELAY);
 
   if (settings.debugMode) {
     const allStorage = await chrome.storage.local.get(null);

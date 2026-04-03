@@ -1,5 +1,6 @@
 // src/content/fadak-banner.ts
 import { t } from '@shared/i18n';
+import { TIMINGS } from '@shared/constants';
 import type { Settings } from '@shared/types';
 
 export const FADAK_BANNER_ID = 'bbr-fadak-profile-banner';
@@ -107,7 +108,7 @@ export function showFadakProfileBanner(deps: FadakBannerDeps): void {
       text.textContent = t('addedToWhitelist', lang);
       banner.className = 'bbr-banner-success';
       btn.remove();
-      setTimeout(() => banner.remove(), 1500);
+      setTimeout(() => banner.remove(), TIMINGS.BANNER_SUCCESS_DISMISS);
     });
     banner.appendChild(btn);
 
@@ -127,7 +128,7 @@ export function showFadakProfileBanner(deps: FadakBannerDeps): void {
     }
   });
   fadakBannerObserver.observe(target, { childList: true, subtree: true });
-  setTimeout(() => { fadakBannerObserver?.disconnect(); fadakBannerObserver = null; }, 10000);
+  setTimeout(() => { fadakBannerObserver?.disconnect(); fadakBannerObserver = null; }, TIMINGS.BANNER_OBSERVER_TIMEOUT);
 }
 
 export function removeFadakBanner(): void {
