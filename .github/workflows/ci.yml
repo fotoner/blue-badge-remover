@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit --skipLibCheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build Chrome
+        run: npm run build
+
+      - name: Build Firefox
+        run: npm run build:firefox
+
+      - name: Upload Chrome build
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-mv3
+          path: dist/chrome-mv3/
+
+      - name: Upload Firefox build
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: firefox-mv2
+          path: dist/firefox-mv2/

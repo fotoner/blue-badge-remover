@@ -6,7 +6,7 @@
     "moduleResolution": "bundler",
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    "types": ["chrome", "vitest/globals"],
+    "types": ["chrome", "vitest/globals", ".wxt/wxt.d.ts"],
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -19,6 +19,6 @@
       "@features/*": ["./src/features/*"]
     }
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"],
+  "include": ["src/**/*.ts", "tests/**/*.ts", "entrypoints/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

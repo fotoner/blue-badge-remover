@@ -16,24 +16,32 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - run: npm ci
 
       - run: npm test
 
-      - run: npm run build
+      # Chrome build + zip
+      - name: Build Chrome
+        run: npm run build
 
-      # dist/ 폴더를 zip으로 패키징
-      - name: Package extension
-        run: |
-          cd dist
-          zip -r ../blue-badge-remover-${{ github.ref_name }}.zip .
+      - name: Package Chrome
+        run: cd dist/chrome-mv3 && zip -r ../../blue-badge-remover-chrome-${{ github.ref_name }}.zip .
 
-      # GitHub Release 생성 + zip 첨부
+      # Firefox build + zip
+      - name: Build Firefox
+        run: npm run build:firefox
+
+      - name: Package Firefox
+        run: cd dist/firefox-mv2 && zip -r ../../blue-badge-remover-firefox-${{ github.ref_name }}.zip .
+
+      # GitHub Release with both zips
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: blue-badge-remover-${{ github.ref_name }}.zip
+          files: |
+            blue-badge-remover-chrome-${{ github.ref_name }}.zip
+            blue-badge-remover-firefox-${{ github.ref_name }}.zip
           generate_release_notes: true
