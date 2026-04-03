@@ -1,21 +1,35 @@
 # TODOS
 
-## Phase 2-1: content/index.ts 리팩토링 시
+## 완료
 
-### reprocessExistingTweets() 버그 수정
-- **What:** `restoreHiddenTweets()`가 quote-only hide를 복원하지 않고, `reprocessExistingTweets()`가 debug label이 있는 트윗을 건너뜀
-- **Why:** 설정 변경 시 quote 상태가 고착되고, debug 모드에서 필터링 재평가가 안 됨
-- **Pros:** 설정 변경이 모든 트윗에 정확히 반영됨
-- **Cons:** reprocessing 로직 복잡도 증가
-- **Context:** Codex plan review에서 발견 (2026-04-03). `content/index.ts:227` (restoreHiddenTweets), `content/index.ts:497` (reprocessExistingTweets), `content/index.ts:529`, `tweet-processing.ts:181` (addDebugLabel). 리팩토링 시 tweet-orchestrator.ts로 추출하면서 함께 수정.
-- **Depends on:** Phase 2-1 content/index.ts 분해
+### ~~reprocessExistingTweets() 버그 수정~~ (v1.3.2)
+- quote-only hide 복원 안 되던 문제 수정
 
-## Phase 2-2: WXT 전환 시
+### ~~public/fetch-interceptor.js 스테일 파일 정리~~ (v1.3.0 WXT 전환)
+- WXT 전환 시 자동 제거됨
 
-### public/fetch-interceptor.js 스테일 파일 정리
-- **What:** `public/fetch-interceptor.js`와 manifest의 `web_accessible_resources`에서 이 파일 참조 제거
-- **Why:** 현재 content script의 `world: "MAIN"`으로 주입하므로 이 파일은 사용되지 않는 유물
-- **Pros:** 불필요한 에셋 제거, manifest 정리
-- **Cons:** 없음
-- **Context:** Codex plan review에서 발견 (2026-04-03). `public/fetch-interceptor.js`, `src/manifest.json:45-49`. WXT 전환 시 manifest가 wxt.config.ts로 이동하므로 자연스럽게 정리.
-- **Depends on:** Phase 2-2 WXT 전환
+## 수동 작업 필요
+
+### 스토어 API 키 발급
+- [ ] Chrome Web Store: Google Cloud Console → OAuth → client ID/secret/refresh token
+- [ ] Firefox AMO: addons.mozilla.org → 개발자 허브 → API 키 (JWT issuer/secret)
+- [ ] Edge Add-ons: Microsoft Partner Center → API 키
+- [ ] GitHub Secrets에 등록 후 release.yml의 자동 제출 활성화
+
+### 웹스토어 페이지 개선
+- [ ] 영문 설명 작성/개선
+- [ ] before/after 스크린샷 제작
+- [ ] Privacy Policy URL 등록 (docs/PRIVACY.md → GitHub Pages 또는 raw URL)
+
+## 향후
+
+### 모바일 E2E PoC
+- Firefox Android 자동 테스트 접근법 조사
+- Appium 또는 실기기 기반 테스트 가능성 검토
+
+### TypeScript strict 모드 수정
+- tsc --noEmit 에러 6개 수정
+- CI에 타입 체크 복원
+
+### tweet-processing.ts 테스트
+- DOM 추출 유틸리티 15-20개 테스트 (extractTweetAuthor, findQuoteBlock 등)

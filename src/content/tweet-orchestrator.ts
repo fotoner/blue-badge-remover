@@ -132,8 +132,20 @@ function processQuote(tweetEl: HTMLElement, settings: ReturnType<typeof getSetti
 
 export function restoreHiddenTweets(): void {
   const feed = document.querySelector('main') ?? document.body;
+  // 전체 트윗 숨김 복원
   feed.querySelectorAll('article[data-testid="tweet"][data-bbr-original]').forEach((tweet) => {
     showTweet(tweet as HTMLElement);
+  });
+  // quote-only 숨김 복원
+  feed.querySelectorAll('[data-bbr-hidden-quote]').forEach((quote) => {
+    quote.removeAttribute('data-bbr-hidden-quote');
+    const placeholder = quote.querySelector('[data-bbr-collapsed]');
+    placeholder?.remove();
+    Array.from(quote.childNodes).forEach((child) => {
+      if (child instanceof HTMLElement) {
+        child.style.display = '';
+      }
+    });
   });
 }
 
