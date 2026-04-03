@@ -189,11 +189,7 @@ function bindEvents(): void {
   });
 
   document.getElementById('open-options-btn')!.addEventListener('click', () => {
-    if (isFirefoxAndroid()) {
-      window.location.href = chrome.runtime.getURL('/options.html');
-    } else {
-      chrome.runtime.openOptionsPage();
-    }
+    openPage(chrome.runtime.getURL('/options.html'));
   });
 
   document.getElementById('open-collector-btn')!.addEventListener('click', () => {
