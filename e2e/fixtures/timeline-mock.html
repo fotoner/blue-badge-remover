@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>X Timeline Mock</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; background: #000; color: #e7e9ea; margin: 0; }
+    main { max-width: 600px; margin: 0 auto; }
+    article { border-bottom: 1px solid #2f3336; padding: 12px 16px; }
+    .hidden { display: none; }
+    [data-testid="socialContext"] { color: #71767b; font-size: 13px; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+<main>
+  <!-- Tweet 1: 파딱 계정 (뱃지 있음, 팔로우 안 함) — 숨겨져야 함 -->
+  <article data-testid="tweet" id="tweet-fadak">
+    <div>
+      <a role="link" href="/fadak_user" data-testid="User-Name">
+        <span>파딱유저</span>
+        <span>@fadak_user</span>
+      </a>
+      <!-- Blue badge SVG (paid) -->
+      <svg viewBox="0 0 22 22" aria-label="Verified account" data-testid="icon-verified" width="20" height="20">
+        <g>
+          <linearGradient id="badge-grad"><stop offset="0" stop-color="#f4e72a"/><stop offset="1" stop-color="#cd8105"/></linearGradient>
+          <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.855-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.69-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.636.433 1.221.878 1.69.47.446 1.055.752 1.69.883.635.13 1.294.083 1.902-.143.272.587.706 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.225 1.26.276 1.89.149.63-.127 1.216-.431 1.69-.878.445-.47.749-1.055.878-1.688.13-.633.079-1.29-.144-1.898.587-.273 1.084-.706 1.438-1.246.355-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="url(#badge-grad)"></path>
+        </g>
+      </svg>
+    </div>
+    <div data-testid="tweetText">파딱 계정의 트윗 내용입니다</div>
+  </article>
+
+  <!-- Tweet 2: 파딱 + 팔로우 중 — 숨겨지면 안 됨 -->
+  <article data-testid="tweet" id="tweet-fadak-followed">
+    <div>
+      <a role="link" href="/followed_fadak" data-testid="User-Name">
+        <span>팔로우한파딱</span>
+        <span>@followed_fadak</span>
+      </a>
+      <svg viewBox="0 0 22 22" aria-label="Verified account" data-testid="icon-verified" width="20" height="20">
+        <g>
+          <linearGradient id="badge-grad2"><stop offset="0" stop-color="#f4e72a"/><stop offset="1" stop-color="#cd8105"/></linearGradient>
+          <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.855-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.69-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.636.433 1.221.878 1.69.47.446 1.055.752 1.69.883.635.13 1.294.083 1.902-.143.272.587.706 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.225 1.26.276 1.89.149.63-.127 1.216-.431 1.69-.878.445-.47.749-1.055.878-1.688.13-.633.079-1.29-.144-1.898.587-.273 1.084-.706 1.438-1.246.355-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="url(#badge-grad2)"></path>
+        </g>
+      </svg>
+    </div>
+    <div data-testid="tweetText">팔로우 중인 파딱의 트윗입니다</div>
+  </article>
+
+  <!-- Tweet 3: 일반 계정 (뱃지 없음) — 숨겨지면 안 됨 -->
+  <article data-testid="tweet" id="tweet-normal">
+    <div>
+      <a role="link" href="/normal_user" data-testid="User-Name">
+        <span>일반유저</span>
+        <span>@normal_user</span>
+      </a>
+    </div>
+    <div data-testid="tweetText">일반 계정의 트윗입니다</div>
+  </article>
+</main>
+</body>
+</html>

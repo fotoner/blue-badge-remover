@@ -12,9 +12,11 @@
     "zip:firefox": "wxt zip --browser firefox",
     "postinstall": "wxt prepare",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/chrome": "^0.1.38",
     "jsdom": "^29.0.1",
     "typescript": "^6.0.2",
