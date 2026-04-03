@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://chromewebstore.google.com/detail/cjhmbgfnddpcdfmoicfcocekmainhhdm?utm_source=item-share-cb"><img alt="Chrome Web Store" src="https://img.shields.io/badge/Chrome_Web_Store-v1.3.2-4285F4?logo=googlechrome&logoColor=white"></a>
+  <a href="https://chromewebstore.google.com/detail/cjhmbgfnddpcdfmoicfcocekmainhhdm?utm_source=item-share-cb"><img alt="Chrome Web Store" src="https://img.shields.io/badge/Chrome_Web_Store-v1.3.6-4285F4?logo=googlechrome&logoColor=white"></a>
   <img alt="Manifest V3" src="https://img.shields.io/badge/Manifest-V3-blue">
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178c6">
   <img alt="License" src="https://img.shields.io/badge/License-MIT-green">
@@ -34,7 +34,7 @@
 | **인용 필터** | 필터링 안 함 / 인용 부분만 숨기기 / 트윗 전체 숨기기 |
 | **키워드 필터** | 특정 키워드를 포함하는 파딱만 선별 숨김 (AdGuard식 문법) |
 | **카테고리 필터** | 내장 키워드를 카테고리별(정치, 경제, 욕설 등) 개별 토글 |
-| **팔로우 예외** | 타임라인 fiber 자동 감지 + Following 페이지 수동 동기화, 계정별 캐시 |
+| **팔로우 예외** | 타임라인 fiber/API 자동 감지 + Following 페이지 수동 동기화, 계정별 캐시 |
 | **화이트리스트** | 별도 관리 페이지에서 @아이디 추가, 프로필 배너에서 원클릭 추가 |
 | **계정 전환** | 계정별 팔로우 캐시 자동 전환, 즉시 재필터링 |
 | **다국어** | 한국어 / English / 日本語 |
@@ -60,7 +60,7 @@ npm install
 npm run build          # Chrome
 npm run build:firefox  # Firefox
 npm run build:edge     # Edge
-npm test               # 204 tests
+npm test               # 265 tests
 ```
 
 1. `chrome://extensions` 접속 (Edge: `edge://extensions`)
@@ -92,7 +92,7 @@ npm test               # 204 tests
 - **TypeScript** (strict mode)
 - **Chrome Extension** Manifest V3
 - **WXT** (Next-gen Web Extension Framework, Chrome + Firefox + Edge)
-- **Vitest** (204 tests) + **Playwright** (E2E)
+- **Vitest** (265 tests) + **Playwright** (E2E)
 
 ## Project Structure
 
@@ -115,7 +115,7 @@ src/
 │   ├── keyword-filter/       # 키워드 필터 (파서 + 매처 + 카테고리)
 │   ├── keyword-collector/    # 키워드 수집 (토크나이저 + 통계)
 │   ├── follow-list/          # 팔로우 동기화
-│   └── settings/             # Chrome Storage 래퍼
+│   └── settings/             # Storage 래퍼 (wxt/browser)
 ├── shared/
 │   ├── types/                # Settings, BadgeInfo, FilterRule
 │   ├── constants/            # 기본값, 스토리지 키

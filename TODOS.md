@@ -21,15 +21,19 @@
 - [ ] before/after 스크린샷 제작
 - [ ] Privacy Policy URL 등록 (docs/PRIVACY.md → GitHub Pages 또는 raw URL)
 
+## 완료 (v1.3.6)
+
+### ~~TypeScript strict 모드 수정~~ (v1.3.3)
+- tsc --noEmit 에러 수정 완료, CI에 타입 체크 복원
+
+### ~~tweet-processing.ts 테스트~~ (v1.3.4)
+- DOM 추출 유틸리티 테스트 추가 (5개 런타임 모듈 커버)
+
+### ~~Firefox 설정 저장 호환성~~ (v1.3.6)
+- chrome.* → wxt/browser 전환으로 Firefox MV2 storage 호환 수정
+
 ## 향후
 
 ### 모바일 E2E PoC
 - Firefox Android 자동 테스트 접근법 조사
 - Appium 또는 실기기 기반 테스트 가능성 검토
-
-### TypeScript strict 모드 수정
-- tsc --noEmit 에러 6개 수정
-- CI에 타입 체크 복원
-
-### tweet-processing.ts 테스트
-- DOM 추출 유틸리티 15-20개 테스트 (extractTweetAuthor, findQuoteBlock 등)

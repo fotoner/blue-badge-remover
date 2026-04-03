@@ -6,10 +6,15 @@
 ## 배포 흐름
 
 ```
-git tag v1.x.x → push → GitHub Actions
+정식 릴리스: git tag v1.x.x → push → GitHub Actions
   ├─ 빌드 (Chrome + Firefox + Edge)
   ├─ GitHub Release 생성 (3개 ZIP 첨부)
   └─ 스토어 자동 제출 (secrets 등록된 스토어만)
+
+테스트 릴리스: git tag v1.x.x-test → push → GitHub Actions
+  ├─ 빌드 (Chrome + Firefox + Edge)
+  ├─ GitHub Release 생성 (prerelease, 3개 ZIP 첨부)
+  └─ 스토어 제출 건너뜀
 ```
 
 ---
