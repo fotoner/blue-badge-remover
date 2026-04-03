@@ -5,12 +5,12 @@ import { MESSAGE_TYPES } from '@shared/constants';
 import { badgeCache, profileCache, collectorBuffer, getSettings, getFollowSet, setFollowSet } from './state';
 import { extractTweetAuthor } from './tweet-processing';
 import { processTweet, restoreHiddenTweets, reprocessExistingTweets } from './tweet-orchestrator';
-import { saveFollowHandles, getMyHandle } from './follow-collector';
+import { saveFollowHandles, getMyHandle, type FollowCollectorDeps } from './follow-collector';
 import { removeFadakBanner } from './fadak-banner';
 
 let domFollowReprocessTimer: ReturnType<typeof setTimeout> | null = null;
 
-export function listenForMessages(followCollectorDeps: Record<string, unknown>): void {
+export function listenForMessages(followCollectorDeps: FollowCollectorDeps): void {
   window.addEventListener('message', (event) => {
     if (event.source !== window || event.origin !== window.location.origin) return;
 
@@ -73,7 +73,7 @@ function handleProfileData(data: { profiles: Array<{ userId: string; handle: str
   }
 }
 
-function handleFollowData(data: { handles: string[]; source?: string }, followCollectorDeps: Record<string, unknown>): void {
+function handleFollowData(data: { handles: string[]; source?: string }, followCollectorDeps: FollowCollectorDeps): void {
   const handles = data.handles;
   if (data.source) {
     // Inline fiber detection — 즉시 followSet 업데이트 + storage 저장

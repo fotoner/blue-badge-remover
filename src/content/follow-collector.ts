@@ -2,7 +2,7 @@
 import { STORAGE_KEYS } from '@shared/constants';
 import type { Settings } from '@shared/types';
 import { logger } from '@shared/utils/logger';
-import { t, type Language } from '@shared/i18n';
+import { t } from '@shared/i18n';
 
 export interface FollowCollectorDeps {
   getCurrentSettings: () => Settings;

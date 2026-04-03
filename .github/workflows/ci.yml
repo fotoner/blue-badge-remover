@@ -19,6 +19,12 @@ jobs:
 
       - run: npm ci
 
+      - name: Prepare WXT types
+        run: npx wxt prepare
+
+      - name: TypeScript check
+        run: npx tsc --noEmit --skipLibCheck
+
       - name: Run tests
         run: npm test
 

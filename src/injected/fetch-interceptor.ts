@@ -51,7 +51,8 @@ window.fetch = async function patchedFetch(
       const data = await cloned.json();
       const endpoint = url.split('/').slice(-2).join('/');
       extractBadgeData(data, endpoint);
-      extractViewerUserId(data);
+      // extractViewerUserId 제거: viewer ID 메시지를 수신하는 리스너 없음.
+      // 계정 감지는 content script의 detectAndHandleAccountSwitch()에서 DOM 기반으로 처리.
 
       const urlLower = url.toLowerCase();
       if (urlLower.includes('follow')) {
@@ -79,9 +80,9 @@ XMLHttpRequest.prototype.open = function patchedXhrOpen(
   (this as XMLHttpRequest & { _bbrUrl: string })._bbrUrl =
     typeof url === 'string' ? url : url.toString();
   if (async === undefined) {
-    return origXhrOpen.call(this, method, url);
+    return (origXhrOpen as Function).call(this, method, url);
   }
-  return origXhrOpen.call(this, method, url, async, username, password);
+  return origXhrOpen.call(this, method, url, async!, username, password);
 };
 
 XMLHttpRequest.prototype.send = function patchedXhrSend(body?: Document | XMLHttpRequestBodyInit | null) {
@@ -94,7 +95,8 @@ XMLHttpRequest.prototype.send = function patchedXhrSend(body?: Document | XMLHtt
         const data = JSON.parse(xhr.responseText) as unknown;
         const endpoint = url.split('/').slice(-2).join('/');
         extractBadgeData(data, endpoint);
-        extractViewerUserId(data);
+        // extractViewerUserId 제거: viewer ID 메시지를 수신하는 리스너 없음.
+      // 계정 감지는 content script의 detectAndHandleAccountSwitch()에서 DOM 기반으로 처리.
         if (url.toLowerCase().includes('follow')) {
           extractFollowData(data);
         }
@@ -158,44 +160,7 @@ function extractBadgeData(data: unknown, endpointHint?: string): void {
   }
 }
 
-function extractViewerUserId(data: unknown): void {
-  const viewerId = findViewerId(data);
-  if (viewerId) {
-    window.postMessage({ type: MESSAGE_TYPES.USER_ID, userId: viewerId }, '*');
-  }
-}
-
-function findViewerId(obj: unknown): string | null {
-  if (obj === null || typeof obj !== 'object') return null;
-
-  const record = obj as Record<string, unknown>;
-
-  // Common X API patterns for viewer/self identity
-  if ('viewer' in record) {
-    const viewer = record['viewer'] as Record<string, unknown> | null;
-    if (viewer && 'rest_id' in viewer && typeof viewer['rest_id'] === 'string') {
-      return viewer['rest_id'];
-    }
-    // Nested: viewer.userResults.result.rest_id
-    const nested = findViewerId(viewer);
-    if (nested) return nested;
-  }
-
-  if ('viewer_v2' in record) {
-    const nested = findViewerId(record['viewer_v2']);
-    if (nested) return nested;
-  }
-
-  // data.data.viewer or similar top-level wrapper
-  for (const key of ['data', 'result', 'user']) {
-    if (key in record && typeof record[key] === 'object') {
-      const nested = findViewerId(record[key]);
-      if (nested) return nested;
-    }
-  }
-
-  return null;
-}
+// extractViewerUserId / findViewerId 제거됨 — 수신 리스너 없는 죽은 코드
 
 function extractFollowData(data: unknown): void {
   const handles: string[] = [];

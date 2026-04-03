@@ -4,6 +4,7 @@ export default defineContentScript({
   world: 'MAIN',
   runAt: 'document_start',
   main() {
+    // @ts-expect-error — fetch-interceptor는 side-effect 스크립트 (export 없음)
     import('../src/injected/fetch-interceptor');
   },
 });
