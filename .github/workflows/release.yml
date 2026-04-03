@@ -54,25 +54,31 @@ jobs:
             blue-badge-remover-edge-${{ github.ref_name }}.zip
           generate_release_notes: true
 
-      # Store submission (API 키가 secrets에 등록된 경우에만 실행)
-      - name: Submit to stores
-        if: |
-          secrets.CHROME_EXTENSION_ID != '' ||
-          secrets.FIREFOX_JWT_ISSUER != '' ||
-          secrets.EDGE_PRODUCT_ID != ''
-        run: |
-          npx wxt submit \
-            ${{ secrets.CHROME_EXTENSION_ID && format('--chrome-zip blue-badge-remover-chrome-{0}.zip', github.ref_name) || '' }} \
-            ${{ secrets.FIREFOX_JWT_ISSUER && format('--firefox-zip blue-badge-remover-firefox-{0}.zip', github.ref_name) || '' }} \
-            ${{ secrets.EDGE_PRODUCT_ID && format('--edge-zip blue-badge-remover-edge-{0}.zip', github.ref_name) || '' }}
+      # Store submission (각 스토어 API 키가 secrets에 등록된 경우에만 실행)
+      - name: Submit to Chrome Web Store
+        if: env.CHROME_EXTENSION_ID != ''
+        continue-on-error: true
+        run: npx wxt submit --chrome-zip blue-badge-remover-chrome-${{ github.ref_name }}.zip
         env:
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+
+      - name: Submit to Firefox AMO
+        if: env.FIREFOX_JWT_ISSUER != ''
+        continue-on-error: true
+        run: npx wxt submit --firefox-zip blue-badge-remover-firefox-${{ github.ref_name }}.zip
+        env:
           FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
           FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
           FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+
+      - name: Submit to Edge Add-ons
+        if: env.EDGE_PRODUCT_ID != ''
+        continue-on-error: true
+        run: npx wxt submit --edge-zip blue-badge-remover-edge-${{ github.ref_name }}.zip
+        env:
           EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
           EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
           EDGE_CLIENT_SECRET: ${{ secrets.EDGE_CLIENT_SECRET }}
