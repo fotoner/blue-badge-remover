@@ -1,6 +1,6 @@
 {
   "name": "blue-badge-remover",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "X(트위터)에서 수익성 목적의 파란 뱃지 계정을 숨기는 크롬 익스텐션. 팔로우 중인 계정과 수동 화이트리스트는 예외 처리.",
   "type": "module",
   "scripts": {
