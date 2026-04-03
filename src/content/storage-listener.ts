@@ -14,11 +14,13 @@ export function listenForSettingsChanges(setDebugFlag: (enabled: boolean) => voi
     if (settingsChange) {
       handleSettingsChange(settingsChange.newValue as Settings, setDebugFlag);
     }
-    if (changes[STORAGE_KEYS.FOLLOW_LIST]) {
-      handleFollowListChange(changes[STORAGE_KEYS.FOLLOW_LIST].newValue as string[]);
+    const followChange = changes[STORAGE_KEYS.FOLLOW_LIST];
+    if (followChange?.newValue) {
+      handleFollowListChange(followChange.newValue as string[]);
     }
-    if (changes[STORAGE_KEYS.WHITELIST]) {
-      handleWhitelistChange(changes[STORAGE_KEYS.WHITELIST].newValue as string[]);
+    const whitelistChange = changes[STORAGE_KEYS.WHITELIST];
+    if (whitelistChange?.newValue) {
+      handleWhitelistChange(whitelistChange.newValue as string[]);
     }
     if (changes[STORAGE_KEYS.CUSTOM_FILTER_LIST]) {
       void loadFilterRules().then(() => { restoreHiddenTweets(); reprocessExistingTweets(); });

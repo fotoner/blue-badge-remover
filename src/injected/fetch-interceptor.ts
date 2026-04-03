@@ -79,9 +79,9 @@ XMLHttpRequest.prototype.open = function patchedXhrOpen(
   (this as XMLHttpRequest & { _bbrUrl: string })._bbrUrl =
     typeof url === 'string' ? url : url.toString();
   if (async === undefined) {
-    return origXhrOpen.call(this, method, url);
+    return (origXhrOpen as Function).call(this, method, url);
   }
-  return origXhrOpen.call(this, method, url, async, username, password);
+  return origXhrOpen.call(this, method, url, async!, username, password);
 };
 
 XMLHttpRequest.prototype.send = function patchedXhrSend(body?: Document | XMLHttpRequestBodyInit | null) {
