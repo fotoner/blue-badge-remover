@@ -32,11 +32,13 @@ popup/     (Popup UI)        ─┘
 2. 테스트를 통과하는 최소한의 코드만 구현
 3. 리팩토링 시 테스트가 여전히 통과하는지 확인
 
-### 브랜치 전략
-- `main`에 직접 커밋 금지. 모든 작업은 feature 브랜치에서 수행
-- 관련 이슈를 논리적 단위로 묶어 1개 브랜치로 작업
+### 브랜치 전략 (git-flow)
+- **`main`**: 릴리스 전용. 태그(v*.*.*) + 웹스토어 배포. 직접 커밋 금지.
+- **`dev`**: 일상 개발. feature/fix 브랜치의 PR 머지 대상 (default branch).
+- **`feat/*`, `fix/*`, `refactor/*`**: dev에서 분기, dev로 squash merge.
+- **`release/v*.*.*`**: dev에서 분기, main으로 머지 후 태그.
+- **`hotfix/*`**: main에서 분기, main + dev 양쪽에 머지.
 - **squash merge 전 코드 리뷰 필수** (`superpowers:requesting-code-review`)
-- 완료 후 squash and merge로 main에 통합
 - 상세: `docs/CONVENTIONS.md`
 
 ### 코딩
