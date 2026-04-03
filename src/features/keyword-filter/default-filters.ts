@@ -1,6 +1,6 @@
 export const DEFAULT_FILTER_LIST = `! Blue Badge Remover - 기본 필터 리스트 (Beta)
 ! 악성 파딱 키워드 필터
-! 업데이트 날짜 2026년 4월 3일 05:40 GMT+9
+! 업데이트 날짜 2026년 4월 3일 14:22 GMT+9
 
 ! 정치 및 테슬라
 🇰🇷
@@ -26,6 +26,8 @@ freedom
 FSD
 국민
 정부
+중국
+작작
 
 ! 경제
 BTC
