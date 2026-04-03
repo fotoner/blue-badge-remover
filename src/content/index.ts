@@ -12,6 +12,7 @@ import { listenForNavigation, setOnNavigate } from './navigation';
 import { collectFollowsFromDOM, saveFollowHandles, removeFollowHandle, getMyHandle, disconnectFollowObserver, listenForFollowButtonClicks } from './follow-collector';
 import { extractTweetAuthor, extractRetweeterName, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, formatUserLabel, addDebugLabel, hasBadgeInAuthorArea } from './tweet-processing';
 import { isProfilePage, getPageType } from './page-utils';
+import { observeSettingsShortcut } from './settings-shortcut';
 import { t } from '@shared/i18n';
 
 const badgeCache = new BadgeCache();
@@ -120,6 +121,7 @@ async function init(): Promise<void> {
 
   setOnNavigate(handleNavigate);
   listenForNavigation();
+  observeSettingsShortcut();
   collectFollowsFromDOM(followCollectorDeps);
   listenForFollowButtonClicks(followCollectorDeps);
 

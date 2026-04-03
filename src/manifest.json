@@ -44,7 +44,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["fetch-interceptor.js"],
+      "resources": ["fetch-interceptor.js", "icons/icon48.png"],
       "matches": ["https://x.com/*", "https://twitter.com/*"]
     }
   ]

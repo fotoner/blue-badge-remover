@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run build:chrome && node scripts/build-firefox.mjs",
+    "build:chrome": "vite build",
+    "build:firefox": "npm run build:chrome && node scripts/build-firefox.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
