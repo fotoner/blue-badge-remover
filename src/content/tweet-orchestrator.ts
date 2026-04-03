@@ -1,7 +1,6 @@
 // src/content/tweet-orchestrator.ts
 // 트윗 처리 오케스트레이터: DOM에서 트윗 정보를 추출하고 숨김/표시를 결정.
 import { detectBadgeSvg } from '@features/badge-detection';
-import { TIMINGS } from '@shared/constants';
 import { shouldHideTweet, shouldHideRetweet, getQuoteAction, hideTweet, hideQuoteBlock, showTweet } from '@features/content-filter';
 import { matchesKeywordFilter } from '@features/keyword-filter';
 import { extractTweetAuthor, extractRetweeterName, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, formatUserLabel, addDebugLabel, hasBadgeInAuthorArea } from './tweet-processing';
@@ -150,29 +149,22 @@ export function restoreHiddenTweets(): void {
   });
 }
 
-export function reprocessExistingTweets(): void {
-  const settings = getSettings();
-  const feed = document.querySelector('main') ?? document.body;
-  const tweets = Array.from(feed.querySelectorAll('article[data-testid="tweet"]'));
-  const chunkSize = TIMINGS.REPROCESS_CHUNK_SIZE;
+let reprocessScheduled = false;
 
-  function processChunk(start: number): void {
-    const end = Math.min(start + chunkSize, tweets.length);
-    for (let i = start; i < end; i++) {
-      const tweet = tweets[i]!;
+export function reprocessExistingTweets(): void {
+  if (reprocessScheduled) return;
+  reprocessScheduled = true;
+  requestAnimationFrame(() => {
+    reprocessScheduled = false;
+    const settings = getSettings();
+    const feed = document.querySelector('main') ?? document.body;
+    feed.querySelectorAll('article[data-testid="tweet"]').forEach((tweet) => {
       tweet.querySelector('[data-bbr-debug]')?.remove();
       try {
         processTweet(tweet as HTMLElement);
       } catch (e) {
         if (settings?.debugMode) console.error('[BBR] processTweet error', e);
       }
-    }
-    if (end < tweets.length) {
-      requestAnimationFrame(() => processChunk(end));
-    }
-  }
-
-  if (tweets.length > 0) {
-    requestAnimationFrame(() => processChunk(0));
-  }
+    });
+  });
 }
