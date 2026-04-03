@@ -69,27 +69,45 @@ popup/     (Popup UI)        ─┘
 | `docs/CODE_REVIEW.md` | 코드 리뷰 필수 규칙, 리뷰 관점 |
 | `docs/RELIABILITY.md` | 에러 처리 정책, 데이터 무결성 |
 | `docs/SECURITY.md` | 환경 변수 관리, 데이터 보호 |
+| `docs/PRIVACY.md` | Privacy Policy (웹스토어 인증용) |
+| `docs/STORE_SETUP.md` | 스토어 배포 자동화 설정 (Chrome/Firefox/Edge API 키) |
 
 ## 디렉토리 구조
 
 ```
-src/
-├── background/                 # Service Worker 진입점
-│   └── index.ts
-├── content/                    # Content Script 진입점
-│   └── index.ts
+entrypoints/                    # WXT 진입점 (빌드 시스템이 관리)
+├── background.ts               # Service Worker
+├── content.ts                  # Content Script (ISOLATED world)
+├── injected.content.ts         # Content Script (MAIN world, fetch 인터셉트)
 ├── popup/                      # Popup UI
-│   ├── index.html
-│   ├── index.ts
-│   └── style.css
+├── options/                    # 고급 필터 설정
+├── whitelist/                  # 화이트리스트 관리
+└── collector/                  # 키워드 수집기
+
+src/
+├── content/                    # Content Script 로직 (6개 모듈)
+│   ├── index.ts                # 초기화 + 모듈 연결
+│   ├── state.ts                # 공유 상태 관리
+│   ├── message-handler.ts      # postMessage 수신
+│   ├── storage-listener.ts     # chrome.storage 변경 감지
+│   ├── tweet-orchestrator.ts   # processTweet + 숨김/표시
+│   ├── tweet-classifier.ts     # 순수 함수 판정 로직
+│   └── collector-buffer.ts     # 키워드 수집기 버퍼
+├── injected/                   # MAIN world 스크립트
+│   └── fetch-interceptor.ts    # X API 응답 파싱 + fiber 팔로우 감지
 ├── features/
 │   ├── badge-detection/        # D1: 뱃지 감지
 │   ├── content-filter/         # D2: 콘텐츠 필터링
 │   ├── follow-list/            # D3: 팔로우 & 화이트리스트
+│   ├── keyword-filter/         # D5: 키워드 필터
+│   ├── keyword-collector/      # 키워드 수집기 스토리지
 │   └── settings/               # D4: 설정 관리
 ├── shared/                     # 공통 타입, 유틸, 상수
 │   ├── types/
 │   ├── utils/
 │   └── constants/
-└── manifest.json
+├── popup/                      # Popup UI 로직
+├── options/                    # Options 페이지 로직
+├── whitelist/                  # 화이트리스트 페이지 로직
+└── collector/                  # 키워드 수집기 페이지 로직
 ```
