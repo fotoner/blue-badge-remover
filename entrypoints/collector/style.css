@@ -1,0 +1,380 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #000;
+  color: #e7e9ea;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #71767b;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: #16181c;
+  border-radius: 12px;
+  flex-wrap: wrap;
+}
+
+.stats {
+  font-size: 14px;
+  color: #71767b;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.toolbar-actions button {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid #2f3336;
+  border-radius: 20px;
+  background: transparent;
+  color: #e7e9ea;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.toolbar-actions button:hover {
+  background: #1d1f23;
+}
+
+.toolbar-actions .btn-danger {
+  color: #f4212e;
+  border-color: #f4212e33;
+}
+
+.toolbar-actions .btn-danger:hover {
+  background: #f4212e1a;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.empty {
+  text-align: center;
+  color: #71767b;
+  font-size: 14px;
+  line-height: 1.8;
+  padding: 48px 0;
+}
+
+.entry {
+  border: 1px solid #2f3336;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.entry-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.entry-header:hover {
+  background: #16181c;
+}
+
+.entry.expanded .entry-header {
+  background: #16181c;
+  border-bottom: 1px solid #2f3336;
+}
+
+.handle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1d9bf0;
+  flex-shrink: 0;
+}
+
+.display-name {
+  font-size: 14px;
+  color: #e7e9ea;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tweet-count {
+  font-size: 12px;
+  color: #71767b;
+  flex-shrink: 0;
+}
+
+.entry-body {
+  display: none;
+  padding: 12px 16px;
+  background: #0a0a0a;
+}
+
+.bio {
+  font-size: 13px;
+  color: #71767b;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #16181c;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tweets {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tweets li {
+  font-size: 13px;
+  color: #e7e9ea;
+  padding: 8px 12px;
+  background: #16181c;
+  border-radius: 8px;
+  border-left: 2px solid #2f3336;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Keyword Distribution Section ── */
+
+.keywords-section {
+  display: none;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #16181c;
+  border-radius: 12px;
+  border: 1px solid #2f3336;
+}
+
+.keywords-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.keywords-heading {
+  font-size: 15px;
+  font-weight: 700;
+  color: #e7e9ea;
+}
+
+.kw-heading-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.kw-toggle-group {
+  display: flex;
+  gap: 6px;
+}
+
+.kw-toggle {
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid #2f3336;
+  border-radius: 20px;
+  background: transparent;
+  color: #71767b;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.kw-toggle:hover {
+  background: #1d1f23;
+  color: #e7e9ea;
+}
+
+.kw-toggle.active {
+  background: #1d9bf01a;
+  border-color: #1d9bf0;
+  color: #1d9bf0;
+}
+
+.kw-empty {
+  font-size: 13px;
+  color: #71767b;
+  text-align: center;
+  padding: 16px 0;
+}
+
+.keywords-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.kw-row {
+  display: grid;
+  grid-template-columns: 28px 60px 1fr 42px;
+  align-items: center;
+  gap: 8px;
+}
+
+.kw-rank {
+  font-size: 11px;
+  color: #71767b;
+  text-align: right;
+}
+
+.kw-label {
+  font-size: 13px;
+  color: #e7e9ea;
+  font-family: monospace;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kw-bar-wrap {
+  background: #2f3336;
+  border-radius: 3px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.kw-bar {
+  height: 100%;
+  background: #1d9bf0;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  min-width: 2px;
+}
+
+.kw-count {
+  font-size: 11px;
+  color: #71767b;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.kw-row {
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 3px 4px;
+  transition: background 0.12s;
+}
+
+.kw-row:hover {
+  background: #1d1f23;
+}
+
+.kw-row.selected {
+  background: #1d9bf01a;
+  outline: 1px solid #1d9bf040;
+}
+
+/* ── Keyword Detail Panel ── */
+
+.kw-detail {
+  margin-top: 14px;
+  border-top: 1px solid #2f3336;
+  padding-top: 14px;
+}
+
+.kw-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.kw-detail-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d9bf0;
+}
+
+.kw-detail-close {
+  padding: 2px 8px;
+  font-size: 12px;
+  border: 1px solid #2f3336;
+  border-radius: 20px;
+  background: transparent;
+  color: #71767b;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.kw-detail-close:hover {
+  background: #1d1f23;
+  color: #e7e9ea;
+}
+
+.kw-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.kw-detail-item {
+  padding: 8px 12px;
+  background: #0a0a0a;
+  border-radius: 8px;
+  border-left: 2px solid #1d9bf040;
+}
+
+.kw-detail-meta {
+  display: block;
+  font-size: 11px;
+  color: #1d9bf0;
+  margin-bottom: 4px;
+}
+
+.kw-detail-text {
+  font-size: 13px;
+  color: #e7e9ea;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+.kw-highlight {
+  background: #1d9bf033;
+  color: #1d9bf0;
+  border-radius: 3px;
+  padding: 0 1px;
+}

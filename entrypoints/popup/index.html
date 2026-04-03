@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <title>Blue Badge Remover</title>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-top">
+        <h1>Blue Badge Remover</h1>
+        <div class="lang-selector">
+          <label for="language" data-i18n="language">언어</label>
+          <select id="language">
+            <option value="ko">한국어</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
+        </div>
+      </div>
+      <p class="subtitle" data-i18n="extDescription">X에서 수익성 파란 뱃지 계정을 숨깁니다</p>
+    </header>
+
+    <div class="section master-toggle">
+      <label class="toggle-row">
+        <span class="label-primary" data-i18n="filtering">필터링</span>
+        <input type="checkbox" id="enabled" checked>
+      </label>
+    </div>
+
+    <div id="onboarding-banner" class="section onboarding-banner" style="display:none;background:#1d9bf0;border-radius:8px;padding:12px 16px;color:white;">
+      <p style="margin:0 0 8px 0;font-size:13px;" data-i18n="onboardingBanner">팔로잉 목록을 동기화하면 팔로우 중인 계정이 필터링에서 제외됩니다.</p>
+      <div style="display:flex;gap:8px;">
+        <button type="button" id="onboarding-cta" style="flex:1;background:white;color:#1d9bf0;border:none;border-radius:6px;padding:6px;font-size:13px;font-weight:600;cursor:pointer;" data-i18n="onboardingCta">팔로잉 페이지 열기</button>
+        <button type="button" id="onboarding-dismiss" style="background:transparent;color:white;border:1px solid rgba(255,255,255,0.5);border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer;" data-i18n="onboardingDismiss">닫기</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <label class="toggle-row">
+        <span data-i18n="keywordFilterBeta">키워드 필터</span>
+        <input type="checkbox" id="keywordFilterEnabled">
+      </label>
+      <p class="hint" data-i18n="keywordFilterBetaDesc">모든 파딱이 아닌, 특정 키워드에 해당하는 바이오(프로필)나 이름, 본문을 가지고 있는 글만 가립니다. 가끔 유용한 정보 파딱 등의 글을 보고 싶은 분들에게 추천입니다.</p>
+      <div id="filter-mode-group" class="filter-mode-group">
+        <button type="button" id="open-options-btn" class="btn-secondary" data-i18n="advancedFilterSettings">고급 필터 설정</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2 data-i18n="filterScope">필터링 범위</h2>
+      <p class="desc" data-i18n="filterScopeDesc">파딱 트윗을 숨길 영역을 선택합니다</p>
+      <label class="toggle-row"><span data-i18n="homeTimeline">홈 타임라인</span><input type="checkbox" id="filter-timeline" checked></label>
+      <label class="toggle-row"><span data-i18n="tweetDetailReplies">트윗 상세 / 답글</span><input type="checkbox" id="filter-replies" checked></label>
+      <label class="toggle-row"><span data-i18n="searchResults">검색 결과</span><input type="checkbox" id="filter-search" checked></label>
+      <label class="toggle-row"><span data-i18n="bookmarks">북마크</span><input type="checkbox" id="filter-bookmarks"></label>
+    </div>
+
+    <div class="section">
+      <h2 data-i18n="hideMode">숨김 방식</h2>
+      <label class="radio-row">
+        <input type="radio" name="hideMode" value="remove" checked>
+        <div>
+          <span data-i18n="removeCompletely">완전 제거</span>
+          <span class="desc" data-i18n="removeCompletelyDesc">트윗을 타임라인에서 완전히 제거합니다</span>
+        </div>
+      </label>
+      <label class="radio-row">
+        <input type="radio" name="hideMode" value="collapse">
+        <div>
+          <span data-i18n="collapse">접어서 표시</span>
+          <span class="desc" data-i18n="collapseDesc">클릭하면 펼쳐볼 수 있도록 접어둡니다</span>
+        </div>
+      </label>
+    </div>
+
+    <div class="section">
+      <h2 data-i18n="retweets">리트윗</h2>
+      <p class="desc" data-i18n="retweetsDesc">팔로우가 파딱 트윗을 리트윗한 경우</p>
+      <label class="toggle-row">
+        <span data-i18n="hideRetweetsLabel">파딱 리트윗 숨기기</span>
+        <input type="checkbox" id="retweetFilter" checked>
+      </label>
+    </div>
+
+    <div class="section">
+      <h2 data-i18n="quoteTweets">인용 트윗</h2>
+      <p class="desc" data-i18n="quoteTweetsDesc">파딱 트윗을 인용한 경우의 처리 방식</p>
+      <label class="radio-row">
+        <input type="radio" name="quoteMode" value="off" checked>
+        <span data-i18n="quoteOff">필터링하지 않음</span>
+      </label>
+      <label class="radio-row">
+        <input type="radio" name="quoteMode" value="quote-only">
+        <span data-i18n="quoteOnly">인용 부분만 숨기기</span>
+      </label>
+      <label class="radio-row">
+        <input type="radio" name="quoteMode" value="entire">
+        <span data-i18n="quoteEntire">트윗 전체 숨기기</span>
+      </label>
+    </div>
+
+    <div class="section">
+      <h2 data-i18n="followSync">팔로우 동기화</h2>
+      <p class="desc" data-i18n="followSyncDesc">팔로우 중인 계정은 파딱이어도 숨기지 않습니다. 계정별로 별도 저장됩니다.</p>
+      <div class="sync-info">
+        <span id="current-account"></span>
+      </div>
+      <div class="sync-info">
+        <span id="sync-status"></span>
+        <span id="follow-count"></span>
+      </div>
+      <button id="sync-btn" class="btn-secondary" data-i18n="openFollowingPage">팔로잉 페이지 열기</button>
+      <p class="hint" data-i18n="followingPageHint">팔로잉 페이지에서 스크롤하면 자동으로 수집됩니다</p>
+      <button id="clear-cache-btn" class="btn-danger" data-i18n="clearFollowCache">현재 계정 팔로우 캐시 초기화</button>
+    </div>
+
+    <div class="section">
+      <h2 data-i18n="whitelist">화이트리스트</h2>
+      <p class="desc" data-i18n="whitelistDesc">파딱이어도 숨기지 않을 계정을 직접 추가합니다</p>
+      <button type="button" id="open-whitelist-btn" class="btn-secondary" data-i18n="manageWhitelist">화이트리스트 관리</button>
+    </div>
+
+    <div class="section">
+      <p class="hint" data-i18n="feedbackDesc">버그 제보, 기능 제안 등 여러분의 피드백이 서비스 개선에 큰 도움이 됩니다</p>
+      <a href="https://forms.gle/F1hyx1uo8yaFE3Tt6" target="_blank" class="btn-feedback" data-i18n="feedback">피드백 보내기</a>
+    </div>
+
+    <div class="section">
+      <h2 data-i18n="developer">개발자</h2>
+      <label class="toggle-row">
+        <span data-i18n="debugMode">디버그 모드</span>
+        <input type="checkbox" id="debugMode">
+      </label>
+      <p class="hint" data-i18n="debugModeHint">각 트윗에 처리 정보 라벨을 표시하고 콘솔에 로그를 출력합니다</p>
+      <label class="toggle-row">
+        <span data-i18n="keywordCollector">키워드 수집</span>
+        <input type="checkbox" id="keywordCollectorEnabled">
+      </label>
+      <p class="hint" data-i18n="keywordCollectorHint">필터링되지 않은 파딱의 텍스트를 수집합니다 (키워드만 숨김 모드 전용)</p>
+      <button type="button" id="open-collector-btn" class="btn-secondary btn-secondary--mt" data-i18n="viewCollectedData">수집 데이터 보기</button>
+      <p class="credit">made by <a href="https://x.com/fotoner_p" target="_blank" rel="noopener">@fotoner_p</a></p>
+    </div>
+  </div>
+
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

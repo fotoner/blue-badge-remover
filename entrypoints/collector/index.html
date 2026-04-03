@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <title>BBR 키워드 수집기</title>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>키워드 수집 데이터</h1>
+      <p class="subtitle">필터링되지 않은 파딱 계정의 텍스트 수집 결과</p>
+    </header>
+
+    <div id="keywords" class="keywords-section"></div>
+
+    <div class="toolbar">
+      <div class="stats" id="stats">로딩 중...</div>
+      <div class="toolbar-actions">
+        <button type="button" id="export-json-btn">JSON 내보내기</button>
+        <button type="button" id="copy-text-btn">텍스트 복사</button>
+        <button type="button" id="clear-btn" class="btn-danger">전체 삭제</button>
+      </div>
+    </div>
+
+    <div id="list" class="list"></div>
+  </div>
+
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

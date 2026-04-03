@@ -159,7 +159,7 @@ function bindEvents(): void {
   });
 
   document.getElementById('open-whitelist-btn')!.addEventListener('click', () => {
-    openPage(chrome.runtime.getURL('src/whitelist/index.html'));
+    openPage(chrome.runtime.getURL('/whitelist.html'));
   });
 
   document.getElementById('clear-cache-btn')!.addEventListener('click', async () => {
@@ -190,14 +190,14 @@ function bindEvents(): void {
 
   document.getElementById('open-options-btn')!.addEventListener('click', () => {
     if (isFirefoxAndroid()) {
-      window.location.href = chrome.runtime.getURL('src/options/index.html');
+      window.location.href = chrome.runtime.getURL('/options.html');
     } else {
       chrome.runtime.openOptionsPage();
     }
   });
 
   document.getElementById('open-collector-btn')!.addEventListener('click', () => {
-    openPage(chrome.runtime.getURL('src/collector/index.html'));
+    openPage(chrome.runtime.getURL('/collector.html'));
   });
 
   document.getElementById('onboarding-dismiss')?.addEventListener('click', async () => {

@@ -4,19 +4,22 @@
   "description": "X(트위터)에서 수익성 목적의 파란 뱃지 계정을 숨기는 크롬 익스텐션. 팔로우 중인 계정과 수동 화이트리스트는 예외 처리.",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "npm run build:chrome && node scripts/build-firefox.mjs",
-    "build:chrome": "vite build",
-    "build:firefox": "npm run build:chrome && node scripts/build-firefox.mjs",
+    "dev": "wxt",
+    "build": "wxt build",
+    "build:chrome": "wxt build",
+    "build:firefox": "wxt build --browser firefox",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip --browser firefox",
+    "postinstall": "wxt prepare",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "devDependencies": {
-    "@crxjs/vite-plugin": "^2.4.0",
     "@types/chrome": "^0.1.38",
     "jsdom": "^29.0.1",
     "typescript": "^6.0.2",
     "vite": "^8.0.3",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.2",
+    "wxt": "^0.20.20"
   }
 }

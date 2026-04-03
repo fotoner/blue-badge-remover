@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <title>Blue Badge Remover - 고급 필터 설정</title>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Blue Badge Remover</h1>
+      <p class="subtitle">고급 필터 설정 (Beta)</p>
+    </header>
+
+    <section class="section">
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span>활성 규칙</span>
+          <span class="stat-value" id="active-rule-count">0</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span>내장</span>
+          <span class="stat-value" id="builtin-rule-count">0</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span>커스텀</span>
+          <span class="stat-value" id="custom-rule-count">0</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">내장 필터</h2>
+        <label class="toggle-label">
+          <span class="toggle-text">전체</span>
+          <input type="checkbox" id="default-filter-enabled" checked>
+        </label>
+      </div>
+      <div id="category-list"></div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title" style="margin-bottom:14px">커스텀 필터</h2>
+      <textarea
+        id="custom-filters"
+        class="filter-textarea"
+        placeholder="키워드를 한 줄에 하나씩 입력하세요&#10;예: 테슬라&#10;예: @@gooduser (예외)&#10;예: *coin* (와일드카드)"
+      ></textarea>
+      <div class="btn-row">
+        <button id="save-btn" class="btn-primary">저장</button>
+        <span id="save-status" class="save-status"></span>
+      </div>
+    </section>
+
+    <section class="section guide">
+      <h2 class="section-title" style="margin-bottom:14px">문법 가이드</h2>
+      <div class="guide-content">
+        <ul>
+          <li><code>키워드</code> <span class="guide-desc">대소문자 무시, 바이오/본문에서 검색</span></li>
+          <li><code>*coin*</code> <span class="guide-desc">와일드카드 패턴 매칭</span></li>
+          <li><code>@@handle</code> <span class="guide-desc">이 계정은 필터링에서 제외</span></li>
+          <li><code>! 주석</code> <span class="guide-desc">무시되는 메모 줄</span></li>
+        </ul>
+      </div>
+    </section>
+  </div>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
