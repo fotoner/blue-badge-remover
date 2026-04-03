@@ -38,6 +38,7 @@ popup/     (Popup UI)        ─┘
 - **`feat/*`, `fix/*`, `refactor/*`**: dev에서 분기, dev로 squash merge.
 - **`release/v*.*.*`**: dev에서 분기, main으로 머지 후 태그.
 - **`hotfix/*`**: main에서 분기, main + dev 양쪽에 머지.
+- **테스트 릴리스**: 태그에 `-test` 접미사 (e.g. `v1.4.0-test`). GitHub Release(prerelease)만 생성, 스토어 제출 안 함. 실제 배포 전 검증용.
 - **squash merge 전 코드 리뷰 필수** (`superpowers:requesting-code-review`)
 - 상세: `docs/CONVENTIONS.md`
 
