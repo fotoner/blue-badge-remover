@@ -14,6 +14,7 @@
 | D2 | Content Filtering (콘텐츠 필터링) |
 | D3 | Follow & Whitelist (팔로우 & 화이트리스트) |
 | D4 | Settings (설정) |
+| D5 | Keyword Filter (키워드 필터) |
 
 ### EARS 패턴
 
@@ -153,44 +154,52 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - 첫 글자 소문자 (영어), 마침표 없음
 - squash commit 제목은 50자 이내, 본문에 포함된 이슈 번호 나열
 
-## 브랜치 전략
+## 브랜치 전략 (git-flow)
 
-### 원칙
-- `main`: 안정 브랜치. **직접 커밋 금지**. 항상 squash merge로만 통합.
-- 모든 작업은 feature 브랜치에서 수행한다.
+### 주요 브랜치
 
-### 브랜치 단위 (묶음 기준)
+| 브랜치 | 역할 | 보호 |
+|--------|------|------|
+| `main` | 릴리스 전용. 태그(v*.*.*) + 웹스토어 배포 | 직접 커밋 금지 |
+| `dev` | 일상 개발. PR 머지 대상 (default branch) | 직접 커밋 금지 |
 
-| 기준 | 브랜치 | 예시 |
-|------|--------|------|
-| 독립적인 이슈 1개 | 이슈 1개 = 브랜치 1개 | `feat/user-auth` |
-| 의존성이 있는 관련 이슈 N개 | 논리적 묶음 = 브랜치 1개 | `feat/search-tools` |
-| 문서/설정만 변경 | 변경 묶음 = 브랜치 1개 | `docs/conventions` |
+### 작업 브랜치
 
-**판단 기준**: "이 브랜치의 squash commit 메시지를 한 문장으로 쓸 수 있는가?" — 쓸 수 있으면 적절한 묶음.
-
-### 브랜치 네이밍
-
-```
-<type>/<short-description>
-```
-
-| type | 용도 | 예시 |
-|------|------|------|
-| `feat` | 새 기능 | `feat/search-tools` |
-| `fix` | 버그 수정 | `fix/csv-encoding` |
-| `docs` | 문서 변경 | `docs/local-dev-guide` |
-| `refactor` | 리팩토링 | `refactor/db-queries` |
-| `chore` | 빌드/설정 | `chore/ci-setup` |
+| type | 분기 원점 | 머지 대상 | 예시 |
+|------|----------|----------|------|
+| `feat/*` | dev | dev | `feat/search-tools` |
+| `fix/*` | dev | dev | `fix/csv-encoding` |
+| `refactor/*` | dev | dev | `refactor/db-queries` |
+| `docs/*` | dev | dev | `docs/local-dev-guide` |
+| `chore/*` | dev | dev | `chore/ci-setup` |
+| `release/v*.*.*` | dev | main (→ 태그) | `release/v1.4.0` |
+| `hotfix/*` | main | main + dev | `hotfix/critical-bug` |
 
 ### 워크플로우
 
 ```
-1. main에서 feature 브랜치 생성
-2. 브랜치에서 자유롭게 커밋 (WIP, 중간 커밋 OK)
-3. 작업 완료 후 squash and merge → main
+일상 개발:
+1. dev에서 feature 브랜치 생성
+2. 브랜치에서 자유롭게 커밋
+3. 작업 완료 후 squash merge → dev
 4. feature 브랜치 삭제
+
+릴리스:
+1. dev에서 release/v*.*.* 브랜치 생성
+2. 버전 범프 커밋
+3. squash merge → main
+4. main에서 태그 → GitHub Actions 자동 빌드 + 스토어 제출
+5. main 변경사항을 dev에 머지 (동기화)
+
+핫픽스:
+1. main에서 hotfix/* 브랜치 생성
+2. 수정 후 squash merge → main + dev 양쪽
+3. 필요 시 패치 태그
 ```
+
+### 브랜치 단위 (묶음 기준)
+
+**판단 기준**: "이 브랜치의 squash commit 메시지를 한 문장으로 쓸 수 있는가?" — 쓸 수 있으면 적절한 묶음.
 
 ### Squash Merge 규칙
 
@@ -215,14 +224,14 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 ```bash
 # 1. 코드 리뷰 (superpowers:requesting-code-review)
 # 2. Critical/Important 이슈 수정
-# 3. squash merge
-git checkout main
+# 3. squash merge (dev로)
+git checkout dev
 git pull
 git merge --squash <feature-branch>
 git commit  # squash commit 메시지 작성
 git branch -d <feature-branch>
 ```
 
-**Option 2 (PR 생성)**: GitHub에서 **Squash and merge** 사용.
+**Option 2 (PR 생성)**: GitHub에서 **Squash and merge** → dev로.
 
 **커밋 메시지**: squash commit 메시지는 위 "Squash Merge 규칙" 형식을 따른다.
