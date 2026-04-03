@@ -15,6 +15,11 @@ export default defineConfig({
       'https://twitter.com/*',
       'https://api.twitter.com/*',
     ],
+    icons: {
+      16: 'icons/icon16.png',
+      48: 'icons/icon48.png',
+      128: 'icons/icon128.png',
+    },
     web_accessible_resources: [
       {
         resources: ['icons/icon48.png'],
