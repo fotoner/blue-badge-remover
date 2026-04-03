@@ -41,3 +41,33 @@ jobs:
         with:
           name: firefox-mv2
           path: dist/firefox-mv2/
+
+  e2e:
+    if: github.event_name == 'push'
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install chromium
+
+      - name: Build Chrome
+        run: npm run build
+
+      - name: Run E2E
+        run: xvfb-run npx playwright test
+
+      - name: Upload E2E artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: test-results/
