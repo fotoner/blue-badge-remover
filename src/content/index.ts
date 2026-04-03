@@ -10,7 +10,7 @@ import { logger } from '@shared/utils/logger';
 import { showFadakProfileBanner, removeFadakBanner } from './fadak-banner';
 import { listenForNavigation, setOnNavigate } from './navigation';
 import { collectFollowsFromDOM, saveFollowHandles, removeFollowHandle, getMyHandle, disconnectFollowObserver, listenForFollowButtonClicks } from './follow-collector';
-import { extractTweetAuthor, extractRetweeterName, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, extractBioFromFiber, formatUserLabel, addDebugLabel, hasBadgeInAuthorArea } from './tweet-processing';
+import { extractTweetAuthor, extractRetweeterName, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, formatUserLabel, addDebugLabel, hasBadgeInAuthorArea } from './tweet-processing';
 import { isProfilePage, getPageType } from './page-utils';
 import { t } from '@shared/i18n';
 
@@ -22,6 +22,8 @@ let feedObserver: FeedObserver;
 const profileCache = new ProfileCache();
 let activeFilterRules: FilterRule[] = [];
 let currentUserHandle: string | null = null;
+
+let domFollowReprocessTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Keyword collector buffer — flushed to storage periodically and on navigation
 const collectorBuffer = new Map<string, CollectedFadak>();
@@ -127,7 +129,7 @@ async function init(): Promise<void> {
       currentUserHandle = getMyHandle();
     }
     showFadakProfileBanner(fadakBannerDeps);
-    void showOnboardingSiteBanner();
+    // void showOnboardingSiteBanner(); // fiber scan now auto-detects follows; onboarding prompt no longer needed
     startAccountSwitchWatcher();
   }, 3000);
 
@@ -206,12 +208,38 @@ function listenForMessages(): void {
     }
 
     if (event.data?.type === MESSAGE_TYPES.FOLLOW_DATA) {
-      const myHandle = getMyHandle();
-      const pathUser = window.location.pathname.split('/')[1]?.toLowerCase();
-      if (myHandle && pathUser && pathUser !== myHandle) return;
       const handles = event.data.handles as string[];
-      if (handles?.length) {
-        void saveFollowHandles(handles, followCollectorDeps);
+      const source = event.data.source as string | undefined;
+      if (source) {
+        // Inline fiber detection — update followSet immediately for this tick,
+        // and persist to storage as a rolling cache so follows survive page refreshes.
+        if (handles?.length) {
+          for (const h of handles) {
+            followSet.add(h.toLowerCase());
+          }
+          void saveFollowHandles(handles, followCollectorDeps);
+          const pathHandle = window.location.pathname.split('/')[1]?.toLowerCase();
+          if (pathHandle && followSet.has(pathHandle)) {
+            removeFadakBanner();
+          }
+          if (domFollowReprocessTimer !== null) clearTimeout(domFollowReprocessTimer);
+          domFollowReprocessTimer = setTimeout(() => {
+            domFollowReprocessTimer = null;
+            restoreHiddenTweets();
+            reprocessExistingTweets();
+          }, 0);
+        }
+      } else {
+        // API-based: only trust when we're on our own following page
+        const myHandle = getMyHandle();
+        const pathUser = window.location.pathname.split('/')[1]?.toLowerCase();
+        if (myHandle && pathUser && pathUser !== myHandle) return;
+        if (handles?.length) {
+          void saveFollowHandles(handles, followCollectorDeps).then(() => {
+            restoreHiddenTweets();
+            reprocessExistingTweets();
+          });
+        }
       }
     }
   });
@@ -258,10 +286,16 @@ function listenForSettingsChanges(): void {
     const followChange = changes[STORAGE_KEYS.FOLLOW_LIST];
     if (followChange) {
       followSet = new Set(followChange.newValue as string[]);
+      const pathHandle = window.location.pathname.split('/')[1]?.toLowerCase();
+      if (pathHandle && followSet.has(pathHandle)) {
+        removeFadakBanner();
+      }
     }
     const whitelistChange = changes[STORAGE_KEYS.WHITELIST];
     if (whitelistChange) {
       whitelistSet = new Set(whitelistChange.newValue as string[]);
+      restoreHiddenTweets();
+      reprocessExistingTweets();
     }
     const filterListChange = changes[STORAGE_KEYS.CUSTOM_FILTER_LIST];
     if (filterListChange) {
@@ -277,10 +311,10 @@ function listenForSettingsChanges(): void {
         reprocessExistingTweets();
       });
     }
-    const syncChange = changes[STORAGE_KEYS.LAST_SYNC_AT];
-    if (syncChange) {
-      document.getElementById(ONBOARDING_SITE_BANNER_ID)?.remove();
-    }
+    // const syncChange = changes[STORAGE_KEYS.LAST_SYNC_AT];
+    // if (syncChange) {
+    //   document.getElementById(ONBOARDING_SITE_BANNER_ID)?.remove();
+    // }
   });
 }
 
@@ -288,9 +322,10 @@ function isHandleFollowed(handle: string): boolean {
   return followSet.has(handle.toLowerCase());
 }
 
-const ONBOARDING_SITE_BANNER_ID = 'bbr-onboarding-site-banner';
 
-async function showOnboardingSiteBanner(): Promise<void> {
+// const ONBOARDING_SITE_BANNER_ID = 'bbr-onboarding-site-banner';
+
+/* async function showOnboardingSiteBanner(): Promise<void> {
   if (document.getElementById(ONBOARDING_SITE_BANNER_ID)) return;
   if (!currentSettings.enabled) return;
   if (window.location.pathname.includes('/following')) return;
@@ -338,7 +373,7 @@ async function showOnboardingSiteBanner(): Promise<void> {
   banner.appendChild(dismiss);
 
   header.appendChild(banner);
-}
+} */
 
 function isHandleWhitelisted(handle: string): boolean {
   return whitelistSet.has('@' + handle.toLowerCase());
@@ -440,18 +475,18 @@ function processTweet(tweetEl: HTMLElement): void {
     const retweeterName = extractRetweeterName(tweetEl) ?? '';
     const originalIsFadak = isFadak;
     if (originalIsFadak) {
-      if (isHandleFollowed(handle) || whitelistSet.has(`@${handle}`)) return;
+      if (inFollow || whitelistSet.has(`@${handle}`)) { showTweet(tweetEl); return; }
       const cachedProfile = profileCache.get(handle.toLowerCase());
-      const fiberBio = cachedProfile?.bio || extractBioFromFiber(tweetEl, handle);
+      const bio = cachedProfile?.bio ?? '';
       if (currentSettings.keywordCollectorEnabled && hasBadgeInAuthorArea(tweetEl)) {
-        const profile = cachedProfile ?? { handle, displayName: extractDisplayName(tweetEl, handle) ?? handle, bio: fiberBio };
-        bufferCollectedFadak(handle.toLowerCase(), handle, profile.displayName, profile.bio || fiberBio, extractTweetText(tweetEl));
+        const profile = cachedProfile ?? { handle, displayName: extractDisplayName(tweetEl, handle) ?? handle, bio };
+        bufferCollectedFadak(handle.toLowerCase(), handle, profile.displayName, profile.bio, extractTweetText(tweetEl));
       }
       if (currentSettings.keywordFilterEnabled) {
         const profile = cachedProfile ?? {
           handle,
           displayName: extractDisplayName(tweetEl, handle) ?? handle,
-          bio: fiberBio,
+          bio,
         };
         const tweetText = extractTweetText(tweetEl);
         const { matched } = matchesKeywordFilter(profile, activeFilterRules, tweetText);
@@ -466,18 +501,23 @@ function processTweet(tweetEl: HTMLElement): void {
     return;
   }
 
+  if (isFadak && inFollow) {
+    // Previously hidden by BBR — explicitly restore
+    showTweet(tweetEl);
+  }
+
   if (isFadak && !inFollow) {
     const cachedProfile = profileCache.get(handle.toLowerCase());
-    const fiberBio = cachedProfile?.bio || extractBioFromFiber(tweetEl, handle);
+    const bio = cachedProfile?.bio ?? '';
     if (currentSettings.keywordCollectorEnabled && hasBadgeInAuthorArea(tweetEl)) {
-      const profile = cachedProfile ?? { handle, displayName: displayName ?? handle, bio: fiberBio };
-      bufferCollectedFadak(handle.toLowerCase(), handle, profile.displayName, profile.bio || fiberBio, extractTweetText(tweetEl));
+      const profile = cachedProfile ?? { handle, displayName: displayName ?? handle, bio };
+      bufferCollectedFadak(handle.toLowerCase(), handle, profile.displayName, profile.bio, extractTweetText(tweetEl));
     }
     if (currentSettings.keywordFilterEnabled) {
       const profile = cachedProfile ?? {
         handle,
         displayName: displayName ?? handle,
-        bio: fiberBio,
+        bio,
       };
       const tweetText = extractTweetText(tweetEl);
       const { matched } = matchesKeywordFilter(profile, activeFilterRules, tweetText);
@@ -607,7 +647,8 @@ function reprocessExistingTweets(): void {
   const feed = document.querySelector('main') ?? document.body;
   const tweets = feed.querySelectorAll('article[data-testid="tweet"]');
   tweets.forEach((tweet) => {
-    if (tweet.querySelector('[data-bbr-debug]')) return;
+    // Remove stale debug label so processTweet can re-add it with current state
+    tweet.querySelector('[data-bbr-debug]')?.remove();
     try {
       processTweet(tweet as HTMLElement);
     } catch (e) {
