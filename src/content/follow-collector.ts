@@ -1,8 +1,9 @@
 // src/content/follow-collector.ts
-import { STORAGE_KEYS } from '@shared/constants';
+import { STORAGE_KEYS, TIMINGS } from '@shared/constants';
 import type { Settings } from '@shared/types';
 import { logger } from '@shared/utils/logger';
 import { t } from '@shared/i18n';
+import { getProfileLinkHref } from './page-utils';
 
 export interface FollowCollectorDeps {
   getCurrentSettings: () => Settings;
@@ -16,8 +17,7 @@ let followObserver: MutationObserver | null = null;
 const SYNC_BANNER_ID = 'bbr-follow-sync-banner';
 
 export function getMyHandle(): string | null {
-  const profileLink = document.querySelector('a[data-testid="AppTabBar_Profile_Link"]');
-  const href = profileLink?.getAttribute('href');
+  const href = getProfileLinkHref();
   return href ? href.slice(1).toLowerCase() : null;
 }
 
@@ -87,7 +87,7 @@ export function collectFollowsFromDOM(deps: FollowCollectorDeps): void {
   // myHandle이 아직 없으면 재시도
   const myHandle = getMyHandle();
   if (!myHandle) {
-    setTimeout(() => collectFollowsFromDOMInner(deps), 3000);
+    setTimeout(() => collectFollowsFromDOMInner(deps), TIMINGS.FOLLOW_COLLECT_RETRY);
     return;
   }
 
@@ -117,7 +117,7 @@ function collectFollowsFromDOMInner(deps: FollowCollectorDeps): void {
     if (handles.length > 0) {
       void saveFollowHandles(handles, deps);
     }
-  }, 2000);
+  }, TIMINGS.FOLLOW_EXTRACT_DELAY);
 }
 
 function showSyncBanner(deps: FollowCollectorDeps): void {
@@ -140,7 +140,7 @@ function showSyncBanner(deps: FollowCollectorDeps): void {
   // 페이지 이탈 시 자동 제거
   setTimeout(() => {
     document.getElementById(SYNC_BANNER_ID)?.remove();
-  }, 60000);
+  }, TIMINGS.SYNC_BANNER_DISMISS);
 }
 
 export function disconnectFollowObserver(): void {
@@ -182,7 +182,7 @@ export function listenForFollowButtonClicks(deps: FollowCollectorDeps): void {
           void removeFollowHandle(handle, deps);
           deps.onUnfollowed?.(handle);
         }
-      }, 2000);
+      }, TIMINGS.UNFOLLOW_DETECT_DELAY);
     }
   }, true);
 }

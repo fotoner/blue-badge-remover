@@ -13,6 +13,12 @@ export function isProfilePage(): boolean {
   return !path.includes('/status/') && !path.includes('/following') && !path.includes('/followers');
 }
 
+const PROFILE_LINK_SELECTOR = 'a[data-testid="AppTabBar_Profile_Link"]';
+
+export function getProfileLinkHref(): string | null {
+  return document.querySelector(PROFILE_LINK_SELECTOR)?.getAttribute('href') ?? null;
+}
+
 export function getPageType(): PageType {
   const path = window.location.pathname;
   if (path.includes('/i/bookmarks')) return 'bookmarks';

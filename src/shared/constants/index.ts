@@ -35,6 +35,30 @@ export const X_GRAPHQL_ENDPOINTS = [
   '/i/api/2/',
 ] as const;
 
+/** 타이밍 상수 (ms) */
+export const TIMINGS = {
+  /** 계정 전환 감지 폴링 주기 */
+  ACCOUNT_SWITCH_POLL: 2000,
+  /** 초기 설정 지연 (DOM 안정화 대기) */
+  INITIAL_SETUP_DELAY: 3000,
+  /** 키워드 수집기 플러시 주기 */
+  COLLECTOR_FLUSH_INTERVAL: 5000,
+  /** 호버 카드 옵저버 타임아웃 */
+  HOVER_CARD_TIMEOUT: 3000,
+  /** 파딱 배너 성공 메시지 표시 시간 */
+  BANNER_SUCCESS_DISMISS: 1500,
+  /** 파딱 배너 옵저버 타임아웃 */
+  BANNER_OBSERVER_TIMEOUT: 10000,
+  /** 팔로우 수집 재시도 지연 */
+  FOLLOW_COLLECT_RETRY: 3000,
+  /** 팔로우 핸들 추출 초기 지연 */
+  FOLLOW_EXTRACT_DELAY: 2000,
+  /** 팔로우 동기화 배너 자동 닫기 */
+  SYNC_BANNER_DISMISS: 60000,
+  /** 언팔로우 감지 지연 */
+  UNFOLLOW_DETECT_DELAY: 2000,
+} as const;
+
 export const MESSAGE_TYPES = {
   BADGE_DATA: 'BBR_BADGE_DATA',
   USER_ID: 'BBR_USER_ID',
