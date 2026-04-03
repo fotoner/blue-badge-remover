@@ -19,7 +19,7 @@ export function injectSettingsShortcut(): void {
 
   link.innerHTML = '';
   const img = document.createElement('img');
-  img.src = browser.runtime.getURL('icons/icon48.png');
+  img.src = (browser.runtime.getURL as (path: string) => string)('icons/icon48.png');
   img.alt = 'BBR';
   img.style.cssText = 'width:26px;height:26px;border-radius:50%;';
   link.appendChild(img);
