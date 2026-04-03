@@ -1,404 +1,40 @@
 // src/content/index.ts
-import { BadgeCache, parseBadgeInfo, detectBadgeSvg } from '@features/badge-detection';
-import { FeedObserver, shouldHideTweet, shouldHideRetweet, getQuoteAction, hideTweet, hideQuoteBlock, showTweet, setTweetHiderLanguage } from '@features/content-filter';
-import { ProfileCache, matchesKeywordFilter, DEFAULT_FILTER_LIST, getCustomFilterList, buildActiveRules, parseCategories, buildFilterTextFromCategories } from '@features/keyword-filter';
-import { getCollectedFadaks, saveCollectedFadaks } from '@features/keyword-collector';
-import { getSettings, addToWhitelist } from '@features/settings';
+// Content script 진입점. 초기화 + 모듈 연결만 담당.
+import { FeedObserver, setTweetHiderLanguage } from '@features/content-filter';
+import { getSettings as loadSettings, addToWhitelist } from '@features/settings';
 import { MESSAGE_TYPES, STORAGE_KEYS } from '@shared/constants';
-import type { CollectedFadak, FilterRule, Settings } from '@shared/types';
 import { logger } from '@shared/utils/logger';
 import { showFadakProfileBanner, removeFadakBanner } from './fadak-banner';
 import { listenForNavigation, setOnNavigate } from './navigation';
-import { collectFollowsFromDOM, saveFollowHandles, removeFollowHandle, getMyHandle, disconnectFollowObserver, listenForFollowButtonClicks } from './follow-collector';
-import { extractTweetAuthor, extractRetweeterName, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, formatUserLabel, addDebugLabel, hasBadgeInAuthorArea } from './tweet-processing';
-import { isProfilePage, getPageType } from './page-utils';
+import { collectFollowsFromDOM, saveFollowHandles, disconnectFollowObserver, listenForFollowButtonClicks, getMyHandle } from './follow-collector';
+import { isProfilePage } from './page-utils';
 import { observeSettingsShortcut } from './settings-shortcut';
-import { t } from '@shared/i18n';
+import { setSettings, setFollowSet, setWhitelistSet, setCurrentUserHandle, getSettings, getFollowSet, getCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, profileCache, collectorBuffer } from './state';
+import { loadFilterRules, flushCollector } from './collector-buffer';
+import { processTweet, restoreHiddenTweets, reprocessExistingTweets } from './tweet-orchestrator';
+import { listenForMessages } from './message-handler';
+import { listenForSettingsChanges } from './storage-listener';
 
-const badgeCache = new BadgeCache();
-let currentSettings: Settings;
-let followSet = new Set<string>(); // lowercase handle
-let whitelistSet = new Set<string>(); // @handle format
 let feedObserver: FeedObserver;
-const profileCache = new ProfileCache();
-let activeFilterRules: FilterRule[] = [];
-let currentUserHandle: string | null = null;
-
-let domFollowReprocessTimer: ReturnType<typeof setTimeout> | null = null;
-
-// Keyword collector buffer — flushed to storage periodically and on navigation
-const collectorBuffer = new Map<string, CollectedFadak>();
-const MAX_TWEET_TEXTS_PER_USER = 50;
-
-function bufferCollectedFadak(
-  userId: string,
-  handle: string,
-  displayName: string,
-  bio: string,
-  tweetText: string,
-): void {
-  const now = Date.now();
-  const existing = collectorBuffer.get(userId);
-  if (existing) {
-    if (displayName) existing.displayName = displayName;
-    if (bio) existing.bio = bio;
-    if (tweetText && !existing.tweetTexts.includes(tweetText)) {
-      existing.tweetTexts.push(tweetText);
-      if (existing.tweetTexts.length > MAX_TWEET_TEXTS_PER_USER) existing.tweetTexts.shift();
-    }
-    existing.lastSeenAt = now;
-  } else {
-    collectorBuffer.set(userId, {
-      userId, handle, displayName, bio,
-      tweetTexts: tweetText ? [tweetText] : [],
-      firstSeenAt: now,
-      lastSeenAt: now,
-    });
-  }
-}
-
-async function flushCollector(): Promise<void> {
-  if (collectorBuffer.size === 0) return;
-  const existing = await getCollectedFadaks();
-  const merged = new Map<string, CollectedFadak>(existing.map((f) => [f.userId, f]));
-  for (const entry of collectorBuffer.values()) {
-    const prev = merged.get(entry.userId);
-    if (prev) {
-      if (entry.displayName) prev.displayName = entry.displayName;
-      if (entry.bio) prev.bio = entry.bio;
-      for (const t of entry.tweetTexts) {
-        if (!prev.tweetTexts.includes(t)) {
-          prev.tweetTexts.push(t);
-          if (prev.tweetTexts.length > MAX_TWEET_TEXTS_PER_USER) prev.tweetTexts.shift();
-        }
-      }
-      prev.lastSeenAt = entry.lastSeenAt;
-    } else {
-      merged.set(entry.userId, entry);
-    }
-  }
-  await saveCollectedFadaks(Array.from(merged.values()));
-}
-
-async function loadFilterRules(): Promise<void> {
-  const [custom, stored] = await Promise.all([
-    getCustomFilterList(),
-    chrome.storage.local.get([STORAGE_KEYS.DISABLED_FILTER_CATEGORIES]),
-  ]);
-  const disabledCategories = (stored[STORAGE_KEYS.DISABLED_FILTER_CATEGORIES] as string[] | undefined) ?? [];
-  const categories = parseCategories(DEFAULT_FILTER_LIST);
-  const activeBuiltinText = buildFilterTextFromCategories(categories, disabledCategories);
-  activeFilterRules = buildActiveRules(currentSettings.defaultFilterEnabled, activeBuiltinText, custom);
-}
-
-async function init(): Promise<void> {
-  currentSettings = await getSettings();
-  await loadFilterRules();
-
-  const stored = await chrome.storage.local.get([STORAGE_KEYS.FOLLOW_LIST, STORAGE_KEYS.WHITELIST, STORAGE_KEYS.FOLLOW_CACHE, STORAGE_KEYS.CURRENT_USER_ID]);
-  const currentAccount = (stored[STORAGE_KEYS.CURRENT_USER_ID] as string | null) ?? '';
-  currentUserHandle = currentAccount || null;
-  const cache = (stored[STORAGE_KEYS.FOLLOW_CACHE] as Record<string, string[]> | undefined) ?? {};
-  const cachedFollows = currentAccount ? (cache[currentAccount] ?? []) : ((stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? []);
-  followSet = new Set(cachedFollows);
-  const whitelist = (stored[STORAGE_KEYS.WHITELIST] as string[] | undefined) ?? [];
-  whitelistSet = new Set(whitelist);
-
-  setTweetHiderLanguage(currentSettings.language);
-  setDebugFlag(currentSettings.debugMode); // interceptor already loaded via document_start content script
-  listenForMessages();
-  listenForSettingsChanges();
-  setInterval(() => { if (currentSettings.keywordCollectorEnabled) void flushCollector(); }, 5000);
-
-  // Signal to fetch interceptor (MAIN world) that we're ready to receive messages.
-  // This triggers a replay of any profiles cached before our listener was registered.
-  window.postMessage({ type: MESSAGE_TYPES.CONTENT_READY }, window.location.origin);
-
-  feedObserver = new FeedObserver(processTweet);
-  startObserving();
-  reprocessExistingTweets(); // Scan tweets already in DOM before observer started
-  observeHoverCards();
-
-  setOnNavigate(handleNavigate);
-  listenForNavigation();
-  observeSettingsShortcut();
-  collectFollowsFromDOM(followCollectorDeps);
-  listenForFollowButtonClicks(followCollectorDeps);
-
-  setTimeout(() => {
-    void detectAndHandleAccountSwitch();
-    if (!currentUserHandle) {
-      currentUserHandle = getMyHandle();
-    }
-    showFadakProfileBanner(fadakBannerDeps);
-    // void showOnboardingSiteBanner(); // fiber scan now auto-detects follows; onboarding prompt no longer needed
-    startAccountSwitchWatcher();
-  }, 3000);
-
-  if (currentSettings.debugMode) {
-    const allStorage = await chrome.storage.local.get(null);
-    console.log('[BBR STORAGE]', JSON.stringify({
-      followCount: ((allStorage['followList'] as string[]) ?? []).length,
-      whitelistCount: ((allStorage['whitelist'] as string[]) ?? []).length,
-      lastSyncAt: allStorage['lastSyncAt'],
-    }));
-  }
-  if (currentSettings.debugMode) logger.info('Blue Badge Remover initialized');
-}
 
 function setDebugFlag(enabled: boolean): void {
   window.postMessage({ type: 'BBR_SET_DEBUG', enabled }, window.location.origin);
-}
-
-
-function listenForMessages(): void {
-  window.addEventListener('message', (event) => {
-    if (event.source !== window || event.origin !== window.location.origin) return;
-
-    if (event.data?.type === MESSAGE_TYPES.BADGE_DATA) {
-      for (const userData of event.data.users) {
-        const badge = parseBadgeInfo(userData);
-        if (badge) {
-          badgeCache.set(badge.userId, badge.isBluePremium);
-        }
-      }
-    }
-
-    if (event.data?.type === MESSAGE_TYPES.PROFILE_DATA) {
-      for (const p of event.data.profiles as Array<{
-        userId: string;
-        handle: string;
-        displayName: string;
-        bio: string;
-      }>) {
-        // Key by lowercase handle so processTweet lookups (which use handle) hit the cache
-        const key = p.handle.toLowerCase();
-        profileCache.set(key, { handle: p.handle, displayName: p.displayName, bio: p.bio });
-        // Back-fill bio for already-buffered collector entries (same key as collectorBuffer)
-        if (currentSettings.keywordCollectorEnabled) {
-          const buffered = collectorBuffer.get(key);
-          if (buffered) {
-            if (p.bio && !buffered.bio) {
-              if (currentSettings.debugMode) console.log('[BBR BIO BACKFILL]', key, '->', p.bio.slice(0, 40));
-              buffered.bio = p.bio;
-            }
-            if (p.displayName) buffered.displayName = p.displayName;
-          }
-        }
-      }
-      if (currentSettings.debugMode) {
-        const withBio = (event.data.profiles as Array<{ handle: string; bio: string }>).filter((p) => p.bio);
-        if (withBio.length > 0) console.log('[BBR PROFILE_DATA bios]', withBio.map((p) => `${p.handle}: ${p.bio.slice(0, 30)}`));
-      }
-      if (currentSettings.keywordFilterEnabled) {
-        const updatedHandles = new Set(
-          (event.data.profiles as Array<{ handle: string }>).map((p) => p.handle.toLowerCase()),
-        );
-        const feed = document.querySelector('main') ?? document.body;
-        feed.querySelectorAll('article[data-testid="tweet"]').forEach((tweet) => {
-          const author = extractTweetAuthor(tweet as HTMLElement);
-          if (author && updatedHandles.has(author.handle.toLowerCase())) {
-            tweet.querySelector('[data-bbr-debug]')?.remove();
-            try {
-              processTweet(tweet as HTMLElement);
-            } catch (e) {
-              if (currentSettings?.debugMode) console.error('[BBR] processTweet error', e);
-            }
-          }
-        });
-      }
-    }
-
-    if (event.data?.type === MESSAGE_TYPES.FOLLOW_DATA) {
-      const handles = event.data.handles as string[];
-      const source = event.data.source as string | undefined;
-      if (source) {
-        // Inline fiber detection — update followSet immediately for this tick,
-        // and persist to storage as a rolling cache so follows survive page refreshes.
-        if (handles?.length) {
-          for (const h of handles) {
-            followSet.add(h.toLowerCase());
-          }
-          void saveFollowHandles(handles, followCollectorDeps);
-          const pathHandle = window.location.pathname.split('/')[1]?.toLowerCase();
-          if (pathHandle && followSet.has(pathHandle)) {
-            removeFadakBanner();
-          }
-          if (domFollowReprocessTimer !== null) clearTimeout(domFollowReprocessTimer);
-          domFollowReprocessTimer = setTimeout(() => {
-            domFollowReprocessTimer = null;
-            restoreHiddenTweets();
-            reprocessExistingTweets();
-          }, 0);
-        }
-      } else {
-        // API-based: only trust when we're on our own following page
-        const myHandle = getMyHandle();
-        const pathUser = window.location.pathname.split('/')[1]?.toLowerCase();
-        if (myHandle && pathUser && pathUser !== myHandle) return;
-        if (handles?.length) {
-          void saveFollowHandles(handles, followCollectorDeps).then(() => {
-            restoreHiddenTweets();
-            reprocessExistingTweets();
-          });
-        }
-      }
-    }
-  });
-}
-
-function listenForSettingsChanges(): void {
-  chrome.storage.onChanged.addListener((changes) => {
-    const settingsChange = changes[STORAGE_KEYS.SETTINGS];
-    if (settingsChange) {
-      const prev = currentSettings;
-      currentSettings = settingsChange.newValue as Settings;
-      setTweetHiderLanguage(currentSettings.language);
-      setDebugFlag(currentSettings.debugMode);
-      if (prev.keywordCollectorEnabled && !currentSettings.keywordCollectorEnabled) {
-        void flushCollector();
-      }
-
-      // 마스터 토글, 필터 스코프, 숨김 방식, 키워드 필터 등 변경 시 즉시 반영
-      const needsReprocess =
-        prev.enabled !== currentSettings.enabled ||
-        prev.keywordFilterEnabled !== currentSettings.keywordFilterEnabled ||
-        prev.retweetFilter !== currentSettings.retweetFilter ||
-        prev.hideMode !== currentSettings.hideMode ||
-        prev.quoteMode !== currentSettings.quoteMode ||
-        prev.filter.timeline !== currentSettings.filter.timeline ||
-        prev.filter.replies !== currentSettings.filter.replies ||
-        prev.filter.search !== currentSettings.filter.search ||
-        prev.filter.bookmarks !== currentSettings.filter.bookmarks;
-
-      if (needsReprocess) {
-        restoreHiddenTweets();
-        reprocessExistingTweets();
-      }
-
-      const defaultFilterChanged =
-        prev.defaultFilterEnabled !== currentSettings.defaultFilterEnabled;
-      if (defaultFilterChanged) {
-        void loadFilterRules().then(() => {
-          restoreHiddenTweets();
-          reprocessExistingTweets();
-        });
-      }
-    }
-    const followChange = changes[STORAGE_KEYS.FOLLOW_LIST];
-    if (followChange) {
-      followSet = new Set(followChange.newValue as string[]);
-      const pathHandle = window.location.pathname.split('/')[1]?.toLowerCase();
-      if (pathHandle && followSet.has(pathHandle)) {
-        removeFadakBanner();
-      }
-    }
-    const whitelistChange = changes[STORAGE_KEYS.WHITELIST];
-    if (whitelistChange) {
-      whitelistSet = new Set(whitelistChange.newValue as string[]);
-      restoreHiddenTweets();
-      reprocessExistingTweets();
-    }
-    const filterListChange = changes[STORAGE_KEYS.CUSTOM_FILTER_LIST];
-    if (filterListChange) {
-      void loadFilterRules().then(() => {
-        restoreHiddenTweets();
-        reprocessExistingTweets();
-      });
-    }
-    const categoryChange = changes[STORAGE_KEYS.DISABLED_FILTER_CATEGORIES];
-    if (categoryChange) {
-      void loadFilterRules().then(() => {
-        restoreHiddenTweets();
-        reprocessExistingTweets();
-      });
-    }
-    // const syncChange = changes[STORAGE_KEYS.LAST_SYNC_AT];
-    // if (syncChange) {
-    //   document.getElementById(ONBOARDING_SITE_BANNER_ID)?.remove();
-    // }
-  });
-}
-
-function isHandleFollowed(handle: string): boolean {
-  return followSet.has(handle.toLowerCase());
-}
-
-
-// const ONBOARDING_SITE_BANNER_ID = 'bbr-onboarding-site-banner';
-
-/* async function showOnboardingSiteBanner(): Promise<void> {
-  if (document.getElementById(ONBOARDING_SITE_BANNER_ID)) return;
-  if (!currentSettings.enabled) return;
-  if (window.location.pathname.includes('/following')) return;
-
-  const stored = await chrome.storage.local.get([
-    STORAGE_KEYS.FOLLOW_LIST,
-    STORAGE_KEYS.LAST_SYNC_AT,
-    'onboardingDismissed',
-  ]);
-  const followList = (stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? [];
-  const lastSyncAt = stored[STORAGE_KEYS.LAST_SYNC_AT] as string | null ?? null;
-  const dismissed = (stored['onboardingDismissed'] as boolean | undefined) ?? false;
-
-  if (followList.length > 0 || lastSyncAt !== null || dismissed) return;
-
-  const lang = currentSettings.language;
-  const primaryColumn = document.querySelector('[data-testid="primaryColumn"]');
-  if (!primaryColumn) return;
-  const header = primaryColumn.querySelector(':scope > div > div:first-child');
-  if (!header) return;
-
-  const banner = document.createElement('div');
-  banner.id = ONBOARDING_SITE_BANNER_ID;
-  banner.style.cssText = 'background:#E8850C;color:white;display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 20px;font-size:13px;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
-
-  const text = document.createElement('span');
-  text.textContent = t('onboardingSiteBanner', lang);
-  banner.appendChild(text);
-
-  const btn = document.createElement('button');
-  btn.textContent = t('onboardingSiteCta', lang);
-  btn.style.cssText = 'background:white;color:#E8850C;border:none;border-radius:16px;padding:5px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;';
-  btn.addEventListener('click', () => {
-    window.location.href = '/following';
-  });
-  banner.appendChild(btn);
-
-  const dismiss = document.createElement('button');
-  dismiss.textContent = '\u2715';
-  dismiss.style.cssText = 'background:none;border:none;color:white;font-size:16px;cursor:pointer;padding:0 2px;opacity:0.7;';
-  dismiss.addEventListener('click', async () => {
-    await chrome.storage.local.set({ onboardingDismissed: true });
-    banner.remove();
-  });
-  banner.appendChild(dismiss);
-
-  header.appendChild(banner);
-} */
-
-function isHandleWhitelisted(handle: string): boolean {
-  return whitelistSet.has('@' + handle.toLowerCase());
 }
 
 const fadakBannerDeps = {
   isProfilePage,
   isHandleFollowed,
   isHandleWhitelisted,
-  getCurrentSettings: () => currentSettings,
+  getCurrentSettings: () => getSettings(),
   addToWhitelist,
 };
 
 const followCollectorDeps = {
-  getCurrentSettings: () => currentSettings,
-  setFollowSet: (set: Set<string>) => { followSet = set; },
-  getFollowSet: () => followSet,
-  onFollowed: (_handle: string) => {
-    removeFadakBanner();
-  },
-  onUnfollowed: (_handle: string) => {
-    showFadakProfileBanner(fadakBannerDeps);
-  },
+  getCurrentSettings: () => getSettings(),
+  setFollowSet: (set: Set<string>) => { setFollowSet(set); },
+  getFollowSet: () => getFollowSet(),
+  onFollowed: () => { removeFadakBanner(); },
+  onUnfollowed: () => { showFadakProfileBanner(fadakBannerDeps); },
 };
 
 async function detectAndHandleAccountSwitch(): Promise<void> {
@@ -419,11 +55,10 @@ async function detectAndHandleAccountSwitch(): Promise<void> {
       [STORAGE_KEYS.CURRENT_USER_ID]: currentHandle,
       [STORAGE_KEYS.FOLLOW_LIST]: cachedFollows,
     });
-    followSet = new Set(cachedFollows);
-    currentUserHandle = currentHandle;
-    if (currentSettings.debugMode) logger.info('Account switched', { from: savedHandle, to: currentHandle, cachedFollows: cachedFollows.length });
-
-    // 계정 전환 시 즉시 숨겨진 트윗 복원 + 재처리
+    setFollowSet(new Set(cachedFollows));
+    setCurrentUserHandle(currentHandle);
+    const settings = getSettings();
+    if (settings.debugMode) logger.info('Account switched', { from: savedHandle, to: currentHandle, cachedFollows: cachedFollows.length });
     restoreHiddenTweets();
     reprocessExistingTweets();
   }
@@ -440,137 +75,16 @@ function startAccountSwitchWatcher(): void {
   }, 2000);
 }
 
-function checkFadak(userId: string, element: HTMLElement): boolean {
-  let isFadak = badgeCache.get(userId);
-  if (isFadak === undefined) {
-    isFadak = detectBadgeSvg(element);
-    badgeCache.set(userId, isFadak);
-  }
-  return isFadak;
-}
-
-function processTweet(tweetEl: HTMLElement): void {
-  if (isProfilePage()) return;
-  const author = extractTweetAuthor(tweetEl);
-  if (!author) return;
-
-  const { handle, userId } = author;
-
-  // 자기 자신의 트윗은 필터링하지 않음
-  if (currentUserHandle && handle.toLowerCase() === currentUserHandle.toLowerCase()) return;
-
-  const isFadak = checkFadak(userId, tweetEl);
-  const displayName = extractDisplayName(tweetEl, handle);
-  const userLabel = formatUserLabel(handle, displayName);
-
-  const socialContext = tweetEl.querySelector('[data-testid="socialContext"]');
-  const isRetweet = socialContext !== null;
-  const inFollow = isHandleFollowed(handle);
-
-  if (currentSettings.debugMode) {
-    const hasQuote = !!findQuoteBlock(tweetEl);
-    addDebugLabel(tweetEl, { handle: `@${handle}`, isFadak, isRetweet, hasQuote, inFollow, retweeter: isRetweet ? (extractRetweeterName(tweetEl) ?? '?') : undefined });
-    console.log('[BBR]', userLabel, { isFadak, isRetweet, inFollow, hasQuote });
-  }
-
-  if (isRetweet) {
-    const retweeterName = extractRetweeterName(tweetEl) ?? '';
-    const originalIsFadak = isFadak;
-    if (originalIsFadak) {
-      if (inFollow || whitelistSet.has(`@${handle}`)) { showTweet(tweetEl); return; }
-      const cachedProfile = profileCache.get(handle.toLowerCase());
-      const bio = cachedProfile?.bio ?? '';
-      if (currentSettings.keywordCollectorEnabled && hasBadgeInAuthorArea(tweetEl)) {
-        const profile = cachedProfile ?? { handle, displayName: extractDisplayName(tweetEl, handle) ?? handle, bio };
-        bufferCollectedFadak(handle.toLowerCase(), handle, profile.displayName, profile.bio, extractTweetText(tweetEl));
-      }
-      if (currentSettings.keywordFilterEnabled) {
-        const profile = cachedProfile ?? {
-          handle,
-          displayName: extractDisplayName(tweetEl, handle) ?? handle,
-          bio,
-        };
-        const tweetText = extractTweetText(tweetEl);
-        const { matched } = matchesKeywordFilter(profile, activeFilterRules, tweetText);
-        if (!matched) return;
-      }
-      const hideRetweet = shouldHideRetweet({ settings: currentSettings, isFadak: true, isRetweet: true });
-      if (hideRetweet) {
-        hideTweet(tweetEl, currentSettings.hideMode, { reason: 'retweet', handle: `@${handle}`, retweetedBy: retweeterName || undefined });
-        return;
-      }
-    }
-    return;
-  }
-
-  if (isFadak && inFollow) {
-    // Previously hidden by BBR — explicitly restore
-    showTweet(tweetEl);
-  }
-
-  if (isFadak && !inFollow) {
-    const cachedProfile = profileCache.get(handle.toLowerCase());
-    const bio = cachedProfile?.bio ?? '';
-    if (currentSettings.keywordCollectorEnabled && hasBadgeInAuthorArea(tweetEl)) {
-      const profile = cachedProfile ?? { handle, displayName: displayName ?? handle, bio };
-      bufferCollectedFadak(handle.toLowerCase(), handle, profile.displayName, profile.bio, extractTweetText(tweetEl));
-    }
-    if (currentSettings.keywordFilterEnabled) {
-      const profile = cachedProfile ?? {
-        handle,
-        displayName: displayName ?? handle,
-        bio,
-      };
-      const tweetText = extractTweetText(tweetEl);
-      const { matched } = matchesKeywordFilter(profile, activeFilterRules, tweetText);
-      if (!matched) return;
-    }
-    const hide = shouldHideTweet({
-      settings: currentSettings,
-      followList: new Set<string>(),
-      whitelist: whitelistSet,
-      isFadak: true,
-      userId,
-      handle: `@${handle}`,
-      pageType: getPageType(),
-    });
-    if (hide) {
-      hideTweet(tweetEl, currentSettings.hideMode, { reason: 'fadak', handle: `@${handle}` });
-      return;
-    }
-  }
-
-  const quoteBlock = findQuoteBlock(tweetEl);
-  if (quoteBlock) {
-    const quoteAuthor = extractQuoteAuthor(quoteBlock);
-    const quotedHandle = quoteAuthor?.handle ?? null;
-    const quotedIsFadak = quotedHandle
-      ? checkFadak(quotedHandle, quoteBlock)
-      : detectBadgeSvg(quoteBlock);
-    if (quotedIsFadak && !isHandleFollowed(quotedHandle ?? '') && !whitelistSet.has(`@${quotedHandle ?? ''}`)) {
-      const quoteAction = getQuoteAction(currentSettings, true);
-      if (quoteAction === 'hide-entire') {
-        hideTweet(tweetEl, currentSettings.hideMode, { reason: 'quote-entire', handle: `@${quotedHandle ?? ''}`, quotedBy: userLabel });
-        return;
-      }
-      if (quoteAction === 'hide-quote') {
-        hideQuoteBlock(quoteBlock, { handle: `@${quotedHandle ?? ''}` });
-        return;
-      }
-    }
-  }
-}
-
 function startObserving(): void {
   const feed = document.querySelector('main') ?? document.body;
   feedObserver.observe(feed);
 }
 
 function handleNavigate(): void {
-  if (currentSettings.keywordCollectorEnabled) void flushCollector();
+  const settings = getSettings();
+  if (settings.keywordCollectorEnabled) void flushCollector();
   feedObserver.disconnect();
   removeFadakBanner();
-  // Disconnect follow observer when leaving /following page (I4)
   if (!window.location.pathname.includes('/following')) {
     disconnectFollowObserver();
   }
@@ -578,17 +92,9 @@ function handleNavigate(): void {
     startObserving();
     reprocessExistingTweets();
     showFadakProfileBanner(fadakBannerDeps);
-    // Re-collect follows if navigated to /following
     if (window.location.pathname.includes('/following')) {
       collectFollowsFromDOM(followCollectorDeps);
     }
-  });
-}
-
-function restoreHiddenTweets(): void {
-  const feed = document.querySelector('main') ?? document.body;
-  feed.querySelectorAll('article[data-testid="tweet"][data-bbr-original]').forEach((tweet) => {
-    showTweet(tweet as HTMLElement);
   });
 }
 
@@ -601,7 +107,6 @@ function observeHoverCards(): void {
           ? node
           : node.querySelector('[data-testid="HoverCard"]');
         if (!card) continue;
-        // X fills the card asynchronously — wait for UserDescription to appear
         waitForHoverCardBio(card as HTMLElement);
       }
     }
@@ -611,7 +116,6 @@ function observeHoverCards(): void {
 
 function waitForHoverCardBio(card: HTMLElement): void {
   if (tryExtractBioFromHoverCard(card)) return;
-
   const inner = new MutationObserver(() => {
     if (tryExtractBioFromHoverCard(card)) inner.disconnect();
   });
@@ -624,7 +128,6 @@ function tryExtractBioFromHoverCard(card: HTMLElement): boolean {
   if (!bioEl) return false;
   const bio = bioEl.textContent?.trim() ?? '';
   if (!bio) return false;
-
   const handleLink = card.querySelector('a[role="link"][href^="/"]');
   if (!handleLink) return false;
   const href = handleLink.getAttribute('href') ?? '';
@@ -635,28 +138,67 @@ function tryExtractBioFromHoverCard(card: HTMLElement): boolean {
   const cached = profileCache.get(key);
   if (cached && !cached.bio) profileCache.set(key, { ...cached, bio });
 
-  if (currentSettings.keywordCollectorEnabled) {
+  const settings = getSettings();
+  if (settings.keywordCollectorEnabled) {
     const buffered = collectorBuffer.get(key);
     if (buffered && !buffered.bio) {
       buffered.bio = bio;
-      if (currentSettings.debugMode) console.log('[BBR HOVER BIO]', key, '->', bio.slice(0, 40));
+      if (settings.debugMode) console.log('[BBR HOVER BIO]', key, '->', bio.slice(0, 40));
     }
   }
   return true;
 }
 
-function reprocessExistingTweets(): void {
-  const feed = document.querySelector('main') ?? document.body;
-  const tweets = feed.querySelectorAll('article[data-testid="tweet"]');
-  tweets.forEach((tweet) => {
-    // Remove stale debug label so processTweet can re-add it with current state
-    tweet.querySelector('[data-bbr-debug]')?.remove();
-    try {
-      processTweet(tweet as HTMLElement);
-    } catch (e) {
-      if (currentSettings?.debugMode) console.error('[BBR] processTweet error', e);
+async function init(): Promise<void> {
+  const settings = await loadSettings();
+  setSettings(settings);
+  await loadFilterRules();
+
+  const stored = await chrome.storage.local.get([STORAGE_KEYS.FOLLOW_LIST, STORAGE_KEYS.WHITELIST, STORAGE_KEYS.FOLLOW_CACHE, STORAGE_KEYS.CURRENT_USER_ID]);
+  const currentAccount = (stored[STORAGE_KEYS.CURRENT_USER_ID] as string | null) ?? '';
+  setCurrentUserHandle(currentAccount || null);
+  const cache = (stored[STORAGE_KEYS.FOLLOW_CACHE] as Record<string, string[]> | undefined) ?? {};
+  const cachedFollows = currentAccount ? (cache[currentAccount] ?? []) : ((stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? []);
+  setFollowSet(new Set(cachedFollows));
+  setWhitelistSet(new Set((stored[STORAGE_KEYS.WHITELIST] as string[] | undefined) ?? []));
+
+  setTweetHiderLanguage(settings.language);
+  setDebugFlag(settings.debugMode);
+  listenForMessages(followCollectorDeps);
+  listenForSettingsChanges(setDebugFlag);
+  setInterval(() => { if (getSettings().keywordCollectorEnabled) void flushCollector(); }, 5000);
+
+  window.postMessage({ type: MESSAGE_TYPES.CONTENT_READY }, window.location.origin);
+
+  feedObserver = new FeedObserver(processTweet);
+  startObserving();
+  reprocessExistingTweets();
+  observeHoverCards();
+
+  setOnNavigate(handleNavigate);
+  listenForNavigation();
+  observeSettingsShortcut();
+  collectFollowsFromDOM(followCollectorDeps);
+  listenForFollowButtonClicks(followCollectorDeps);
+
+  setTimeout(() => {
+    void detectAndHandleAccountSwitch();
+    if (!getCurrentUserHandle()) {
+      setCurrentUserHandle(getMyHandle());
     }
-  });
+    showFadakProfileBanner(fadakBannerDeps);
+    startAccountSwitchWatcher();
+  }, 3000);
+
+  if (settings.debugMode) {
+    const allStorage = await chrome.storage.local.get(null);
+    console.log('[BBR STORAGE]', JSON.stringify({
+      followCount: ((allStorage['followList'] as string[]) ?? []).length,
+      whitelistCount: ((allStorage['whitelist'] as string[]) ?? []).length,
+      lastSyncAt: allStorage['lastSyncAt'],
+    }));
+    logger.info('Blue Badge Remover initialized');
+  }
 }
 
 if (typeof document !== 'undefined') {
