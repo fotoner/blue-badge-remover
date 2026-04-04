@@ -57,7 +57,7 @@ export function processTweet(tweetEl: HTMLElement): void {
     if (processDirectFadak(tweetEl, handle, displayName, settings, whitelistSet, activeFilterRules)) return;
   }
 
-  processQuote(tweetEl, settings, userLabel);
+  processQuote(tweetEl, handle, inFollow, settings, userLabel);
 }
 
 function processRetweet(
@@ -111,12 +111,17 @@ function processDirectFadak(
   return false;
 }
 
-function processQuote(tweetEl: HTMLElement, settings: ReturnType<typeof getSettings>, userLabel: string): void {
+function processQuote(tweetEl: HTMLElement, parentHandle: string, parentInFollow: boolean, settings: ReturnType<typeof getSettings>, userLabel: string): void {
   const quoteBlock = findQuoteBlock(tweetEl);
   if (!quoteBlock) return;
 
   const quoteAuthor = extractQuoteAuthor(quoteBlock);
   const quotedHandle = quoteAuthor?.handle ?? null;
+
+  // self-quote: 부모가 팔로우 중이고 자기 트윗을 인용한 경우 건너뛰기
+  const isSelfQuote = quotedHandle !== null && quotedHandle.toLowerCase() === parentHandle.toLowerCase();
+  if (isSelfQuote && parentInFollow) return;
+
   const quotedIsFadak = quotedHandle ? checkFadak(quotedHandle, quoteBlock) : detectBadgeSvg(quoteBlock);
 
   if (!quotedIsFadak) return;
