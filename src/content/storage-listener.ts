@@ -6,7 +6,8 @@ import { STORAGE_KEYS } from '@shared/constants';
 import type { Settings } from '@shared/types';
 import { getSettings, setSettings, setFollowSet, setWhitelistSet } from './state';
 import { restoreHiddenTweets, reprocessExistingTweets } from './tweet-orchestrator';
-import { loadFilterRules, flushCollector } from './collector-buffer';
+import { flushCollector } from './collector-buffer';
+import { loadFilterRules } from './filter-pipeline';
 import { removeFadakBanner } from './fadak-banner';
 
 export function listenForSettingsChanges(setDebugFlag: (enabled: boolean) => void): void {

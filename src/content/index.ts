@@ -11,7 +11,8 @@ import { collectFollowsFromDOM, saveFollowHandles, disconnectFollowObserver, lis
 import { isProfilePage, getProfileLinkHref } from './page-utils';
 import { observeSettingsShortcut } from './settings-shortcut';
 import { setSettings, setFollowSet, setWhitelistSet, setCurrentUserHandle, getSettings, getFollowSet, getCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, profileCache, collectorBuffer } from './state';
-import { loadFilterRules, flushCollector } from './collector-buffer';
+import { flushCollector } from './collector-buffer';
+import { loadFilterRules } from './filter-pipeline';
 import { processTweet, restoreHiddenTweets, reprocessExistingTweets } from './tweet-orchestrator';
 import { listenForMessages } from './message-handler';
 import { listenForSettingsChanges } from './storage-listener';
