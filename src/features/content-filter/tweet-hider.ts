@@ -176,20 +176,23 @@ function showQuoteBlock(element: HTMLElement): void {
 function buildHideLabel(context?: HideContext): string {
   if (!context) return t('hiddenTweetClick', currentLanguage);
 
+  // 카테고리가 있으면 "파딱 필터 (카테고리)" 형태로 표시
+  const categoryTag = context.category ? ` (${context.category})` : '';
+
   switch (context.reason) {
     case 'fadak':
-      return t('hiddenTweetFadak', currentLanguage, { handle: context.handle ?? '' });
+      return t('hiddenTweetFadak', currentLanguage, { handle: context.handle ?? '' }) + categoryTag;
     case 'retweet':
       return t('hiddenTweetRetweet', currentLanguage, {
         retweetedBy: context.retweetedBy ?? '',
         handle: context.handle ?? '',
-      });
+      }) + categoryTag;
     case 'quote-entire':
       return t('hiddenTweetQuoteEntire', currentLanguage, {
         quotedBy: context.quotedBy ?? '',
         handle: context.handle ?? '',
-      });
+      }) + categoryTag;
     default:
-      return t('hiddenTweetClick', currentLanguage);
+      return t('hiddenTweetClick', currentLanguage) + categoryTag;
   }
 }
