@@ -43,7 +43,7 @@ export function matchesKeywordFilter(
     if (rule.type === 'exception') continue;
     if (profileMatchesRule(profile, rule, tweetText)) {
       const matchedRule = rule.type === 'keyword' ? rule.value : rule.original;
-      return { matched: true, matchedRule };
+      return { matched: true, matchedRule, packId: rule.packId, category: rule.category };
     }
   }
 

@@ -50,13 +50,32 @@ export interface ProfileInfo {
 }
 
 export type FilterRule =
-  | { type: 'keyword'; value: string }
-  | { type: 'wildcard'; pattern: RegExp; original: string }
-  | { type: 'exception'; handle: string };
+  | { type: 'keyword'; value: string; packId?: string; category?: string; reason?: string }
+  | { type: 'wildcard'; pattern: RegExp; original: string; packId?: string; category?: string; reason?: string }
+  | { type: 'exception'; handle: string; packId?: string };
 
 export interface KeywordMatchResult {
   matched: boolean;
   matchedRule?: string;
+  packId?: string;
+  category?: string;
+}
+
+export interface FilterPack {
+  id: string;
+  name: string;
+  description: string;
+  author: string;
+  version: string;
+  updatedAt: string;
+  homepage?: string;
+  category?: string;
+  rules: string;
+}
+
+export interface FilterPackEntry {
+  pack: FilterPack;
+  enabled: boolean;
 }
 
 export type StorageKey = keyof StorageSchema;
