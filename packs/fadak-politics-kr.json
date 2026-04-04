@@ -1,0 +1,11 @@
+{
+  "id": "fadak-politics-kr",
+  "name": "정치 파딱 필터",
+  "description": "정치 관련 파딱 계정을 필터링합니다",
+  "author": "blue-badge-remover",
+  "version": "1.0.0",
+  "updatedAt": "2026-04-05T00:00:00Z",
+  "homepage": "https://raw.githubusercontent.com/fotoner/blue-badge-remover/dev/packs/fadak-politics-kr.json",
+  "category": "정치",
+  "rules": "정치*홍보\n국회의원*지지\n선거*투표\n정당*가입\n@@news_politics"
+}
