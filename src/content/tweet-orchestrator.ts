@@ -8,6 +8,7 @@ import { badgeCache, profileCache, getSettings, getWhitelistSet, getActiveFilter
 import { bufferCollectedFadak } from './collector-buffer';
 import { classifyTweet, classifyQuote } from './tweet-classifier';
 import type { ClassifyResult, QuoteClassifyResult } from './tweet-classifier';
+import { recordHide } from '@features/stats';
 
 function checkFadak(userId: string, element: HTMLElement): boolean {
   let isFadak = badgeCache.get(userId);
@@ -64,7 +65,7 @@ export function processTweet(tweetEl: HTMLElement): void {
     pageType: getPageType(),
   });
 
-  // DOM 조작
+  // DOM 조작 + 통계 수집
   if (result.action === 'show') {
     showTweet(tweetEl);
   } else if (result.action === 'hide') {
@@ -75,6 +76,7 @@ export function processTweet(tweetEl: HTMLElement): void {
       retweetedBy: retweeterName || undefined,
       category: result.category,
     });
+    recordHide(tweetEl, result.category, result.packId);
   }
   // action === 'skip' → 비파딱, 아무것도 안 함
 

@@ -16,6 +16,7 @@ import { loadFilterRules } from './filter-pipeline';
 import { processTweet, restoreHiddenTweets, reprocessExistingTweets } from './tweet-orchestrator';
 import { listenForMessages } from './message-handler';
 import { listenForSettingsChanges } from './storage-listener';
+import { startStatsFlush, stopStatsFlush, flushStats } from '@features/stats';
 
 let feedObserver: FeedObserver;
 let accountSwitchTimerId: ReturnType<typeof setInterval> | null = null;
@@ -87,6 +88,7 @@ function startObserving(): void {
 function handleNavigate(): void {
   const settings = getSettings();
   if (settings.keywordCollectorEnabled) void flushCollector();
+  void flushStats();
   feedObserver.disconnect();
   removeFadakBanner();
   if (!window.location.pathname.includes('/following')) {
@@ -173,6 +175,7 @@ async function init(): Promise<void> {
   listenForSettingsChanges(setDebugFlag);
   if (collectorFlushTimerId !== null) clearInterval(collectorFlushTimerId);
   collectorFlushTimerId = setInterval(() => { if (getSettings().keywordCollectorEnabled) void flushCollector(); }, TIMINGS.COLLECTOR_FLUSH_INTERVAL);
+  startStatsFlush();
 
   window.postMessage({ type: MESSAGE_TYPES.CONTENT_READY }, window.location.origin);
 
