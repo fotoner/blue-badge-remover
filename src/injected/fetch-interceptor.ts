@@ -192,6 +192,7 @@ interface ProfileEntry {
 interface ArticleData {
   handle: string;
   following: boolean;
+  isBluePremium: boolean;
 }
 
 function extractArticleDataFromFiber(article: HTMLElement): ArticleData | null {
@@ -206,7 +207,11 @@ function extractArticleDataFromFiber(article: HTMLElement): ArticleData | null {
     seenProps.add(obj as object);
     const r = obj as Record<string, unknown>;
     if (typeof r['screen_name'] === 'string' && typeof r['following'] === 'boolean') {
-      return { handle: r['screen_name'], following: r['following'] };
+      const isBlueVerified = r['is_blue_verified'] === true;
+      const verifiedType = typeof r['verified_type'] === 'string' ? r['verified_type'] : '';
+      const isLegacy = r['legacy'] && typeof r['legacy'] === 'object' && (r['legacy'] as Record<string, unknown>)['verified'] === true;
+      const isBluePremium = isBlueVerified && verifiedType !== 'Business' && !isLegacy;
+      return { handle: r['screen_name'], following: r['following'], isBluePremium };
     }
     if (Array.isArray(obj)) {
       for (const item of obj) { const f = scanProps(item, depth + 1); if (f) return f; }
@@ -245,6 +250,8 @@ function extractArticleDataFromFiber(article: HTMLElement): ArticleData | null {
   function processArticle(article: HTMLElement) {
     const data = extractArticleDataFromFiber(article);
     if (!data?.following) return;
+    // 노딱(금딱/기관)은 팔로우 목록에 추가하지 않음 — blue premium만 대상
+    if (!data.isBluePremium) return;
     window.postMessage({
       type: MESSAGE_TYPES.FOLLOW_DATA,
       handles: [data.handle.toLowerCase()],
