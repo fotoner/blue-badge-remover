@@ -3,6 +3,10 @@
 import type { DailyStats } from './types';
 import { getTodayStats, saveDayStats } from './stats-storage';
 
+// 마일스톤 콜백 — content script에서 설정
+let onFlushCallback: ((totalHidden: number) => void) | null = null;
+export function setOnFlush(cb: (totalHidden: number) => void): void { onFlushCallback = cb; }
+
 const FLUSH_INTERVAL_MS = 5000;
 const COUNTED_ATTR = 'data-bbr-counted';
 
@@ -48,6 +52,7 @@ export async function flushStats(): Promise<void> {
   }
   await saveDayStats(today);
   buffer = emptyBuffer();
+  if (onFlushCallback) onFlushCallback(today.totalHidden);
 }
 
 /** 5초 간격 flush 시작 */

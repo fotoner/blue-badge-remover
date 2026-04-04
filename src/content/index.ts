@@ -16,7 +16,8 @@ import { loadFilterRules } from './filter-pipeline';
 import { processTweet, restoreHiddenTweets, reprocessExistingTweets } from './tweet-orchestrator';
 import { listenForMessages } from './message-handler';
 import { listenForSettingsChanges } from './storage-listener';
-import { startStatsFlush, stopStatsFlush, flushStats } from '@features/stats';
+import { startStatsFlush, stopStatsFlush, flushStats, setOnFlush } from '@features/stats';
+import { checkMilestone } from './milestone-banner';
 
 let feedObserver: FeedObserver;
 let accountSwitchTimerId: ReturnType<typeof setInterval> | null = null;
@@ -175,6 +176,7 @@ async function init(): Promise<void> {
   listenForSettingsChanges(setDebugFlag);
   if (collectorFlushTimerId !== null) clearInterval(collectorFlushTimerId);
   collectorFlushTimerId = setInterval(() => { if (getSettings().keywordCollectorEnabled) void flushCollector(); }, TIMINGS.COLLECTOR_FLUSH_INTERVAL);
+  setOnFlush((totalHidden) => void checkMilestone(totalHidden));
   startStatsFlush();
 
   window.postMessage({ type: MESSAGE_TYPES.CONTENT_READY }, window.location.origin);
