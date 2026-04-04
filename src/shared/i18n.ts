@@ -67,7 +67,13 @@ type TranslationKeys =
   | 'onboardingDismiss'
   | 'followSyncBanner'
   | 'onboardingSiteBanner'
-  | 'onboardingSiteCta';
+  | 'onboardingSiteCta'
+  | 'todayHidden'
+  | 'share'
+  | 'openSettings'
+  | 'updateBanner'
+  | 'dismiss'
+  | 'shareText';
 
 type Translations = Record<TranslationKeys, string>;
 
@@ -135,6 +141,12 @@ const ko: Translations = {
   followSyncBanner: '전체 팔로우 목록을 가져오려면 최하단까지 스크롤해주세요',
   onboardingSiteBanner: '팔로잉 페이지에서 스크롤하면 팔로우 중인 계정을 필터에서 제외할 수 있습니다',
   onboardingSiteCta: '동기화하기',
+  todayHidden: '오늘 {count}개 숨김',
+  share: '공유',
+  openSettings: '설정 열기',
+  updateBanner: '새 버전으로 업데이트되었습니다!',
+  dismiss: '닫기',
+  shareText: '오늘 파딱 제거기로 {count}개의 파딱 트윗을 숨겼습니다 😎',
 };
 
 const en: Translations = {
@@ -201,6 +213,12 @@ const en: Translations = {
   followSyncBanner: 'Scroll to the bottom to import your full following list',
   onboardingSiteBanner: 'Scroll the Following page to exclude accounts you follow from filtering',
   onboardingSiteCta: 'Sync now',
+  todayHidden: 'Hidden {count} today',
+  share: 'Share',
+  openSettings: 'Open Settings',
+  updateBanner: 'Updated to a new version!',
+  dismiss: 'Dismiss',
+  shareText: 'I hid {count} paid badge tweets today with Blue Badge Remover 😎',
 };
 
 const ja: Translations = {
@@ -267,6 +285,12 @@ const ja: Translations = {
   followSyncBanner: '全フォローリストを取得するには一番下までスクロールしてください',
   onboardingSiteBanner: 'フォローページでスクロールするとフォロー中のアカウントをフィルタから除外できます',
   onboardingSiteCta: '同期する',
+  todayHidden: '今日 {count}件非表示',
+  share: '共有',
+  openSettings: '設定を開く',
+  updateBanner: '新しいバージョンに更新されました！',
+  dismiss: '閉じる',
+  shareText: '今日Blue Badge Removerで{count}件の課金バッジツイートを非表示にしました 😎',
 };
 
 const translations: Record<Language, Translations> = { ko, en, ja };
