@@ -1,12 +1,13 @@
 // src/content/tweet-orchestrator.ts
-// 트윗 처리 오케스트레이터: DOM에서 트윗 정보를 추출하고 숨김/표시를 결정.
+// 트윗 처리 오케스트레이터: DOM에서 트윗 정보를 추출하고, classifier로 판정하고, DOM을 조작.
 import { detectBadgeSvg } from '@features/badge-detection';
-import { shouldHideTweet, shouldHideRetweet, getQuoteAction, hideTweet, hideQuoteBlock, showTweet } from '@features/content-filter';
-import { matchesKeywordFilter } from '@features/keyword-filter';
+import { hideTweet, hideQuoteBlock, showTweet } from '@features/content-filter';
 import { extractTweetAuthor, extractRetweeterName, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, formatUserLabel, addDebugLabel, hasBadgeInAuthorArea } from './tweet-processing';
 import { isProfilePage, getPageType } from './page-utils';
-import { badgeCache, profileCache, getSettings, getFollowSet, getWhitelistSet, getActiveFilterRules, getCurrentUserHandle, isHandleFollowed, isHandleWhitelisted } from './state';
+import { badgeCache, profileCache, getSettings, getWhitelistSet, getActiveFilterRules, getCurrentUserHandle, isHandleFollowed, isHandleWhitelisted } from './state';
 import { bufferCollectedFadak } from './collector-buffer';
+import { classifyTweet, classifyQuote } from './tweet-classifier';
+import type { ClassifyResult, QuoteClassifyResult } from './tweet-classifier';
 
 function checkFadak(userId: string, element: HTMLElement): boolean {
   let isFadak = badgeCache.get(userId);
@@ -44,104 +45,70 @@ export function processTweet(tweetEl: HTMLElement): void {
     console.log('[BBR]', userLabel, { isFadak, isRetweet, inFollow, hasQuote });
   }
 
-  if (isRetweet) {
-    processRetweet(tweetEl, handle, isFadak, inFollow, settings, whitelistSet, activeFilterRules);
-    return;
-  }
-
-  if (isFadak && inFollow) {
-    showTweet(tweetEl);
-  }
-
-  if (isFadak && !inFollow) {
-    if (processDirectFadak(tweetEl, handle, displayName, settings, whitelistSet, activeFilterRules)) return;
-  }
-
-  processQuote(tweetEl, handle, inFollow, settings, userLabel);
-}
-
-function processRetweet(
-  tweetEl: HTMLElement, handle: string, isFadak: boolean, inFollow: boolean,
-  settings: ReturnType<typeof getSettings>, whitelistSet: Set<string>, activeFilterRules: ReturnType<typeof getActiveFilterRules>,
-): void {
-  if (!isFadak) return;
-  if (inFollow || whitelistSet.has(`@${handle}`)) { showTweet(tweetEl); return; }
-
   const cachedProfile = profileCache.get(handle.toLowerCase());
   const bio = cachedProfile?.bio ?? '';
-  if (settings.keywordCollectorEnabled && hasBadgeInAuthorArea(tweetEl)) {
-    const profile = cachedProfile ?? { handle, displayName: extractDisplayName(tweetEl, handle) ?? handle, bio };
-    bufferCollectedFadak(handle.toLowerCase(), handle, profile.displayName, profile.bio, extractTweetText(tweetEl));
-  }
-  if (settings.keywordFilterEnabled) {
-    const profile = cachedProfile ?? { handle, displayName: extractDisplayName(tweetEl, handle) ?? handle, bio };
-    const { matched } = matchesKeywordFilter(profile, activeFilterRules, extractTweetText(tweetEl));
-    if (!matched) return;
-  }
-  const retweeterName = extractRetweeterName(tweetEl) ?? '';
-  if (shouldHideRetweet({ settings, isFadak: true, isRetweet: true })) {
-    hideTweet(tweetEl, settings.hideMode, { reason: 'retweet', handle: `@${handle}`, retweetedBy: retweeterName || undefined });
-  }
-}
+  const tweetText = extractTweetText(tweetEl);
+  const profile = cachedProfile ?? { handle, displayName: displayName ?? handle, bio };
 
-/** @returns true if tweet was hidden (caller should return early) */
-function processDirectFadak(
-  tweetEl: HTMLElement, handle: string, displayName: string | null,
-  settings: ReturnType<typeof getSettings>, whitelistSet: Set<string>, activeFilterRules: ReturnType<typeof getActiveFilterRules>,
-): boolean {
-  const cachedProfile = profileCache.get(handle.toLowerCase());
-  const bio = cachedProfile?.bio ?? '';
-  if (settings.keywordCollectorEnabled && hasBadgeInAuthorArea(tweetEl)) {
-    const profile = cachedProfile ?? { handle, displayName: displayName ?? handle, bio };
-    bufferCollectedFadak(handle.toLowerCase(), handle, profile.displayName, profile.bio, extractTweetText(tweetEl));
+  // 키워드 수집기 버퍼링 (분류와 무관하게 실행)
+  if (isFadak && settings.keywordCollectorEnabled && hasBadgeInAuthorArea(tweetEl)) {
+    bufferCollectedFadak(handle.toLowerCase(), handle, profile.displayName, profile.bio, tweetText);
   }
-  if (settings.keywordFilterEnabled) {
-    const profile = cachedProfile ?? { handle, displayName: displayName ?? handle, bio };
-    const { matched } = matchesKeywordFilter(profile, activeFilterRules, extractTweetText(tweetEl));
-    if (!matched) return false;
-  }
-  const hide = shouldHideTweet({
-    settings, followList: new Set<string>(), whitelist: whitelistSet,
-    isFadak: true, handle: `@${handle}`, pageType: getPageType(),
+
+  // classifier로 판정
+  const result: ClassifyResult = classifyTweet({
+    handle, displayName, isFadak, inFollow,
+    isRetweet,
+    isWhitelisted: whitelistSet.has(`@${handle}`),
+    settings, activeFilterRules, profile, tweetText,
+    pageType: getPageType(),
   });
-  if (hide) {
-    hideTweet(tweetEl, settings.hideMode, { reason: 'fadak', handle: `@${handle}` });
-    return true;
+
+  // DOM 조작
+  if (result.action === 'show') {
+    showTweet(tweetEl);
+  } else if (result.action === 'hide') {
+    const retweeterName = isRetweet ? (extractRetweeterName(tweetEl) ?? '') : undefined;
+    hideTweet(tweetEl, settings.hideMode, {
+      reason: result.reason ?? 'fadak',
+      handle: `@${handle}`,
+      retweetedBy: retweeterName || undefined,
+      category: result.category,
+    });
   }
-  return false;
+  // action === 'skip' → 비파딱, 아무것도 안 함
+
+  // 인용 트윗 처리
+  processQuoteBlock(tweetEl, handle, inFollow, settings, userLabel);
 }
 
-function processQuote(tweetEl: HTMLElement, parentHandle: string, parentInFollow: boolean, settings: ReturnType<typeof getSettings>, userLabel: string): void {
+function processQuoteBlock(tweetEl: HTMLElement, parentHandle: string, parentInFollow: boolean, settings: ReturnType<typeof getSettings>, userLabel: string): void {
   const quoteBlock = findQuoteBlock(tweetEl);
   if (!quoteBlock) return;
 
   const quoteAuthor = extractQuoteAuthor(quoteBlock);
   const quotedHandle = quoteAuthor?.handle ?? null;
-
-  // self-quote: 부모가 팔로우 중이고 자기 트윗을 인용한 경우 건너뛰기
-  const isSelfQuote = quotedHandle !== null && quotedHandle.toLowerCase() === parentHandle.toLowerCase();
-  if (isSelfQuote && parentInFollow) return;
-
   const quotedIsFadak = quotedHandle ? checkFadak(quotedHandle, quoteBlock) : detectBadgeSvg(quoteBlock);
 
-  if (!quotedIsFadak) return;
-  if (isHandleFollowed(quotedHandle ?? '') || isHandleWhitelisted(quotedHandle ?? '')) return;
+  const result: QuoteClassifyResult = classifyQuote({
+    quotedHandle, quotedIsFadak,
+    quotedInFollow: isHandleFollowed(quotedHandle ?? ''),
+    quotedIsWhitelisted: isHandleWhitelisted(quotedHandle ?? ''),
+    parentHandle, parentInFollow, settings,
+  });
 
-  const quoteAction = getQuoteAction(settings, true);
-  if (quoteAction === 'hide-entire') {
-    hideTweet(tweetEl, settings.hideMode, { reason: 'quote-entire', handle: `@${quotedHandle ?? ''}`, quotedBy: userLabel });
-  } else if (quoteAction === 'hide-quote') {
+  if (result.action === 'hide-entire') {
+    hideTweet(tweetEl, settings.hideMode, { reason: 'quote-entire', handle: `@${quotedHandle ?? ''}`, quotedBy: userLabel, category: result.reason });
+  } else if (result.action === 'hide-quote') {
     hideQuoteBlock(quoteBlock, { handle: `@${quotedHandle ?? ''}` });
   }
 }
 
 export function restoreHiddenTweets(): void {
   const feed = document.querySelector('main') ?? document.body;
-  // 전체 트윗 숨김 복원
   feed.querySelectorAll('article[data-testid="tweet"][data-bbr-original]').forEach((tweet) => {
     showTweet(tweet as HTMLElement);
   });
-  // quote-only 숨김 복원
   feed.querySelectorAll('[data-bbr-hidden-quote]').forEach((quote) => {
     quote.removeAttribute('data-bbr-hidden-quote');
     const placeholder = quote.querySelector('[data-bbr-collapsed]');

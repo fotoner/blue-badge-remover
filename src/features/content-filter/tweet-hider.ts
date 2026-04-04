@@ -13,10 +13,11 @@ export function setTweetHiderLanguage(lang: Language): void {
 }
 
 export interface HideContext {
-  reason: 'fadak' | 'retweet' | 'quote-entire';
+  reason: string;
   handle?: string;
   retweetedBy?: string;
   quotedBy?: string;
+  category?: string;
 }
 
 export interface HideQuoteContext {
