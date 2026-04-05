@@ -19,16 +19,17 @@ export function parseBadgeInfo(userData: unknown): BadgeInfo | null {
     return null;
   }
 
-  const isBusiness = data.verified_type === 'Business';
-  const isGovernment = data.verified_type === 'Government';
+  // verified_type이 존재하면 기관 인증 (Business, Government 등 모든 타입 포함)
+  const hasVerifiedType = !!data.verified_type;
   const isLegacyVerified = data.legacy?.verified === true;
 
-  // is_blue_verified가 false여도 Business/Government/Legacy 인증이면 non-fadak으로 캐시해야 함
-  if (!data.is_blue_verified && !isBusiness && !isGovernment && !isLegacyVerified) {
+  // is_blue_verified가 false여도 기관/레거시 인증이면 non-fadak으로 캐시해야 함
+  if (!data.is_blue_verified && !hasVerifiedType && !isLegacyVerified) {
     return null;
   }
 
-  const isBluePremium = data.is_blue_verified && !isBusiness && !isGovernment && !isLegacyVerified;
+  // 파딱 = is_blue_verified가 true이면서 기관 인증도 아니고 레거시 인증도 아닌 계정
+  const isBluePremium = data.is_blue_verified && !hasVerifiedType && !isLegacyVerified;
   const handle = data.legacy?.screen_name ?? data.core?.screen_name ?? null;
 
   return {
@@ -36,6 +37,6 @@ export function parseBadgeInfo(userData: unknown): BadgeInfo | null {
     handle,
     isBluePremium,
     isLegacyVerified,
-    isBusiness,
+    isBusiness: hasVerifiedType,
   };
 }
