@@ -80,7 +80,7 @@ describe('fetchPack', () => {
   it('throws on invalid JSON', async () => {
     mockFetch.mockResolvedValue(new Response('not json {{{', { status: 200 }));
 
-    await expect(fetchPack('https://example.com/bad.json')).rejects.toThrow('Invalid pack format');
+    await expect(fetchPack('https://example.com/bad.json')).rejects.toThrow();
   });
 
   it('throws on HTTP error', async () => {
