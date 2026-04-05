@@ -30,6 +30,9 @@ export function listenForSettingsChanges(setDebugFlag: (enabled: boolean) => voi
     if (changes[STORAGE_KEYS.DISABLED_FILTER_CATEGORIES]) {
       void loadFilterRules().then(() => { restoreHiddenTweets(); reprocessExistingTweets(); });
     }
+    if (changes[STORAGE_KEYS.FILTER_PACKS]) {
+      void loadFilterRules().then(() => { restoreHiddenTweets(); reprocessExistingTweets(); });
+    }
   });
 }
 

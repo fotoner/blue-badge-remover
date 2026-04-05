@@ -19,18 +19,23 @@ entrypoints/  (WXT 진입점)
 ├── content.ts            Content Script (ISOLATED world)
 ├── injected.content.ts   Content Script (MAIN world, fetch 인터셉트)
 ├── popup/                Popup UI
+├── dashboard/            Dashboard (설정 + 통계)
 ├── options/              고급 필터 설정
 ├── whitelist/            화이트리스트 관리
 └── collector/            키워드 수집기
 
+packs/                    기본 제공 필터 팩 (JSON)
+
 src/
-├── content/              Content Script 로직 (6개 모듈)
+├── content/              Content Script 로직 (8개 모듈)
 │   ├── index.ts              초기화 + 모듈 연결
 │   ├── state.ts              공유 상태 관리
 │   ├── message-handler.ts    postMessage 수신 (MAIN → ISOLATED)
 │   ├── storage-listener.ts   chrome.storage 변경 감지
-│   ├── tweet-orchestrator.ts processTweet + 숨김/표시 제어
-│   ├── tweet-classifier.ts   순수 함수 판정 로직 (테스트 가능)
+│   ├── tweet-orchestrator.ts processTweet + 숨김/표시
+│   ├── tweet-classifier.ts   순수 함수 판정 로직
+│   ├── filter-pipeline.ts    필터 규칙 로드 (내장+커스텀+팩 병합)
+│   ├── milestone-banner.ts   마일스톤 축하 배너
 │   └── collector-buffer.ts   키워드 수집기 버퍼
 ├── features/
 │   ├── badge-detection/      D1: 뱃지 감지 (API + SVG)
@@ -38,6 +43,8 @@ src/
 │   ├── follow-list/          D3: 팔로우 & 화이트리스트
 │   ├── keyword-filter/       D5: 키워드 필터 (매칭, 파서, 캐시)
 │   ├── keyword-collector/    키워드 수집기 스토리지
+│   ├── filter-pack/          필터 팩 관리 (로더 + 스토리지)
+│   ├── stats/                숨김 통계 수집/저장
 │   └── settings/             D4: 설정 관리
 ├── shared/
 │   ├── types/                공통 타입 (Settings, FilterRule, etc.)

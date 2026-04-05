@@ -31,7 +31,7 @@ window.addEventListener('message', (event) => {
   }
   // Content script signals it's ready — replay cached profiles so none are missed
   if (data?.type === MESSAGE_TYPES.CONTENT_READY && cachedProfiles.size > 0) {
-    window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles: Array.from(cachedProfiles.values()) }, '*');
+    window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles: Array.from(cachedProfiles.values()) }, window.location.origin);
   }
 });
 
@@ -118,7 +118,7 @@ function extractBadgeData(data: unknown, endpointHint?: string): void {
     window.postMessage({
       type: MESSAGE_TYPES.BADGE_DATA,
       users,
-    }, '*');
+    }, window.location.origin);
 
     // Derive profiles from already-collected users — avoids a second full traversal
     const profiles: ProfileEntry[] = [];
@@ -152,7 +152,7 @@ function extractBadgeData(data: unknown, endpointHint?: string): void {
           cachedProfiles.set(p.userId, p);
         }
       }
-      window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles }, '*');
+      window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles }, window.location.origin);
 
       if (bbrDebugMode) {
         const withBio = profiles.filter((p) => p.bio);
@@ -175,7 +175,7 @@ function extractFollowData(data: unknown): void {
     window.postMessage({
       type: MESSAGE_TYPES.FOLLOW_DATA,
       handles,
-    }, '*');
+    }, window.location.origin);
   }
 }
 
@@ -256,7 +256,7 @@ function extractArticleDataFromFiber(article: HTMLElement): ArticleData | null {
       type: MESSAGE_TYPES.FOLLOW_DATA,
       handles: [data.handle.toLowerCase()],
       source: 'inline',
-    }, '*');
+    }, window.location.origin);
   }
 
   const observer = new MutationObserver((mutations) => {

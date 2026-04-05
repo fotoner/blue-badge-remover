@@ -43,6 +43,7 @@ export function listenForMessages(followCollectorDeps: FollowCollectorDeps): voi
 }
 
 function handleBadgeData(data: { users: unknown[] }): void {
+  let needsRestore = false;
   let needsReprocess = false;
   for (const userData of data.users) {
     const badge = parseBadgeInfo(userData);
@@ -51,15 +52,22 @@ function handleBadgeData(data: { users: unknown[] }): void {
       if (badge.handle) {
         const prevByHandle = badgeCache.get(badge.handle.toLowerCase());
         badgeCache.set(badge.handle.toLowerCase(), badge.isBluePremium);
-        // non-fadak 계정인데 캐시가 없었거나(SVG로 숨겨졌을 수 있음) true였으면 복원
-        if (!badge.isBluePremium && prevByHandle !== false) {
+        // 캐시 값이 변경된 경우에만 reprocess
+        if (prevByHandle !== undefined && prevByHandle !== badge.isBluePremium) {
           needsReprocess = true;
+          if (!badge.isBluePremium) {
+            // 파딱→비파딱 교정: 숨긴 트윗 복원 필요
+            needsRestore = true;
+          }
+          // 비파딱→파딱 교정: 재처리만 (restore하면 모든 숨긴 트윗이 플래시)
         }
       }
     }
   }
-  if (needsReprocess) {
+  if (needsRestore) {
     restoreHiddenTweets();
+  }
+  if (needsReprocess) {
     reprocessExistingTweets();
   }
 }

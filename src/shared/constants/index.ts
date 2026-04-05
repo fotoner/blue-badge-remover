@@ -29,6 +29,7 @@ export const STORAGE_KEYS = {
   CUSTOM_FILTER_LIST: 'customFilterList',
   COLLECTED_FADAKS: 'collectedFadaks',
   DISABLED_FILTER_CATEGORIES: 'disabledFilterCategories',
+  FILTER_PACKS: 'filterPacks',
 } as const;
 
 export const X_GRAPHQL_ENDPOINTS = [

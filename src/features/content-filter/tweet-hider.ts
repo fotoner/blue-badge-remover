@@ -90,7 +90,7 @@ function injectStyles(): void {
 
 const SHIELD_ICON = `<svg class="bbr-placeholder-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1L2 3.5v4c0 3.5 2.6 6.4 6 7.5 3.4-1.1 6-4 6-7.5v-4L8 1zm0 2.2l4 1.7v2.6c0 2.6-1.9 4.8-4 5.7-2.1-.9-4-3.1-4-5.7V4.9l4-1.7z"/></svg>`;
 
-export function hideTweet(element: HTMLElement, mode: 'remove' | 'collapse', context?: HideContext): void {
+export function hideTweet(element: HTMLElement, mode: 'remove' | 'collapse', context?: HideContext, onExpand?: (el: HTMLElement) => void): void {
   if (element.hasAttribute(ORIGINAL_CONTENT_KEY)) return;
   if (element.hasAttribute(EXPANDED_ATTR)) return;
 
@@ -123,6 +123,7 @@ export function hideTweet(element: HTMLElement, mode: 'remove' | 'collapse', con
     e.stopPropagation();
     e.preventDefault();
     showTweet(element);
+    onExpand?.(element);
   }, { once: true });
   element.appendChild(placeholder);
 }

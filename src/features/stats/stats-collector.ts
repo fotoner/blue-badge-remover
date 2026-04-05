@@ -1,7 +1,7 @@
 // src/features/stats/stats-collector.ts
 // 메모리 버퍼 + 주기적 flush 패턴 (collector-buffer와 동일).
 import type { DailyStats } from './types';
-import { getTodayStats, saveDayStats, getAllTimeTotal } from './stats-storage';
+import { getTodayStats, saveDayStats, getAllTimeTotal, incrementTotal } from './stats-storage';
 
 // 마일스톤 콜백 — content script에서 설정
 let onFlushCallback: ((totalHidden: number) => void) | null = null;
@@ -14,8 +14,16 @@ const COUNTED_ATTR = 'data-bbr-counted';
 let buffer: DailyStats = emptyBuffer();
 let flushTimerId: ReturnType<typeof setInterval> | null = null;
 
+function localDateStr(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function emptyBuffer(): DailyStats {
-  return { date: new Date().toISOString().slice(0, 10), totalHidden: 0, totalShown: 0, byCategory: {}, byPack: {} };
+  return { date: localDateStr(), totalHidden: 0, totalShown: 0, byCategory: {}, byPack: {} };
 }
 
 /** 트윗 숨김 시 호출. tweetEl로 중복 방지. */
@@ -41,7 +49,9 @@ export function recordShow(): void {
 export async function flushStats(): Promise<void> {
   if (buffer.totalHidden === 0 && buffer.totalShown === 0) return;
 
-  const today = await getTodayStats();
+  const hiddenCount = buffer.totalHidden;
+  // buffer.date 기준으로 저장 — 자정 경계에서도 올바른 날짜에 귀속
+  const today = await getTodayStats(buffer.date);
   today.totalHidden += buffer.totalHidden;
   today.totalShown += buffer.totalShown;
   for (const [cat, count] of Object.entries(buffer.byCategory)) {
@@ -51,6 +61,9 @@ export async function flushStats(): Promise<void> {
     today.byPack[pack] = (today.byPack[pack] ?? 0) + count;
   }
   await saveDayStats(today);
+  if (hiddenCount > 0) {
+    await incrementTotal(hiddenCount);
+  }
   buffer = emptyBuffer();
   if (onFlushCallback) {
     const allTime = await getAllTimeTotal();

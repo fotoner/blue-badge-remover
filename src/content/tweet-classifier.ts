@@ -4,6 +4,8 @@ import { shouldHideTweet, shouldHideRetweet, getQuoteAction, type PageType } fro
 import { matchesKeywordFilter } from '@features/keyword-filter';
 import type { FilterRule, Settings, ProfileInfo, KeywordMatchResult } from '@shared/types';
 
+const EMPTY_SET: ReadonlySet<string> = new Set<string>();
+
 export interface ClassifyInput {
   handle: string;
   displayName: string | null;
@@ -62,7 +64,7 @@ export function classifyTweet(input: ClassifyInput): ClassifyResult {
         : { action: 'show', reason: 'retweet-filter-off' };
     }
     const hide = shouldHideTweet({
-      settings, followList: new Set<string>(), whitelist: new Set<string>(),
+      settings, followList: EMPTY_SET as Set<string>, whitelist: EMPTY_SET as Set<string>,
       isFadak: true, handle: `@${handle}`, pageType,
     });
     return hide
@@ -77,7 +79,7 @@ export function classifyTweet(input: ClassifyInput): ClassifyResult {
   }
 
   const hide = shouldHideTweet({
-    settings, followList: new Set<string>(), whitelist: new Set<string>(),
+    settings, followList: EMPTY_SET as Set<string>, whitelist: EMPTY_SET as Set<string>,
     isFadak: true, handle: `@${handle}`, pageType,
   });
   return hide ? { action: 'hide', reason: 'fadak' } : { action: 'show', reason: 'page-filter-off' };

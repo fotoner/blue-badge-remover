@@ -40,6 +40,8 @@
 | **다국어** | 한국어 / English / 日本語 |
 | **멀티 브라우저** | Chrome + Firefox + Edge (WXT 기반 빌드) |
 | **모바일 지원** | Firefox Android (설정 바로가기, 탭 내 페이지 이동) |
+| **필터 팩** | 주제별 기본 필터 팩 (정치, 금융, 공격성) + 커스텀 팩 |
+| **통계 대시보드** | 오늘/전체 숨김 수, 카테고리별 통계, X 공유 |
 | **디버그 모드** | 트윗별 처리 라벨 + 콘솔 로그 |
 
 ## Install
@@ -51,7 +53,7 @@
 ### Firefox / Edge
 
 [GitHub Releases](https://github.com/fotoner/blue-badge-remover/releases)에서 ZIP 다운로드 후 수동 설치.
-(스토어 등록 준비 중)
+Firefox AMO 등록 완료. Edge는 준비 중.
 
 ### 개발 빌드
 
@@ -60,7 +62,7 @@ npm install
 npm run build          # Chrome
 npm run build:firefox  # Firefox
 npm run build:edge     # Edge
-npm test               # 265 tests
+npm test               # 340 tests
 ```
 
 1. `chrome://extensions` 접속 (Edge: `edge://extensions`)
@@ -92,7 +94,7 @@ npm test               # 265 tests
 - **TypeScript** (strict mode)
 - **Chrome Extension** Manifest V3
 - **WXT** (Next-gen Web Extension Framework, Chrome + Firefox + Edge)
-- **Vitest** (265 tests) + **Playwright** (E2E)
+- **Vitest** (340 tests) + **Playwright** (E2E)
 
 ## Project Structure
 
@@ -102,18 +104,23 @@ entrypoints/                  # WXT 진입점
 ├── content.ts                # Content Script (ISOLATED world)
 ├── injected.content.ts       # fetch/XHR 인터셉터 (MAIN world)
 ├── popup/                    # Popup UI
+├── dashboard/                # Dashboard (설정 + 통계)
 ├── options/                  # 고급 필터 설정
 ├── whitelist/                # 화이트리스트 관리
 └── collector/                # 키워드 수집 분석
 
+packs/                        # 기본 제공 필터 팩 (JSON)
+
 src/
-├── content/                  # Content Script 로직 (6개 모듈)
+├── content/                  # Content Script 로직 (8개 모듈)
 ├── injected/                 # MAIN world 스크립트
 ├── features/
 │   ├── badge-detection/      # 뱃지 감지 (API + SVG)
 │   ├── content-filter/       # 트윗 필터링 (Observer + Hider)
 │   ├── keyword-filter/       # 키워드 필터 (파서 + 매처 + 카테고리)
 │   ├── keyword-collector/    # 키워드 수집 (토크나이저 + 통계)
+│   ├── filter-pack/          # 필터 팩 관리 (로더 + 스토리지)
+│   ├── stats/                # 숨김 통계 수집/저장
 │   ├── follow-list/          # 팔로우 동기화
 │   └── settings/             # Storage 래퍼 (wxt/browser)
 ├── shared/

@@ -2,9 +2,9 @@
 // 트윗 처리 오케스트레이터: DOM에서 트윗 정보를 추출하고, classifier로 판정하고, DOM을 조작.
 import { detectBadgeSvg } from '@features/badge-detection';
 import { hideTweet, hideQuoteBlock, showTweet } from '@features/content-filter';
-import { extractTweetAuthor, extractRetweeterName, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, formatUserLabel, addDebugLabel, hasBadgeInAuthorArea } from './tweet-processing';
-import { isProfilePage, getPageType } from './page-utils';
-import { badgeCache, profileCache, getSettings, getWhitelistSet, getActiveFilterRules, getCurrentUserHandle, isHandleFollowed, isHandleWhitelisted } from './state';
+import { extractTweetAuthor, extractRetweeterName, extractTweetStatusPath, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, formatUserLabel, addDebugLabel, hasBadgeInAuthorArea } from './tweet-processing';
+import { isProfilePage, isDetailPage, getPageType } from './page-utils';
+import { badgeCache, profileCache, getSettings, getWhitelistSet, getActiveFilterRules, getCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, getExpandedSet } from './state';
 import { bufferCollectedFadak } from './collector-buffer';
 import { classifyTweet, classifyQuote } from './tweet-classifier';
 import type { ClassifyResult, QuoteClassifyResult } from './tweet-classifier';
@@ -15,10 +15,15 @@ function checkFadak(userId: string, element: HTMLElement): boolean {
   if (cached !== undefined) return cached;
 
   const svgResult = detectBadgeSvg(element);
-  // 구조적 감지(path 1개 + computedColor)는 정확도가 높으므로 양쪽 다 캐시.
-  // API 데이터가 나중에 도착하면 handleBadgeData에서 교정 + reprocess.
-  badgeCache.set(userId, svgResult);
-  return svgResult;
+  if (!svgResult) {
+    // non-fadak만 캐시 (금딱/회딱/뱃지없음 확정)
+    badgeCache.set(userId, false);
+    return false;
+  }
+  // SVG true는 캐시 안 함 — 부분 렌더링 시 금딱 오감지 방지.
+  // API 데이터(handleBadgeData)가 도착하면 확정 캐시 + reprocess.
+  // 다음 processTweet 호출 시 다시 SVG 체크 → API 도착 후에는 캐시 히트.
+  return true;
 }
 
 export function processTweet(tweetEl: HTMLElement): void {
@@ -33,6 +38,19 @@ export function processTweet(tweetEl: HTMLElement): void {
   const activeFilterRules = getActiveFilterRules();
 
   if (currentUserHandle && handle.toLowerCase() === currentUserHandle.toLowerCase()) return;
+
+  // 사용자가 펼친 트윗은 재숨김 안 함 (가상 리스트 DOM 재생성 대응)
+  const statusPath = extractTweetStatusPath(tweetEl);
+  if (statusPath && getExpandedSet().has(statusPath)) {
+    showTweet(tweetEl);
+    return;
+  }
+
+  // 상세 페이지 메인 트윗은 숨기지 않음 (배너로 대체)
+  if (isDetailPage() && statusPath) {
+    const currentPath = window.location.pathname;
+    if (currentPath.includes(statusPath)) return;
+  }
 
   const isFadak = checkFadak(handle.toLowerCase(), tweetEl);
   const displayName = extractDisplayName(tweetEl, handle);
@@ -62,22 +80,28 @@ export function processTweet(tweetEl: HTMLElement): void {
   const result: ClassifyResult = classifyTweet({
     handle, displayName, isFadak, inFollow,
     isRetweet,
-    isWhitelisted: whitelistSet.has(`@${handle}`),
+    isWhitelisted: whitelistSet.has(`@${handle.toLowerCase()}`),
     settings, activeFilterRules, profile, tweetText,
     pageType: getPageType(),
   });
 
   // DOM 조작 + 통계 수집
   if (result.action === 'show') {
-    showTweet(tweetEl);
+    if (tweetEl.hasAttribute('data-bbr-original')) {
+      showTweet(tweetEl);
+    }
   } else if (result.action === 'hide') {
     const retweeterName = isRetweet ? (extractRetweeterName(tweetEl) ?? '') : undefined;
+    const expandedSet = getExpandedSet();
     hideTweet(tweetEl, settings.hideMode, {
       reason: result.reason ?? 'fadak',
       handle: `@${handle}`,
       retweetedBy: retweeterName || undefined,
       category: result.category,
       matchedRule: result.matchedRule,
+    }, (el) => {
+      const sp = extractTweetStatusPath(el);
+      if (sp) expandedSet.add(sp);
     });
     recordHide(tweetEl, result.category, result.packId);
   }
@@ -112,13 +136,14 @@ function processQuoteBlock(tweetEl: HTMLElement, parentHandle: string, parentInF
 }
 
 export function restoreHiddenTweets(): void {
+  getExpandedSet().clear();
   const feed = document.querySelector('main') ?? document.body;
-  // expanded 마커도 제거 — 설정 변경 시 재필터링 가능하도록
-  feed.querySelectorAll('article[data-testid="tweet"][data-bbr-expanded]').forEach((tweet) => {
-    tweet.removeAttribute('data-bbr-expanded');
-  });
   feed.querySelectorAll('article[data-testid="tweet"][data-bbr-original]').forEach((tweet) => {
     showTweet(tweet as HTMLElement);
+  });
+  // expanded 마커 제거 — showTweet이 설정하므로 반드시 showTweet 이후에 제거
+  feed.querySelectorAll('article[data-testid="tweet"][data-bbr-expanded]').forEach((tweet) => {
+    tweet.removeAttribute('data-bbr-expanded');
   });
   feed.querySelectorAll('[data-bbr-hidden-quote]').forEach((quote) => {
     quote.removeAttribute('data-bbr-hidden-quote');

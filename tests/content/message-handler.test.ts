@@ -219,6 +219,74 @@ describe('message-handler', () => {
       expect(badgeCache.get('rest456')).toBe(false);
     });
 
+    it('캐시 false→API true (fadak 교정): reprocess만 호출, restore 미호출', () => {
+      // 미리 캐시에 false 설정 (SVG 미감지 상태)
+      badgeCache.set('targetuser', false);
+
+      mockParseBadgeInfo.mockReturnValue({
+        userId: 'r1', handle: 'TargetUser',
+        isBluePremium: true, isLegacyVerified: false, isBusiness: false,
+      });
+
+      dispatchMessage({
+        type: MESSAGE_TYPES.BADGE_DATA,
+        users: [{}],
+      });
+
+      expect(mockReprocessExistingTweets).toHaveBeenCalledOnce();
+      expect(mockRestoreHiddenTweets).not.toHaveBeenCalled();
+    });
+
+    it('캐시 true→API false (non-fadak 교정): restore + reprocess 모두 호출', () => {
+      // 미리 캐시에 true 설정 (SVG 오감지 상태)
+      badgeCache.set('golduser', true);
+
+      mockParseBadgeInfo.mockReturnValue({
+        userId: 'r2', handle: 'GoldUser',
+        isBluePremium: false, isLegacyVerified: false, isBusiness: true,
+      });
+
+      dispatchMessage({
+        type: MESSAGE_TYPES.BADGE_DATA,
+        users: [{}],
+      });
+
+      expect(mockRestoreHiddenTweets).toHaveBeenCalledOnce();
+      expect(mockReprocessExistingTweets).toHaveBeenCalledOnce();
+    });
+
+    it('캐시 undefined→API true: reprocess 미호출 (신규 캐시만)', () => {
+      mockParseBadgeInfo.mockReturnValue({
+        userId: 'r3', handle: 'NewUser',
+        isBluePremium: true, isLegacyVerified: false, isBusiness: false,
+      });
+
+      dispatchMessage({
+        type: MESSAGE_TYPES.BADGE_DATA,
+        users: [{}],
+      });
+
+      expect(badgeCache.get('newuser')).toBe(true);
+      expect(mockRestoreHiddenTweets).not.toHaveBeenCalled();
+      expect(mockReprocessExistingTweets).not.toHaveBeenCalled();
+    });
+
+    it('캐시 undefined→API false: reprocess 미호출', () => {
+      mockParseBadgeInfo.mockReturnValue({
+        userId: 'r4', handle: 'BizUser',
+        isBluePremium: false, isLegacyVerified: false, isBusiness: true,
+      });
+
+      dispatchMessage({
+        type: MESSAGE_TYPES.BADGE_DATA,
+        users: [{}],
+      });
+
+      expect(badgeCache.get('bizuser')).toBe(false);
+      expect(mockRestoreHiddenTweets).not.toHaveBeenCalled();
+      expect(mockReprocessExistingTweets).not.toHaveBeenCalled();
+    });
+
     it('여러 유저 데이터를 한 번에 처리한다', () => {
       mockParseBadgeInfo
         .mockReturnValueOnce({

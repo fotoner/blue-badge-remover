@@ -5,7 +5,7 @@ import { FeedObserver, setTweetHiderLanguage } from '@features/content-filter';
 import { getSettings as loadSettings, addToWhitelist } from '@features/settings';
 import { MESSAGE_TYPES, STORAGE_KEYS, TIMINGS } from '@shared/constants';
 import { logger } from '@shared/utils/logger';
-import { showFadakProfileBanner, removeFadakBanner } from './fadak-banner';
+import { showFadakProfileBanner, showFadakDetailBanner, removeFadakBanner } from './fadak-banner';
 import { listenForNavigation, setOnNavigate } from './navigation';
 import { collectFollowsFromDOM, saveFollowHandles, disconnectFollowObserver, listenForFollowButtonClicks, getMyHandle } from './follow-collector';
 import { isProfilePage, getProfileLinkHref } from './page-utils';
@@ -99,6 +99,7 @@ function handleNavigate(): void {
     startObserving();
     reprocessExistingTweets();
     showFadakProfileBanner(fadakBannerDeps);
+    showFadakDetailBanner(fadakBannerDeps);
     if (window.location.pathname.includes('/following')) {
       collectFollowsFromDOM(followCollectorDeps);
     }
@@ -201,6 +202,7 @@ async function init(): Promise<void> {
       setCurrentUserHandle(getMyHandle());
     }
     showFadakProfileBanner(fadakBannerDeps);
+    showFadakDetailBanner(fadakBannerDeps);
     startAccountSwitchWatcher();
   }, TIMINGS.INITIAL_SETUP_DELAY);
 
