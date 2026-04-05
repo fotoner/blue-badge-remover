@@ -48,7 +48,6 @@ vi.mock('@shared/utils/logger', () => ({
 }));
 
 import {
-  badgeCache,
   setSettings,
   setFollowSet,
   setWhitelistSet,
@@ -94,22 +93,22 @@ beforeEach(() => {
   setFollowSet(new Set());
   setWhitelistSet(new Set());
   setCurrentUserHandle(null);
-  badgeCache.set('testuser', true); // Pre-populate badge cache
 
   vi.clearAllMocks();
+  // SVG 기반 감지: 기본 false, 개별 테스트에서 true로 설정
   mockDetectBadgeSvg.mockReturnValue(false);
 });
 
 describe('processTweet', () => {
   it('프로필 페이지에서는 처리하지 않는다', () => {
     // isProfilePage depends on URL — set path to a profile page
-    const origHref = globalThis.window?.location?.href;
     // processTweet calls isProfilePage which checks location.pathname
     // Since we're in jsdom, the default path is '/', which is NOT a profile page
     // This test verifies that a tweet on the timeline IS processed
+    mockDetectBadgeSvg.mockReturnValue(true);
     const tweet = createTweetEl('testuser');
     processTweet(tweet);
-    // Should attempt to hide since testuser is a known fadak
+    // Should attempt to hide since testuser is a known fadak (SVG returns true)
     expect(mockHideTweet).toHaveBeenCalled();
   });
 
@@ -121,6 +120,7 @@ describe('processTweet', () => {
   });
 
   it('파딱 + 팔로우 중이면 숨기지 않는다 (이전에 숨겨진 경우만 showTweet)', () => {
+    mockDetectBadgeSvg.mockReturnValue(true);
     setFollowSet(new Set(['testuser']));
     const tweet = createTweetEl('testuser');
     processTweet(tweet);
@@ -130,6 +130,7 @@ describe('processTweet', () => {
   });
 
   it('파딱 + 팔로우 중 + 이전에 숨겨진 트윗이면 showTweet 호출', () => {
+    mockDetectBadgeSvg.mockReturnValue(true);
     setFollowSet(new Set(['testuser']));
     const tweet = createTweetEl('testuser');
     tweet.setAttribute('data-bbr-original', 'hidden');
@@ -138,6 +139,7 @@ describe('processTweet', () => {
   });
 
   it('파딱 + 미팔로우이면 hideTweet 호출', () => {
+    mockDetectBadgeSvg.mockReturnValue(true);
     const tweet = createTweetEl('testuser');
     processTweet(tweet);
     expect(mockHideTweet).toHaveBeenCalledWith(
@@ -150,7 +152,7 @@ describe('processTweet', () => {
 
   it('비파딱 트윗은 숨기지 않는다', () => {
     const tweet = createTweetEl('normaluser');
-    // normaluser is not in badgeCache, detectBadgeSvg returns false
+    // detectBadgeSvg returns false (default mock)
     processTweet(tweet);
     expect(mockHideTweet).not.toHaveBeenCalled();
   });
@@ -163,35 +165,6 @@ describe('processTweet', () => {
   });
 });
 
-describe('checkFadak 캐시 동작', () => {
-  it('SVG false → 캐시에 false 저장', () => {
-    mockDetectBadgeSvg.mockReturnValue(false);
-    const tweet = createTweetEl('newuser');
-    processTweet(tweet);
-    // badgeCache에 false가 저장되었으므로 두 번째 호출에서 SVG 재검사 안 함
-    expect(badgeCache.get('newuser')).toBe(false);
-  });
-
-  it('SVG true → 캐시에 저장 안 함 (API가 확정)', () => {
-    mockDetectBadgeSvg.mockReturnValue(true);
-    // badgeCache에 svguser가 없는 상태에서 시작
-    const tweet = createTweetEl('svguser');
-    processTweet(tweet);
-    // SVG true는 캐시하지 않으므로 undefined
-    expect(badgeCache.get('svguser')).toBeUndefined();
-  });
-
-  it('SVG true + 캐시 미스 → 다음 호출에서 다시 SVG 체크', () => {
-    mockDetectBadgeSvg.mockReturnValue(true);
-    const tweet = createTweetEl('rechecked');
-    processTweet(tweet);
-    const firstCallCount = mockDetectBadgeSvg.mock.calls.length;
-
-    processTweet(tweet);
-    // 캐시가 없으므로 두 번째 호출에서도 detectBadgeSvg 재호출
-    expect(mockDetectBadgeSvg.mock.calls.length).toBeGreaterThan(firstCallCount);
-  });
-});
 
 describe('restoreHiddenTweets', () => {
   it('data-bbr-original 속성이 있는 트윗을 복원한다', () => {

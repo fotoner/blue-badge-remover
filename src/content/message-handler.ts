@@ -1,8 +1,7 @@
 // src/content/message-handler.ts
 // MAIN world(fetch-interceptor)에서 postMessage로 전달되는 데이터 수신 처리.
-import { parseBadgeInfo } from '@features/badge-detection';
 import { MESSAGE_TYPES } from '@shared/constants';
-import { badgeCache, profileCache, collectorBuffer, getSettings, getFollowSet, setFollowSet } from './state';
+import { profileCache, collectorBuffer, getSettings, getFollowSet, setFollowSet } from './state';
 import { extractTweetAuthor } from './tweet-processing';
 import { processTweet, restoreHiddenTweets, reprocessExistingTweets } from './tweet-orchestrator';
 import { saveFollowHandles, getMyHandle, type FollowCollectorDeps } from './follow-collector';
@@ -42,36 +41,9 @@ export function listenForMessages(followCollectorDeps: FollowCollectorDeps): voi
   });
 }
 
-function handleBadgeData(data: { users: unknown[] }): void {
-  let needsRestore = false;
-  let needsReprocess = false;
-  for (const userData of data.users) {
-    const badge = parseBadgeInfo(userData);
-    if (badge) {
-      badgeCache.set(badge.userId, badge.isBluePremium);
-      if (badge.handle) {
-        const prevByHandle = badgeCache.get(badge.handle.toLowerCase());
-        badgeCache.set(badge.handle.toLowerCase(), badge.isBluePremium);
-        if (prevByHandle !== undefined && prevByHandle !== badge.isBluePremium) {
-          // 캐시 값이 변경된 경우 reprocess
-          needsReprocess = true;
-          if (!badge.isBluePremium) needsRestore = true;
-        }
-        if (prevByHandle === undefined && !badge.isBluePremium) {
-          // Fix A 보완: SVG true는 캐시 안 하므로 캐시 없는 non-fadak은
-          // SVG 오감지로 숨겨진 트윗이 있을 수 있음 → 복원 필요
-          needsRestore = true;
-          needsReprocess = true;
-        }
-      }
-    }
-  }
-  if (needsRestore) {
-    restoreHiddenTweets();
-  }
-  if (needsReprocess) {
-    reprocessExistingTweets();
-  }
+function handleBadgeData(_data: { users: unknown[] }): void {
+  // SVG 기반 감지로 전환 — API 배지 캐시 사용 안 함.
+  // 이중 팝(SVG 숨김→API 복원→재숨김)과 parseBadgeInfo 엣지 케이스 제거.
 }
 
 function handleProfileData(data: { profiles: Array<{ userId: string; handle: string; displayName: string; bio: string }> }): void {

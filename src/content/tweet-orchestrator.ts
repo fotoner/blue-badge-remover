@@ -4,26 +4,16 @@ import { detectBadgeSvg } from '@features/badge-detection';
 import { hideTweet, hideQuoteBlock, showTweet } from '@features/content-filter';
 import { extractTweetAuthor, extractRetweeterName, extractTweetStatusPath, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, formatUserLabel, addDebugLabel, hasBadgeInAuthorArea } from './tweet-processing';
 import { isProfilePage, isDetailPage, getPageType } from './page-utils';
-import { badgeCache, profileCache, getSettings, getWhitelistSet, getActiveFilterRules, getCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, getExpandedSet } from './state';
+import { profileCache, getSettings, getWhitelistSet, getActiveFilterRules, getCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, getExpandedSet } from './state';
 import { bufferCollectedFadak } from './collector-buffer';
 import { classifyTweet, classifyQuote } from './tweet-classifier';
 import type { ClassifyResult, QuoteClassifyResult } from './tweet-classifier';
 import { recordHide } from '@features/stats';
 
-function checkFadak(userId: string, element: HTMLElement): boolean {
-  const cached = badgeCache.get(userId);
-  if (cached !== undefined) return cached;
-
-  const svgResult = detectBadgeSvg(element);
-  if (!svgResult) {
-    // non-fadak만 캐시 (금딱/회딱/뱃지없음 확정)
-    badgeCache.set(userId, false);
-    return false;
-  }
-  // SVG true는 캐시 안 함 — 부분 렌더링 시 금딱 오감지 방지.
-  // API 데이터(handleBadgeData)가 도착하면 확정 캐시 + reprocess.
-  // 다음 processTweet 호출 시 다시 SVG 체크 → API 도착 후에는 캐시 히트.
-  return true;
+function checkFadak(_userId: string, element: HTMLElement): boolean {
+  // SVG 구조만으로 판정. API 캐시 사용 안 함 (이중 팝 + API 엣지 케이스 제거).
+  // React가 SVG 자식을 원자적으로 커밋하므로 부분 렌더링 리스크 최소.
+  return detectBadgeSvg(element);
 }
 
 export function processTweet(tweetEl: HTMLElement): void {
