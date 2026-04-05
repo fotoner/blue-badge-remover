@@ -3,6 +3,7 @@ import { t } from '@shared/i18n';
 import { TIMINGS } from '@shared/constants';
 import type { Settings } from '@shared/types';
 import { extractTweetStatusPath } from './tweet-processing';
+import { detectBadgeSvg } from '@features/badge-detection';
 
 export const FADAK_BANNER_ID = 'bbr-fadak-profile-banner';
 const BANNER_STYLE_ATTR = 'data-bbr-banner-styles';
@@ -61,13 +62,8 @@ function injectBannerStyles(): void {
 }
 
 function isBlueBadge(badgeEl: Element): boolean {
-  const svg = badgeEl.closest('svg') ?? badgeEl;
-  // 금딱은 linearGradient 사용
-  if (svg.querySelector('linearGradient')) return false;
-  // 회색딱 체크
-  const fill = (svg.getAttribute('fill') ?? '').toLowerCase();
-  if (fill.includes('#829aab') || fill.includes('grey') || fill.includes('gray')) return false;
-  return true;
+  // detectBadgeSvg와 동일 로직 사용: path 1개 + fill 없음 + gradient 없음 = 파딱
+  return detectBadgeSvg(badgeEl);
 }
 
 export function showFadakProfileBanner(deps: FadakBannerDeps): void {
