@@ -64,10 +64,11 @@ test.describe('Extension Smoke Test', () => {
     await page.goto(`chrome-extension://${extensionId}/popup.html`);
     await page.waitForLoadState('domcontentloaded');
 
-    // 디버그 모드 토글
-    const debugCheckbox = page.locator('#debugMode');
-    await debugCheckbox.check();
-    // 잠시 대기 (storage 저장)
+    // 필터링 토글 OFF
+    const enabledCheckbox = page.locator('#enabled');
+    if (await enabledCheckbox.isChecked()) {
+      await enabledCheckbox.uncheck();
+    }
     await page.waitForTimeout(500);
 
     // 새 탭에서 다시 열어서 상태 유지 확인
@@ -75,11 +76,11 @@ test.describe('Extension Smoke Test', () => {
     await page2.goto(`chrome-extension://${extensionId}/popup.html`);
     await page2.waitForLoadState('domcontentloaded');
 
-    const debugChecked = await page2.locator('#debugMode').isChecked();
-    expect(debugChecked).toBe(true);
+    const enabledChecked = await page2.locator('#enabled').isChecked();
+    expect(enabledChecked).toBe(false);
 
     // 원복
-    await page2.locator('#debugMode').uncheck();
+    await page2.locator('#enabled').check();
     await page2.waitForTimeout(500);
 
     await page.close();
