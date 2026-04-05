@@ -32,12 +32,10 @@
 ### ~~Firefox 설정 저장 호환성~~ (v1.3.6)
 - chrome.* → wxt/browser 전환으로 Firefox MV2 storage 호환 수정
 
-## 버그
+## 완료 (v1.4.0)
 
-### fiber 기반 팔로우 감지에서 노딱(금딱/기관) 미인식
-- fiber에서 following 상태만 확인하고, 뱃지 유형(blue/gold/grey)을 구분하지 않음
-- 노딱 계정이 팔로우 목록에 추가되면서 필터링 예외 처리됨
-- 관련 파일: `src/injected/fetch-interceptor.ts` (extractArticleDataFromFiber)
+### ~~fiber 기반 팔로우 감지에서 노딱(금딱/기관) 미인식~~
+- isBluePremium 체크 추가, API→SVG 타이밍 경합 시 reprocess로 복원
 
 ## 향후
 
