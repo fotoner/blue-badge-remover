@@ -173,12 +173,6 @@ h3 {
   border-top: 1px solid var(--border-subtle);
 }
 
-.subsection:first-of-type {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
-}
-
 .desc {
   color: var(--text-muted);
   font-size: 11px;
