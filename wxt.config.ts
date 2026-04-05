@@ -8,7 +8,7 @@ export default defineConfig({
     name: '__MSG_extName__',
     description: '__MSG_extDescription__',
     default_locale: 'ko',
-    permissions: ['storage', 'unlimitedStorage', 'alarms'],
+    permissions: ['storage', 'unlimitedStorage'],
     host_permissions: [
       'https://x.com/*',
       'https://api.x.com/*',

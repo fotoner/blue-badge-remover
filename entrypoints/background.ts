@@ -5,7 +5,6 @@ import { MESSAGE_TYPES } from '@shared/constants';
 import { shouldUpdate, updateAllPacks } from '@features/filter-pack';
 import { cleanupOldStats } from '@features/stats';
 
-const PACK_UPDATE_ALARM = 'pack-auto-update';
 const UPDATE_NOTI_FLAG = 'bbr-update-available';
 
 export default defineBackground(() => {
@@ -19,30 +18,17 @@ export default defineBackground(() => {
   // 확장 설치/업데이트 감지
   browser.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'update') {
-      // PC에서만 업데이트 노티 플래그 설정
       if (!isFirefoxAndroid) {
         void browser.storage.local.set({ [UPDATE_NOTI_FLAG]: true });
       }
     }
   });
 
-  // 팩 자동 업데이트 알람 (SW 재기동 시 리셋 방지)
-  void browser.alarms.get(PACK_UPDATE_ALARM).then((existing) => {
-    if (!existing) void browser.alarms.create(PACK_UPDATE_ALARM, { periodInMinutes: 24 * 60 });
-  });
-  browser.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === PACK_UPDATE_ALARM) {
-      void shouldUpdate().then((needed) => {
-        if (needed) void updateAllPacks();
-      });
-      void cleanupOldStats();
-    }
-  });
-
-  // SW 재기동 시 누락된 팩 업데이트 체크
+  // SW 시작 시 팩 업데이트 체크 + 통계 정리 (alarms 불필요)
   void shouldUpdate().then((needed) => {
     if (needed) void updateAllPacks();
   });
+  void cleanupOldStats();
 
   // content script → 설정 페이지 열기 요청 처리
   browser.runtime.onMessage.addListener((message, sender) => {
