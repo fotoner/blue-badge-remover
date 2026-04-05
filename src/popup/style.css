@@ -1,22 +1,43 @@
+/* Design System Tokens */
+:root {
+  --bg: #0E1418;
+  --surface-1: #131B21;
+  --surface-2: #18232B;
+  --surface-3: #21303A;
+  --text-primary: #F5F9FC;
+  --text-secondary: #D7E1E8;
+  --text-muted: #8C9AA5;
+  --accent: #1d9bf0;
+  --accent-soft: rgba(29, 155, 240, 0.14);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(29, 155, 240, 0.32);
+  --success: #6EE7B7;
+  --warning: #F7C66B;
+  --danger: #FF7B72;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'IBM Plex Sans KR', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
 /* Base */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
   width: 340px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-body);
   font-size: 13px;
-  color: #e7e9ea;
-  background: #15202b;
+  color: var(--text-primary);
+  background: var(--bg);
   line-height: 1.5;
 }
 
 .container {
-  padding: 20px;
+  padding: 16px;
 }
 
 /* Header */
 .header {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .header-top {
@@ -26,8 +47,9 @@ body {
 }
 
 .header h1 {
-  font-size: 17px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
   letter-spacing: -0.2px;
   display: flex;
   align-items: center;
@@ -40,16 +62,17 @@ body {
 }
 
 .version {
-  color: #71767b;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 400;
 }
 
 /* Sections */
 .section {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(56, 68, 77, 0.5);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .section:last-child {
@@ -58,24 +81,25 @@ body {
   padding-bottom: 0;
 }
 
-/* Update banner */
+/* Update banner — no border, radius allowed */
 .update-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #1d9bf0;
-  border-radius: 8px;
+  background: var(--accent);
+  border-radius: 4px;
   padding: 10px 14px;
   color: white;
   font-size: 13px;
   font-weight: 500;
 }
 
+/* Dismiss button — has border, so radius 0 */
 .update-dismiss {
   background: transparent;
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 6px;
+  border-radius: 0;
   padding: 4px 10px;
   font-size: 12px;
   font-family: inherit;
@@ -91,13 +115,14 @@ body {
 
 /* Master toggle */
 .master-toggle {
-  background: rgba(29, 155, 240, 0.08);
-  margin: 0 -20px 16px;
-  padding: 14px 20px;
+  background: var(--accent-soft);
+  margin: 0 -16px 12px;
+  padding: 14px 16px;
   border-bottom: none;
 }
 
 .label-primary {
+  font-family: var(--font-display);
   font-size: 15px;
   font-weight: 600;
 }
@@ -116,13 +141,13 @@ body {
   opacity: 0.85;
 }
 
-/* Checkbox toggle switch */
+/* Checkbox toggle switch — interactive pill, radius allowed */
 input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
   width: 36px;
   height: 20px;
-  background: #38444d;
+  background: var(--surface-3);
   border-radius: 10px;
   position: relative;
   cursor: pointer;
@@ -135,7 +160,7 @@ input[type="checkbox"]::after {
   position: absolute;
   width: 16px;
   height: 16px;
-  background: #e7e9ea;
+  background: var(--text-primary);
   border-radius: 50%;
   top: 2px;
   left: 2px;
@@ -143,7 +168,7 @@ input[type="checkbox"]::after {
 }
 
 input[type="checkbox"]:checked {
-  background: #1d9bf0;
+  background: var(--accent);
 }
 
 input[type="checkbox"]:checked::after {
@@ -158,7 +183,8 @@ input[type="checkbox"]:checked::after {
 }
 
 .stats-text {
-  color: #e7e9ea;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
   font-size: 14px;
   font-weight: 500;
 }
@@ -171,34 +197,36 @@ button {
   transition: background 0.15s, opacity 0.15s;
 }
 
+/* Share button — interactive pill, no border */
 .btn-share {
-  background: #273340;
-  color: #1d9bf0;
+  background: var(--surface-2);
+  color: var(--accent);
   padding: 6px 14px;
-  border-radius: 16px;
+  border-radius: 12px;
   font-size: 12px;
   font-weight: 600;
   flex-shrink: 0;
 }
 
 .btn-share:hover {
-  background: #2f3d4c;
+  background: var(--surface-3);
 }
 
+/* Settings button — no border, radius 4px */
 .btn-settings {
   display: block;
   width: 100%;
-  background: #273340;
-  color: #e7e9ea;
+  background: var(--surface-2);
+  color: var(--text-primary);
   padding: 10px;
-  border-radius: 8px;
+  border-radius: 4px;
   font-size: 13px;
   font-weight: 500;
   text-align: center;
 }
 
 .btn-settings:hover {
-  background: #2f3d4c;
+  background: var(--surface-3);
 }
 
 /* Info list */
@@ -215,12 +243,13 @@ button {
 }
 
 .info-label {
-  color: #71767b;
+  color: var(--text-muted);
   font-size: 12px;
 }
 
 .info-value {
-  color: #e7e9ea;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 500;
 }
@@ -232,23 +261,23 @@ button {
 }
 
 .feedback-link {
-  color: #536471;
+  color: var(--text-muted);
   font-size: 11px;
   text-decoration: none;
 }
 
 .feedback-link:hover {
-  color: #1d9bf0;
+  color: var(--accent);
 }
 
 .credit {
-  color: #536471;
+  color: var(--text-muted);
   font-size: 11px;
   text-align: center;
 }
 
 .credit a {
-  color: #1d9bf0;
+  color: var(--accent);
   text-decoration: none;
 }
 
