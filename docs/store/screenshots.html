@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280">
+<title>Blue Badge Remover - Store Screenshots</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+  .slide {
+    width: 1280px;
+    height: 800px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── Slide 1: Hero ── */
+  .slide-hero {
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
+    flex-direction: column;
+    gap: 32px;
+  }
+  .slide-hero .icon {
+    width: 120px;
+    height: 120px;
+    background: #F4212E;
+    border-radius: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .slide-hero .icon svg {
+    width: 64px;
+    height: 64px;
+    fill: white;
+  }
+  .slide-hero h1 {
+    color: white;
+    font-size: 56px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .slide-hero h1 span {
+    color: #F4212E;
+  }
+  .slide-hero p {
+    color: #8899a6;
+    font-size: 24px;
+    text-align: center;
+    max-width: 700px;
+    line-height: 1.5;
+  }
+
+  /* ── Slide 2: Before/After ── */
+  .slide-compare {
+    background: #15202b;
+    gap: 0;
+  }
+  .compare-panel {
+    width: 640px;
+    height: 800px;
+    padding: 48px 40px;
+    display: flex;
+    flex-direction: column;
+  }
+  .compare-panel.before {
+    background: #15202b;
+    border-right: 2px solid #38444d;
+  }
+  .compare-panel.after {
+    background: #0d1117;
+  }
+  .compare-label {
+    font-size: 18px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+    padding: 8px 20px;
+    display: inline-block;
+    width: fit-content;
+  }
+  .compare-label.bad { background: #F4212E; color: white; }
+  .compare-label.good { background: #00ba7c; color: white; }
+
+  .tweet-mock {
+    background: #192734;
+    border: 1px solid #38444d;
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    gap: 12px;
+  }
+  .tweet-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #38444d;
+    flex-shrink: 0;
+  }
+  .tweet-body { flex: 1; }
+  .tweet-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #d9d9d9;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .badge-blue {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    background: #1d9bf0;
+    border-radius: 50%;
+    position: relative;
+  }
+  .badge-blue::after {
+    content: '✓';
+    color: white;
+    font-size: 11px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .tweet-handle { color: #8899a6; font-size: 13px; }
+  .tweet-text { color: #d9d9d9; font-size: 15px; margin-top: 8px; line-height: 1.4; }
+  .tweet-fadak { opacity: 0.4; }
+  .tweet-follow .tweet-name { color: #1d9bf0; }
+
+  .hidden-placeholder {
+    background: #192734;
+    border: 1px solid #38444d;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    color: #8899a6;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .shield-icon {
+    width: 16px;
+    height: 16px;
+    fill: #8899a6;
+  }
+
+  /* ── Slide 3: Features Grid ── */
+  .slide-features {
+    background: linear-gradient(180deg, #0a0a0a 0%, #111827 100%);
+    flex-direction: column;
+    gap: 40px;
+    padding: 60px;
+  }
+  .slide-features h2 {
+    color: white;
+    font-size: 40px;
+    font-weight: 700;
+  }
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    width: 100%;
+  }
+  .feature-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .feature-icon {
+    font-size: 32px;
+    line-height: 1;
+  }
+  .feature-title {
+    color: white;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .feature-desc {
+    color: #8899a6;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── Slide 4: Privacy ── */
+  .slide-privacy {
+    background: linear-gradient(135deg, #0a0a0a 0%, #0d1f0d 50%, #0a0a0a 100%);
+    flex-direction: column;
+    gap: 40px;
+  }
+  .privacy-badge {
+    width: 80px;
+    height: 80px;
+    border: 3px solid #00ba7c;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+  }
+  .slide-privacy h2 {
+    color: white;
+    font-size: 44px;
+    font-weight: 700;
+    text-align: center;
+  }
+  .privacy-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 600px;
+  }
+  .privacy-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: #d9d9d9;
+    font-size: 20px;
+  }
+  .check {
+    color: #00ba7c;
+    font-size: 24px;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<!-- Slide 1: Hero -->
+<div class="slide slide-hero" id="slide-1">
+  <div class="icon">
+    <svg viewBox="0 0 24 24"><path d="M12 2L2 7v6c0 5.55 4.16 10.74 10 12 5.84-1.26 10-6.45 10-12V7L12 2zm0 2.18l6 2.73v4.09c0 4.13-2.94 7.98-6 9.23-3.06-1.25-6-5.1-6-9.23V6.91l6-2.73z"/><line x1="8" y1="8" x2="16" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/><line x1="16" y1="8" x2="8" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+  </div>
+  <h1>타임라인에서<br><span>파딱</span>을 지우다</h1>
+  <p>돈 내고 산 파란 뱃지 계정의 트윗을 자동으로 숨기고,<br>내가 팔로우하는 사람들의 트윗만 깨끗하게</p>
+</div>
+
+<!-- Slide 2: Before/After -->
+<div class="slide slide-compare" id="slide-2">
+  <div class="compare-panel before">
+    <div class="compare-label bad">BEFORE</div>
+
+    <div class="tweet-mock tweet-follow">
+      <div class="tweet-avatar" style="background:#5c6bc0"></div>
+      <div class="tweet-body">
+        <div class="tweet-name">팔로우하는 친구</div>
+        <div class="tweet-handle">@my_friend</div>
+        <div class="tweet-text">오늘 날씨 진짜 좋다 🌸</div>
+      </div>
+    </div>
+
+    <div class="tweet-mock tweet-fadak">
+      <div class="tweet-avatar" style="background:#e57373"></div>
+      <div class="tweet-body">
+        <div class="tweet-name">광고봇123 <span class="badge-blue"></span></div>
+        <div class="tweet-handle">@ad_bot_123</div>
+        <div class="tweet-text">💰 하루 10분으로 월 500만원! 지금 바로 시작하세요 ▶▶▶</div>
+      </div>
+    </div>
+
+    <div class="tweet-mock tweet-fadak">
+      <div class="tweet-avatar" style="background:#ff8a65"></div>
+      <div class="tweet-body">
+        <div class="tweet-name">정치논객 <span class="badge-blue"></span></div>
+        <div class="tweet-handle">@politics_guy</div>
+        <div class="tweet-text">이게 나라냐? 이 정부는 당장 사퇴해야...</div>
+      </div>
+    </div>
+
+    <div class="tweet-mock tweet-follow">
+      <div class="tweet-avatar" style="background:#4db6ac"></div>
+      <div class="tweet-body">
+        <div class="tweet-name">일러스트 작가</div>
+        <div class="tweet-handle">@artist_momo</div>
+        <div class="tweet-text">새 그림 올렸어요~ 이번엔 봄 테마 🎨</div>
+      </div>
+    </div>
+
+    <div class="tweet-mock tweet-fadak">
+      <div class="tweet-avatar" style="background:#ba68c8"></div>
+      <div class="tweet-body">
+        <div class="tweet-name">코인마스터 <span class="badge-blue"></span></div>
+        <div class="tweet-handle">@crypto_master</div>
+        <div class="tweet-text">비트코인 지금 안 사면 후회합니다!!! 📈🚀</div>
+      </div>
+    </div>
+
+    <div class="tweet-mock tweet-fadak">
+      <div class="tweet-avatar" style="background:#a1887f"></div>
+      <div class="tweet-body">
+        <div class="tweet-name">스팸어카운트 <span class="badge-blue"></span></div>
+        <div class="tweet-handle">@spam_acc_99</div>
+        <div class="tweet-text">팔로우하면 맞팔 100% 보장! DM 주세요</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="compare-panel after">
+    <div class="compare-label good">AFTER</div>
+
+    <div class="tweet-mock tweet-follow">
+      <div class="tweet-avatar" style="background:#5c6bc0"></div>
+      <div class="tweet-body">
+        <div class="tweet-name">팔로우하는 친구</div>
+        <div class="tweet-handle">@my_friend</div>
+        <div class="tweet-text">오늘 날씨 진짜 좋다 🌸</div>
+      </div>
+    </div>
+
+    <div class="hidden-placeholder">
+      <svg class="shield-icon" viewBox="0 0 16 16"><path d="M8 1L2 3.5v4c0 3.5 2.6 6.4 6 7.5 3.4-1.1 6-4 6-7.5v-4L8 1zm0 2.2l4 1.7v2.6c0 2.6-1.9 4.8-4 5.7-2.1-.9-4-3.1-4-5.7V4.9l4-1.7z"/></svg>
+      파딱 @ad_bot_123의 트윗이 숨겨졌습니다
+    </div>
+
+    <div class="hidden-placeholder">
+      <svg class="shield-icon" viewBox="0 0 16 16"><path d="M8 1L2 3.5v4c0 3.5 2.6 6.4 6 7.5 3.4-1.1 6-4 6-7.5v-4L8 1zm0 2.2l4 1.7v2.6c0 2.6-1.9 4.8-4 5.7-2.1-.9-4-3.1-4-5.7V4.9l4-1.7z"/></svg>
+      파딱 @politics_guy의 트윗이 숨겨졌습니다
+    </div>
+
+    <div class="tweet-mock tweet-follow">
+      <div class="tweet-avatar" style="background:#4db6ac"></div>
+      <div class="tweet-body">
+        <div class="tweet-name">일러스트 작가</div>
+        <div class="tweet-handle">@artist_momo</div>
+        <div class="tweet-text">새 그림 올렸어요~ 이번엔 봄 테마 🎨</div>
+      </div>
+    </div>
+
+    <div class="hidden-placeholder">
+      <svg class="shield-icon" viewBox="0 0 16 16"><path d="M8 1L2 3.5v4c0 3.5 2.6 6.4 6 7.5 3.4-1.1 6-4 6-7.5v-4L8 1zm0 2.2l4 1.7v2.6c0 2.6-1.9 4.8-4 5.7-2.1-.9-4-3.1-4-5.7V4.9l4-1.7z"/></svg>
+      파딱 @crypto_master의 트윗이 숨겨졌습니다
+    </div>
+
+    <div class="hidden-placeholder">
+      <svg class="shield-icon" viewBox="0 0 16 16"><path d="M8 1L2 3.5v4c0 3.5 2.6 6.4 6 7.5 3.4-1.1 6-4 6-7.5v-4L8 1zm0 2.2l4 1.7v2.6c0 2.6-1.9 4.8-4 5.7-2.1-.9-4-3.1-4-5.7V4.9l4-1.7z"/></svg>
+      파딱 @spam_acc_99의 트윗이 숨겨졌습니다
+    </div>
+  </div>
+</div>
+
+<!-- Slide 3: Features -->
+<div class="slide slide-features" id="slide-3">
+  <h2>주요 기능</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🛡️</div>
+      <div class="feature-title">자동 파딱 감지</div>
+      <div class="feature-desc">X API + SVG 뱃지 분석으로 파란 뱃지(Premium) 계정을 정확하게 식별</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">👥</div>
+      <div class="feature-title">팔로우 예외</div>
+      <div class="feature-desc">내가 팔로우하는 계정은 파딱이어도 숨기지 않음. 자동 동기화</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🏢</div>
+      <div class="feature-title">기관 인증 보호</div>
+      <div class="feature-desc">골드(기업)/그레이(정부) 뱃지는 숨기지 않음. 파란 뱃지만 필터링</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <div class="feature-title">통계 대시보드</div>
+      <div class="feature-desc">숨긴 트윗 수, 카테고리별 통계, X에 공유하기</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔧</div>
+      <div class="feature-title">세밀한 설정</div>
+      <div class="feature-desc">타임라인/답글/검색/북마크별 토글, 리트윗/인용 개별 설정</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌏</div>
+      <div class="feature-title">다국어 지원</div>
+      <div class="feature-desc">한국어, English, 日本語 완벽 지원</div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 4: Privacy -->
+<div class="slide slide-privacy" id="slide-4">
+  <div class="privacy-badge">🔒</div>
+  <h2>완전한 프라이버시</h2>
+  <div class="privacy-list">
+    <div class="privacy-item"><span class="check">✓</span> 모든 처리는 브라우저 내부에서만</div>
+    <div class="privacy-item"><span class="check">✓</span> 외부 서버 통신 없음</div>
+    <div class="privacy-item"><span class="check">✓</span> 개인정보 수집 없음</div>
+    <div class="privacy-item"><span class="check">✓</span> 인증 토큰 저장 안 함</div>
+    <div class="privacy-item"><span class="check">✓</span> 오픈소스 (MIT 라이선스)</div>
+  </div>
+</div>
+
+</body>
+</html>
