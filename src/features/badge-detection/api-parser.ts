@@ -19,13 +19,15 @@ export function parseBadgeInfo(userData: unknown): BadgeInfo | null {
     return null;
   }
 
-  if (!data.is_blue_verified) {
+  const isBusiness = data.verified_type === 'Business';
+  const isLegacyVerified = data.legacy?.verified === true;
+
+  // is_blue_verified가 false여도 Business/Legacy 인증이면 non-fadak으로 캐시해야 함
+  if (!data.is_blue_verified && !isBusiness && !isLegacyVerified) {
     return null;
   }
 
-  const isBusiness = data.verified_type === 'Business';
-  const isLegacyVerified = data.legacy?.verified === true;
-  const isBluePremium = !isBusiness && !isLegacyVerified;
+  const isBluePremium = data.is_blue_verified && !isBusiness && !isLegacyVerified;
   const handle = data.legacy?.screen_name ?? data.core?.screen_name ?? null;
 
   return {
