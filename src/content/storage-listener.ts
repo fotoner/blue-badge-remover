@@ -52,7 +52,8 @@ function handleSettingsChange(newSettings: Settings, setDebugFlag: (enabled: boo
     prev.filter.timeline !== newSettings.filter.timeline ||
     prev.filter.replies !== newSettings.filter.replies ||
     prev.filter.search !== newSettings.filter.search ||
-    prev.filter.bookmarks !== newSettings.filter.bookmarks;
+    prev.filter.bookmarks !== newSettings.filter.bookmarks ||
+    prev.filter.lists !== newSettings.filter.lists;
 
   if (needsReprocess) {
     restoreHiddenTweets();

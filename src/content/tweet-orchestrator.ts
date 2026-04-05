@@ -15,15 +15,10 @@ function checkFadak(userId: string, element: HTMLElement): boolean {
   if (cached !== undefined) return cached;
 
   const svgResult = detectBadgeSvg(element);
-  if (!svgResult) {
-    // SVG가 non-fadak(false): 확정 캐시 (금딱/회딱/뱃지없음)
-    badgeCache.set(userId, false);
-    return false;
-  }
-  // SVG가 파딱(true)으로 판단해도 캐시하지 않음.
-  // API 데이터(handleBadgeData)가 도착하면 확정 캐시되고 reprocess됨.
-  // 캐시 안 하면 다음 processTweet 호출 시 다시 SVG 체크 → API 도착 후에는 캐시 히트.
-  return true;
+  // 구조적 감지(path 1개 + computedColor)는 정확도가 높으므로 양쪽 다 캐시.
+  // API 데이터가 나중에 도착하면 handleBadgeData에서 교정 + reprocess.
+  badgeCache.set(userId, svgResult);
+  return svgResult;
 }
 
 export function processTweet(tweetEl: HTMLElement): void {
@@ -88,8 +83,10 @@ export function processTweet(tweetEl: HTMLElement): void {
   }
   // action === 'skip' → 비파딱, 아무것도 안 함
 
-  // 인용 트윗 처리
-  processQuoteBlock(tweetEl, handle, inFollow, settings, userLabel);
+  // 인용 트윗 처리 (전역 필터링 OFF면 스킵)
+  if (settings.enabled) {
+    processQuoteBlock(tweetEl, handle, inFollow, settings, userLabel);
+  }
 }
 
 function processQuoteBlock(tweetEl: HTMLElement, parentHandle: string, parentInFollow: boolean, settings: ReturnType<typeof getSettings>, userLabel: string): void {
