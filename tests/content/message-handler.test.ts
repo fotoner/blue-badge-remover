@@ -271,7 +271,7 @@ describe('message-handler', () => {
       expect(mockReprocessExistingTweets).not.toHaveBeenCalled();
     });
 
-    it('캐시 undefined→API false: reprocess 미호출', () => {
+    it('캐시 undefined→API false: restore + reprocess 호출 (SVG 오감지 복원)', () => {
       mockParseBadgeInfo.mockReturnValue({
         userId: 'r4', handle: 'BizUser',
         isBluePremium: false, isLegacyVerified: false, isBusiness: true,
@@ -283,8 +283,9 @@ describe('message-handler', () => {
       });
 
       expect(badgeCache.get('bizuser')).toBe(false);
-      expect(mockRestoreHiddenTweets).not.toHaveBeenCalled();
-      expect(mockReprocessExistingTweets).not.toHaveBeenCalled();
+      // SVG true는 캐시 안 하므로 캐시 없는 non-fadak은 오감지 복원 필요
+      expect(mockRestoreHiddenTweets).toHaveBeenCalledOnce();
+      expect(mockReprocessExistingTweets).toHaveBeenCalledOnce();
     });
 
     it('여러 유저 데이터를 한 번에 처리한다', () => {

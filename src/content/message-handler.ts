@@ -52,14 +52,16 @@ function handleBadgeData(data: { users: unknown[] }): void {
       if (badge.handle) {
         const prevByHandle = badgeCache.get(badge.handle.toLowerCase());
         badgeCache.set(badge.handle.toLowerCase(), badge.isBluePremium);
-        // 캐시 값이 변경된 경우에만 reprocess
         if (prevByHandle !== undefined && prevByHandle !== badge.isBluePremium) {
+          // 캐시 값이 변경된 경우 reprocess
           needsReprocess = true;
-          if (!badge.isBluePremium) {
-            // 파딱→비파딱 교정: 숨긴 트윗 복원 필요
-            needsRestore = true;
-          }
-          // 비파딱→파딱 교정: 재처리만 (restore하면 모든 숨긴 트윗이 플래시)
+          if (!badge.isBluePremium) needsRestore = true;
+        }
+        if (prevByHandle === undefined && !badge.isBluePremium) {
+          // Fix A 보완: SVG true는 캐시 안 하므로 캐시 없는 non-fadak은
+          // SVG 오감지로 숨겨진 트윗이 있을 수 있음 → 복원 필요
+          needsRestore = true;
+          needsReprocess = true;
         }
       }
     }
