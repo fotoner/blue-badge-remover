@@ -60,6 +60,7 @@ type TranslationKeys =
   | 'keywordFilterBetaDesc'
   | 'advancedFilterSettings'
   | 'bookmarks'
+  | 'lists'
   | 'addToWhitelist'
   | 'addedToWhitelist'
   | 'onboardingBanner'
@@ -72,6 +73,8 @@ type TranslationKeys =
   | 'share'
   | 'openSettings'
   | 'updateBanner'
+  | 'updateBannerVersion'
+  | 'milestoneMessage'
   | 'dismiss'
   | 'shareText';
 
@@ -133,6 +136,7 @@ const ko: Translations = {
   keywordFilterBetaDesc: '모든 파딱이 아닌, 특정 키워드에 해당하는 바이오(프로필)나 이름, 본문을 가지고 있는 글만 가립니다. 가끔 유용한 정보 파딱 등의 글을 보고 싶은 분들에게 추천입니다.',
   advancedFilterSettings: '고급 필터 설정',
   bookmarks: '북마크',
+  lists: '리스트',
   addToWhitelist: '화이트리스트에 추가',
   addedToWhitelist: '화이트리스트에 추가됨',
   onboardingBanner: '팔로잉 목록을 동기화하면 팔로우 중인 계정이 필터링에서 제외됩니다.',
@@ -145,8 +149,10 @@ const ko: Translations = {
   share: '공유',
   openSettings: '설정 열기',
   updateBanner: '새 버전으로 업데이트되었습니다!',
+  updateBannerVersion: 'v{version}으로 업데이트되었습니다!',
   dismiss: '닫기',
-  shareText: '오늘 파딱 제거기로 {count}개의 파딱 트윗을 숨겼습니다 😎',
+  shareText: '오늘 파딱 트윗 {count}개를 숨겼습니다 🧹\n\n#파딱제거기 #BlueBadgeRemover',
+  milestoneMessage: '🎉 {count}번째 파딱 트윗을 숨겼습니다!',
 };
 
 const en: Translations = {
@@ -205,6 +211,7 @@ const en: Translations = {
   keywordFilterBetaDesc: 'It does not hide all Paid badge posts, but only those containing specific keywords in the bio, name or the main text. This is recommended for users who occasionally want to see useful information from Paid badge holders.',
   advancedFilterSettings: 'Advanced Filter Settings',
   bookmarks: 'Bookmarks',
+  lists: 'Lists',
   addToWhitelist: 'Add to Whitelist',
   addedToWhitelist: 'Added to Whitelist',
   onboardingBanner: 'Sync your following list to exclude followed accounts from filtering.',
@@ -217,8 +224,10 @@ const en: Translations = {
   share: 'Share',
   openSettings: 'Open Settings',
   updateBanner: 'Updated to a new version!',
+  updateBannerVersion: 'Updated to v{version}!',
   dismiss: 'Dismiss',
-  shareText: 'I hid {count} paid badge tweets today with Blue Badge Remover 😎',
+  shareText: 'Hid {count} paid badge tweets today 🧹\n\n#BlueBadgeRemover',
+  milestoneMessage: '🎉 Hidden {count} paid badge tweets!',
 };
 
 const ja: Translations = {
@@ -277,6 +286,7 @@ const ja: Translations = {
   keywordFilterBetaDesc: 'すべての課金バッジの投稿を非表示にするのではなく、プロフィールや名前、本文に特定のキーワードが含まれている投稿のみを非表示にします。時々、課金バッジユーザーによる有益な情報を確認したい方に適しています。',
   advancedFilterSettings: '高度なフィルター設定',
   bookmarks: 'ブックマーク',
+  lists: 'リスト',
   addToWhitelist: 'ホワイトリストに追加',
   addedToWhitelist: 'ホワイトリストに追加済み',
   onboardingBanner: 'フォローリストを同期すると、フォロー中のアカウントがフィルタリングから除外されます。',
@@ -289,8 +299,10 @@ const ja: Translations = {
   share: '共有',
   openSettings: '設定を開く',
   updateBanner: '新しいバージョンに更新されました！',
+  updateBannerVersion: 'v{version}に更新されました！',
   dismiss: '閉じる',
-  shareText: '今日Blue Badge Removerで{count}件の課金バッジツイートを非表示にしました 😎',
+  shareText: '今日{count}件の課金バッジツイートを非表示にしました 🧹\n\n#BlueBadgeRemover',
+  milestoneMessage: '🎉 {count}件の課金バッジツイートを非表示にしました！',
 };
 
 const translations: Record<Language, Translations> = { ko, en, ja };

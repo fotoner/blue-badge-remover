@@ -29,6 +29,14 @@ body {
   font-size: 17px;
   font-weight: 700;
   letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-icon {
+  width: 24px;
+  height: 24px;
 }
 
 .version {
@@ -193,9 +201,44 @@ button {
   background: #2f3d4c;
 }
 
+/* Info list */
+.info-list {
+  padding-top: 0;
+  padding-bottom: 8px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+}
+
+.info-label {
+  color: #71767b;
+  font-size: 12px;
+}
+
+.info-value {
+  color: #e7e9ea;
+  font-size: 12px;
+  font-weight: 500;
+}
+
 /* Footer */
 .footer {
   padding-top: 4px;
+  text-align: center;
+}
+
+.feedback-link {
+  color: #536471;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.feedback-link:hover {
+  color: #1d9bf0;
 }
 
 .credit {

@@ -178,6 +178,9 @@ async function init(): Promise<void> {
   collectorFlushTimerId = setInterval(() => { if (getSettings().keywordCollectorEnabled) void flushCollector(); }, TIMINGS.COLLECTOR_FLUSH_INTERVAL);
   setOnFlush((totalHidden) => void checkMilestone(totalHidden));
   startStatsFlush();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') void flushStats();
+  });
 
   window.postMessage({ type: MESSAGE_TYPES.CONTENT_READY }, window.location.origin);
 

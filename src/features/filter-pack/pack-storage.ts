@@ -27,7 +27,7 @@ export async function saveFilterPack(pack: FilterPack): Promise<void> {
   const entries = await readEntries();
   const idx = entries.findIndex((e) => e.pack.id === pack.id);
   if (idx >= 0) {
-    entries[idx] = { pack, enabled: entries[idx].enabled };
+    entries[idx] = { pack, enabled: entries[idx]!.enabled };
   } else {
     entries.push({ pack, enabled: false });
   }

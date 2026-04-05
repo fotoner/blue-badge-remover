@@ -75,6 +75,7 @@ export function processTweet(tweetEl: HTMLElement): void {
       handle: `@${handle}`,
       retweetedBy: retweeterName || undefined,
       category: result.category,
+      matchedRule: result.matchedRule,
     });
     recordHide(tweetEl, result.category, result.packId);
   }
@@ -100,7 +101,7 @@ function processQuoteBlock(tweetEl: HTMLElement, parentHandle: string, parentInF
   });
 
   if (result.action === 'hide-entire') {
-    hideTweet(tweetEl, settings.hideMode, { reason: 'quote-entire', handle: `@${quotedHandle ?? ''}`, quotedBy: userLabel, category: result.reason });
+    hideTweet(tweetEl, settings.hideMode, { reason: 'quote-entire', handle: `@${quotedHandle ?? ''}`, quotedBy: userLabel });
   } else if (result.action === 'hide-quote') {
     hideQuoteBlock(quoteBlock, { handle: `@${quotedHandle ?? ''}` });
   }
@@ -108,6 +109,10 @@ function processQuoteBlock(tweetEl: HTMLElement, parentHandle: string, parentInF
 
 export function restoreHiddenTweets(): void {
   const feed = document.querySelector('main') ?? document.body;
+  // expanded 마커도 제거 — 설정 변경 시 재필터링 가능하도록
+  feed.querySelectorAll('article[data-testid="tweet"][data-bbr-expanded]').forEach((tweet) => {
+    tweet.removeAttribute('data-bbr-expanded');
+  });
   feed.querySelectorAll('article[data-testid="tweet"][data-bbr-original]').forEach((tweet) => {
     showTweet(tweet as HTMLElement);
   });

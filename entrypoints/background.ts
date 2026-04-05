@@ -26,8 +26,10 @@ export default defineBackground(() => {
     }
   });
 
-  // 팩 자동 업데이트 알람
-  void browser.alarms.create(PACK_UPDATE_ALARM, { periodInMinutes: 24 * 60 });
+  // 팩 자동 업데이트 알람 (SW 재기동 시 리셋 방지)
+  void browser.alarms.get(PACK_UPDATE_ALARM).then((existing) => {
+    if (!existing) void browser.alarms.create(PACK_UPDATE_ALARM, { periodInMinutes: 24 * 60 });
+  });
   browser.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === PACK_UPDATE_ALARM) {
       void shouldUpdate().then((needed) => {

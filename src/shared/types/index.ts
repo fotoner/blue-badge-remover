@@ -5,6 +5,7 @@ export interface Settings {
     replies: boolean;
     search: boolean;
     bookmarks: boolean;
+    lists: boolean;
   };
   hideMode: 'remove' | 'collapse';
   retweetFilter: boolean;
@@ -52,7 +53,7 @@ export interface ProfileInfo {
 export type FilterRule =
   | { type: 'keyword'; value: string; packId?: string; category?: string; reason?: string }
   | { type: 'wildcard'; pattern: RegExp; original: string; packId?: string; category?: string; reason?: string }
-  | { type: 'exception'; handle: string; packId?: string };
+  | { type: 'exception'; handle: string; packId?: string; category?: string };
 
 export interface KeywordMatchResult {
   matched: boolean;

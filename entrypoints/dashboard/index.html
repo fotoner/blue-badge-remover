@@ -8,16 +8,10 @@
 </head>
 <body>
   <div class="container">
-    <!-- Update Banner -->
-    <div id="update-banner" class="update-banner" style="display:none">
-      <span>새로운 버전으로 업데이트되었습니다!</span>
-      <button type="button" id="update-dismiss" class="banner-dismiss">&times;</button>
-    </div>
-
     <!-- Header -->
     <header class="header">
       <div class="header-top">
-        <h1>Blue Badge Remover</h1>
+        <h1><img src="/icons/icon48.png" alt="" class="app-icon">Blue Badge Remover</h1>
         <div class="lang-selector">
           <label for="language" data-i18n="language">언어</label>
           <select id="language">
@@ -37,9 +31,14 @@
         <span class="hero-number" id="hero-count">0개</span>
         <span class="hero-subtitle">오늘 숨긴 파딱 트윗</span>
       </div>
+      <div class="total-stat">
+        <span>지금까지 숨긴 총 파딱 트윗</span>
+        <span class="total-count" id="total-count">0개</span>
+      </div>
       <button type="button" id="share-btn" class="btn-share">X에 공유하기</button>
       <div id="category-bars" class="category-bars"></div>
       <p id="stats-empty" class="empty-state" style="display:none">아직 통계가 없습니다. X를 사용하면 자동으로 수집됩니다.</p>
+      <button type="button" id="reset-stats-btn" class="btn-reset">통계 초기화</button>
     </section>
 
     <!-- Section 2: Filter Settings -->
@@ -50,6 +49,7 @@
       <label class="toggle-row"><span data-i18n="tweetDetailReplies">트윗 상세 / 답글</span><input type="checkbox" id="filter-replies" checked></label>
       <label class="toggle-row"><span data-i18n="searchResults">검색 결과</span><input type="checkbox" id="filter-search" checked></label>
       <label class="toggle-row"><span data-i18n="bookmarks">북마크</span><input type="checkbox" id="filter-bookmarks"></label>
+      <label class="toggle-row"><span data-i18n="lists">리스트</span><input type="checkbox" id="filter-lists"></label>
 
       <div class="subsection">
         <h3 data-i18n="hideMode">숨김 방식</h3>
@@ -96,37 +96,15 @@
       </div>
     </section>
 
-    <!-- Section 3: Filter Management -->
-    <section class="section" id="section-filter-mgmt">
-      <h2>필터 관리</h2>
-
-      <div class="subsection">
-        <h3>내 필터</h3>
-        <div class="filter-preview" id="custom-filter-preview">
-          <pre id="custom-filter-text" class="filter-text"></pre>
-        </div>
-        <button type="button" id="edit-custom-filter-btn" class="btn-secondary">필터 편집</button>
-      </div>
-
-      <div class="subsection">
-        <h3>기본 필터</h3>
-        <label class="toggle-row">
-          <span>기본 필터 사용</span>
-          <input type="checkbox" id="defaultFilterEnabled" checked>
-        </label>
-        <div id="default-category-list" class="category-list"></div>
-      </div>
-
-      <div class="subsection">
-        <h3>구독 팩</h3>
-        <div id="filter-pack-list" class="filter-pack-list"></div>
-        <p id="packs-empty" class="empty-hint" style="display:none">등록된 필터 팩이 없습니다</p>
-        <div class="add-row">
-          <input type="text" id="pack-url-input" placeholder="필터 팩 URL 입력">
-          <button type="button" id="add-pack-btn" class="btn-small">팩 추가</button>
-        </div>
-        <button type="button" id="export-pack-btn" class="btn-secondary btn-mt">팩으로 내보내기</button>
-      </div>
+    <!-- Section 3: Filter Settings (link) -->
+    <section class="section" id="section-filter-link">
+      <h2>필터</h2>
+      <label class="toggle-row">
+        <span data-i18n="keywordFilterBeta">키워드 필터</span>
+        <input type="checkbox" id="keywordFilterEnabled">
+      </label>
+      <p class="hint" data-i18n="keywordFilterBetaDesc">특정 키워드에 해당하는 파딱만 숨깁니다</p>
+      <button type="button" id="open-options-btn" class="btn-secondary btn-mt" data-i18n="advancedFilterSettings">고급 필터 설정</button>
     </section>
 
     <!-- Section 4: Follow & Whitelist -->
@@ -161,22 +139,6 @@
       <a href="https://forms.gle/F1hyx1uo8yaFE3Tt6" target="_blank" class="btn-feedback" data-i18n="feedback">피드백 보내기</a>
       <p class="credit">v<span id="ext-version"></span> &middot; made by <a href="https://x.com/fotoner_p" target="_blank" rel="noopener">@fotoner_p</a></p>
     </section>
-  </div>
-
-  <!-- Export Modal -->
-  <div id="export-modal" class="modal-overlay" style="display:none">
-    <div class="modal">
-      <h3>팩으로 내보내기</h3>
-      <label class="modal-label">이름 <input type="text" id="export-name" placeholder="필터 팩 이름"></label>
-      <label class="modal-label">작성자 <input type="text" id="export-author" placeholder="작성자"></label>
-      <label class="modal-label">설명 <input type="text" id="export-description" placeholder="설명 (선택)"></label>
-      <label class="modal-label">카테고리 <input type="text" id="export-category" placeholder="카테고리 (선택)"></label>
-      <div class="modal-actions">
-        <button type="button" id="export-copy-btn" class="btn-small">JSON 복사</button>
-        <button type="button" id="export-download-btn" class="btn-small">다운로드</button>
-        <button type="button" id="export-cancel-btn" class="btn-cancel">취소</button>
-      </div>
-    </div>
   </div>
 
   <script type="module" src="./main.ts"></script>

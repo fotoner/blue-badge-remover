@@ -5,7 +5,7 @@ import type { Settings } from '../../src/shared/types';
 
 const defaultSettings: Settings = {
   enabled: true,
-  filter: { timeline: true, replies: true, search: true, bookmarks: false },
+  filter: { timeline: true, replies: true, search: true, bookmarks: false, lists: true },
   hideMode: 'collapse',
   retweetFilter: true,
   quoteMode: 'quote-only',

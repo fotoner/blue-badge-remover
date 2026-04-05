@@ -1,7 +1,7 @@
 // src/features/stats/stats-collector.ts
 // 메모리 버퍼 + 주기적 flush 패턴 (collector-buffer와 동일).
 import type { DailyStats } from './types';
-import { getTodayStats, saveDayStats } from './stats-storage';
+import { getTodayStats, saveDayStats, getAllTimeTotal } from './stats-storage';
 
 // 마일스톤 콜백 — content script에서 설정
 let onFlushCallback: ((totalHidden: number) => void) | null = null;
@@ -52,7 +52,10 @@ export async function flushStats(): Promise<void> {
   }
   await saveDayStats(today);
   buffer = emptyBuffer();
-  if (onFlushCallback) onFlushCallback(today.totalHidden);
+  if (onFlushCallback) {
+    const allTime = await getAllTimeTotal();
+    onFlushCallback(allTime);
+  }
 }
 
 /** 5초 간격 flush 시작 */

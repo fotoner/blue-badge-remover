@@ -2,8 +2,7 @@ import { browser } from 'wxt/browser';
 import { getSettings, saveSettings } from '@features/settings';
 import { t, type Language } from '@shared/i18n';
 import type { Settings } from '@shared/types';
-import { renderStats } from './stats-section';
-import { renderFilters, bindFilterEvents } from './filter-section';
+import { renderStats, bindStatsEvents } from './stats-section';
 import {
   renderSettingsToDOM,
   bindSettingsEvents,
@@ -19,10 +18,8 @@ async function init(): Promise<void> {
   renderSettingsToDOM(settings);
   applyTranslations(settings.language);
   await renderSyncStatus(settings.language);
-  await renderStats();
-  await renderFilters(settings);
+  await renderStats(settings.keywordFilterEnabled);
   bindAllEvents();
-  await checkUpdateBanner();
 }
 
 function renderVersion(): void {
@@ -49,23 +46,16 @@ function applyTranslations(lang: Language): void {
   });
 }
 
-async function checkUpdateBanner(): Promise<void> {
-  const result = await browser.storage.local.get(['bbr-update-available']);
-  const available = result['bbr-update-available'] as boolean | undefined;
-  const banner = document.getElementById('update-banner');
-  if (banner) {
-    banner.style.display = available ? 'flex' : 'none';
-  }
-}
-
 function bindAllEvents(): void {
   const save = async (): Promise<void> => {
     settings.filter.timeline = checked('filter-timeline');
     settings.filter.replies = checked('filter-replies');
     settings.filter.search = checked('filter-search');
     settings.filter.bookmarks = checked('filter-bookmarks');
+    settings.filter.lists = checked('filter-lists');
     settings.retweetFilter = checked('retweetFilter');
     settings.debugMode = checked('debugMode');
+    settings.keywordFilterEnabled = checked('keywordFilterEnabled');
     settings.keywordCollectorEnabled = checked('keywordCollectorEnabled');
     settings.language = (
       document.getElementById('language') as HTMLSelectElement
@@ -76,11 +66,11 @@ function bindAllEvents(): void {
     settings.quoteMode = (
       document.querySelector('input[name="quoteMode"]:checked') as HTMLInputElement
     ).value as Settings['quoteMode'];
-    settings.defaultFilterEnabled = checked('defaultFilterEnabled');
+    // defaultFilterEnabled는 options 페이지에서 관리 — 여기서 덮어쓰지 않음
     await saveSettings(settings);
   };
 
-  document.querySelectorAll('input').forEach((input) => {
+  document.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach((input) => {
     input.addEventListener('change', save);
   });
 
@@ -92,30 +82,29 @@ function bindAllEvents(): void {
   });
 
   bindSettingsEvents(settings);
-  bindFilterEvents(settings);
+  bindStatsEvents(settings.keywordFilterEnabled);
 
-  // Update banner dismiss
-  document.getElementById('update-dismiss')?.addEventListener('click', async () => {
-    await browser.storage.local.set({ 'bbr-update-available': false });
-    const banner = document.getElementById('update-banner');
-    if (banner) banner.style.display = 'none';
+  // 고급 필터 설정 → options 페이지
+  document.getElementById('open-options-btn')?.addEventListener('click', () => {
+    void browser.tabs.create({ url: browser.runtime.getURL('/options.html') });
   });
 
   // Share button
   document.getElementById('share-btn')?.addEventListener('click', () => {
-    const count = document.getElementById('hero-count')?.textContent ?? '0개';
-    const num = parseInt(count, 10) || 0;
-    const text = `오늘 Blue Badge Remover로 파딱 트윗 ${num}개를 숨겼습니다!`;
-    const url = 'https://chromewebstore.google.com/detail/blue-badge-remover/gpoiflbcmmpihejhgnomdkaofdgjlbhm';
+    const count = document.getElementById('hero-count')?.textContent ?? '0';
+    const num = String(parseInt(count, 10) || 0);
+    const text = t('shareText', settings.language, { count: num });
+    const landingUrl = 'https://blue-badge.fotone.moe/';
     window.open(
-      `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
+      `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(landingUrl)}`,
       '_blank',
     );
   });
 }
 
 function checked(id: string): boolean {
-  return (document.getElementById(id) as HTMLInputElement).checked;
+  const el = document.getElementById(id) as HTMLInputElement | null;
+  return el?.checked ?? false;
 }
 
 init();

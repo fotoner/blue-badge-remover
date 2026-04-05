@@ -7,6 +7,7 @@ export const DEFAULT_SETTINGS: Settings = {
     replies: true,
     search: true,
     bookmarks: false,
+    lists: false,
   },
   hideMode: 'remove',
   retweetFilter: true,

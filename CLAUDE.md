@@ -63,6 +63,7 @@ popup/     (Popup UI)        ─┘
 
 | 문서 | 내용 |
 |------|------|
+| `DESIGN.md` | 디자인 시스템 (색상, 타이포, 레이아웃, border/radius 규칙) |
 | `docs/ARCHITECTURE.md` | 아키텍처 맵, 의존성 방향 규칙 |
 | `docs/REQUIREMENTS.md` | EARS 기반 요구사항 (MECE 도메인별) |
 | `docs/QUALITY_RULES.md` | TDD + 코딩 + 아키텍처 제약 규칙 |

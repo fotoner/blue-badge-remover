@@ -1,6 +1,8 @@
 // src/content/milestone-banner.ts
 // 마일스톤 축하 배너: 100/500/1K/5K/10K 도달 시 타임라인 상단에 표시.
 import { browser } from 'wxt/browser';
+import { t, type Language } from '@shared/i18n';
+import { getSettings } from './state';
 
 const MILESTONE_BANNER_ID = 'bbr-milestone-banner';
 const MILESTONE_STORAGE_KEY = 'bbr-milestone-last';
@@ -36,7 +38,8 @@ function showMilestoneBanner(count: number): void {
   `;
 
   const text = document.createElement('span');
-  text.textContent = `🎉 ${count.toLocaleString()}번째 파딱 트윗을 숨겼습니다!`;
+  const lang = getSettings().language;
+  text.textContent = t('milestoneMessage', lang, { count: count.toLocaleString() });
 
   const dismiss = document.createElement('button');
   dismiss.textContent = '✕';

@@ -10,7 +10,7 @@
   <div class="container">
     <header>
       <h1>Blue Badge Remover</h1>
-      <p class="subtitle">고급 필터 설정 (Beta)</p>
+      <p class="subtitle">고급 필터 설정</p>
     </header>
 
     <section class="section">
@@ -28,6 +28,11 @@
         <div class="stat-item">
           <span>커스텀</span>
           <span class="stat-value" id="custom-rule-count">0</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span>필터 팩</span>
+          <span class="stat-value" id="pack-rule-count">0</span>
         </div>
       </div>
     </section>
@@ -52,6 +57,7 @@
       ></textarea>
       <div class="btn-row">
         <button id="save-btn" class="btn-primary">저장</button>
+        <button id="export-pack-btn" class="btn-secondary">필터 팩으로 내보내기</button>
         <span id="save-status" class="save-status"></span>
       </div>
     </section>
@@ -65,6 +71,17 @@
           <li><code>@@handle</code> <span class="guide-desc">이 계정은 필터링에서 제외</span></li>
           <li><code>! 주석</code> <span class="guide-desc">무시되는 메모 줄</span></li>
         </ul>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title" style="margin-bottom:14px">필터 팩</h2>
+      <p class="guide-desc" style="margin-bottom:12px">다른 사람이 만든 키워드 필터를 가져와서 사용할 수 있습니다</p>
+      <div id="filter-pack-list"></div>
+      <p id="packs-empty" class="guide-desc" style="display:none;margin-top:8px">등록된 필터 팩이 없습니다</p>
+      <div class="btn-row" style="margin-top:12px">
+        <button id="import-pack-btn" class="btn-secondary">필터 팩 가져오기</button>
+        <input type="file" id="import-pack-file" accept=".json" style="display:none">
       </div>
     </section>
   </div>

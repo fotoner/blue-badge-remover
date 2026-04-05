@@ -38,6 +38,7 @@ export async function fetchPack(url: string): Promise<FilterPack> {
 
 export async function updateAllPacks(): Promise<void> {
   const entries = await getFilterPacks();
+  let anySuccess = false;
   for (const entry of entries) {
     if (!entry.pack.homepage) continue;
     try {
@@ -45,11 +46,14 @@ export async function updateAllPacks(): Promise<void> {
       if (isNewerVersion(entry.pack.version, remote.version)) {
         await saveFilterPack(remote);
       }
+      anySuccess = true;
     } catch {
       // 개별 팩 업데이트 실패 — 다음 cycle에서 재시도
     }
   }
-  await browser.storage.local.set({ [LAST_UPDATE_KEY]: Date.now() });
+  if (anySuccess || entries.length === 0) {
+    await browser.storage.local.set({ [LAST_UPDATE_KEY]: Date.now() });
+  }
 }
 
 export async function shouldUpdate(): Promise<boolean> {

@@ -1,6 +1,6 @@
 // src/content/tweet-classifier.ts
 // 순수 분류 함수: DOM 접근 없이 입력 데이터만으로 트윗 숨김 판정.
-import { shouldHideTweet, shouldHideRetweet, getQuoteAction } from '@features/content-filter';
+import { shouldHideTweet, shouldHideRetweet, getQuoteAction, type PageType } from '@features/content-filter';
 import { matchesKeywordFilter } from '@features/keyword-filter';
 import type { FilterRule, Settings, ProfileInfo, KeywordMatchResult } from '@shared/types';
 
@@ -15,7 +15,7 @@ export interface ClassifyInput {
   activeFilterRules: FilterRule[];
   profile: ProfileInfo | null;
   tweetText: string;
-  pageType: string;
+  pageType: PageType;
 }
 
 export interface ClassifyResult {

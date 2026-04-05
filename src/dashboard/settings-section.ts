@@ -8,8 +8,10 @@ export function renderSettingsToDOM(settings: Settings): void {
   setChecked('filter-replies', settings.filter.replies);
   setChecked('filter-search', settings.filter.search);
   setChecked('filter-bookmarks', settings.filter.bookmarks);
+  setChecked('filter-lists', settings.filter.lists);
   setChecked('retweetFilter', settings.retweetFilter);
   setChecked('debugMode', settings.debugMode);
+  setChecked('keywordFilterEnabled', settings.keywordFilterEnabled);
   setChecked('keywordCollectorEnabled', settings.keywordCollectorEnabled);
   setChecked('defaultFilterEnabled', settings.defaultFilterEnabled);
 

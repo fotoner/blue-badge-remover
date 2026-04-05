@@ -1,7 +1,8 @@
 import { browser } from 'wxt/browser';
 import { getSettings, saveSettings } from '@features/settings';
-import { getTodayStats } from '@features/stats';
+import { getTodayStats, getAllTimeTotal } from '@features/stats';
 import { t } from '@shared/i18n';
+import { STORAGE_KEYS } from '@shared/constants';
 import type { Settings } from '@shared/types';
 
 const UPDATE_FLAG_KEY = 'bbr-update-available';
@@ -29,6 +30,7 @@ async function init(): Promise<void> {
   renderToggle();
   applyTranslations();
   await renderStats();
+  await renderInfo();
   await renderUpdateBanner();
   bindEvents();
 }
@@ -70,6 +72,35 @@ async function renderStats(): Promise<void> {
   }
 }
 
+async function renderInfo(): Promise<void> {
+  // 총 숨김
+  const totalEl = document.getElementById('total-hidden');
+  if (totalEl) {
+    const total = await getAllTimeTotal();
+    totalEl.textContent = `${total}개`;
+  }
+
+  // 키워드 필터 상태
+  const kwEl = document.getElementById('keyword-filter-status');
+  if (kwEl) {
+    kwEl.textContent = settings.keywordFilterEnabled ? 'ON' : 'OFF';
+    kwEl.style.color = settings.keywordFilterEnabled ? '#00ba7c' : '#536471';
+  }
+
+  // 팔로우 동기화 상태
+  const followEl = document.getElementById('follow-sync-status');
+  if (followEl) {
+    try {
+      const stored = await browser.storage.local.get([STORAGE_KEYS.FOLLOW_LIST]);
+      const followList = (stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? [];
+      followEl.textContent = followList.length > 0 ? `${followList.length}명` : '미동기화';
+      followEl.style.color = followList.length > 0 ? '#e7e9ea' : '#536471';
+    } catch {
+      followEl.textContent = '-';
+    }
+  }
+}
+
 async function renderUpdateBanner(): Promise<void> {
   const banner = document.getElementById('update-banner');
   if (!banner) return;
@@ -78,6 +109,11 @@ async function renderUpdateBanner(): Promise<void> {
     const result = await browser.storage.local.get([UPDATE_FLAG_KEY]);
     const showBanner = (result[UPDATE_FLAG_KEY] as boolean | undefined) ?? false;
     banner.style.display = showBanner ? 'flex' : 'none';
+    if (showBanner) {
+      const version = browser.runtime.getManifest().version;
+      const textEl = document.getElementById('update-text');
+      if (textEl) textEl.textContent = t('updateBannerVersion', settings.language, { version });
+    }
   } catch {
     banner.style.display = 'none';
   }
@@ -89,7 +125,8 @@ function getShareUrl(): string {
   const count = countMatch ? countMatch[0] : '0';
   const lang = settings.language;
   const text = t('shareText', lang, { count });
-  return `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`;
+  const landingUrl = 'https://blue-badge.fotone.moe/';
+  return `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(landingUrl)}`;
 }
 
 function bindEvents(): void {

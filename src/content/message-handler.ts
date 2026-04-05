@@ -43,14 +43,25 @@ export function listenForMessages(followCollectorDeps: FollowCollectorDeps): voi
 }
 
 function handleBadgeData(data: { users: unknown[] }): void {
+  let needsReprocess = false;
   for (const userData of data.users) {
     const badge = parseBadgeInfo(userData);
     if (badge) {
+      const prevById = badgeCache.get(badge.userId);
       badgeCache.set(badge.userId, badge.isBluePremium);
       if (badge.handle) {
+        const prevByHandle = badgeCache.get(badge.handle.toLowerCase());
         badgeCache.set(badge.handle.toLowerCase(), badge.isBluePremium);
+        // SVG 감지가 잘못 캐시한 경우(fadak→non-fadak) 복원 필요
+        if (!badge.isBluePremium && (prevById === true || prevByHandle === true)) {
+          needsReprocess = true;
+        }
       }
     }
+  }
+  if (needsReprocess) {
+    restoreHiddenTweets();
+    reprocessExistingTweets();
   }
 }
 

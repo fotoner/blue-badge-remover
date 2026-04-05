@@ -9,22 +9,28 @@ import {
   getFilterPacks,
   toggleFilterPack,
   removeFilterPack,
+  saveFilterPack,
 } from '@features/filter-pack';
 import type { FilterPack, FilterPackEntry } from '@shared/types';
 import { STORAGE_KEYS } from '@shared/constants';
 import type { Settings } from '@shared/types';
 
 export async function renderFilters(settings: Settings): Promise<void> {
-  await renderCustomFilterPreview();
+  await renderCustomFilterPreview(settings);
   renderDefaultCategories(settings);
   await renderFilterPacks();
 }
 
-async function renderCustomFilterPreview(): Promise<void> {
+async function renderCustomFilterPreview(settings: Settings): Promise<void> {
   const text = await getCustomFilterList();
   const el = document.getElementById('custom-filter-text');
   if (el) {
     el.textContent = text || '(필터가 비어 있습니다)';
+  }
+  // 키워드 필터 비활성 시 미리보기 흐리게
+  const preview = document.getElementById('custom-filter-preview');
+  if (preview) {
+    preview.style.opacity = settings.keywordFilterEnabled ? '1' : '0.5';
   }
 }
 
@@ -153,8 +159,8 @@ function createPackItem(entry: FilterPackEntry): HTMLElement {
   const toggle = document.createElement('input');
   toggle.type = 'checkbox';
   toggle.checked = entry.enabled;
-  toggle.addEventListener('change', async () => {
-    await toggleFilterPack(pack.id, !entry.enabled);
+  toggle.addEventListener('change', () => {
+    void toggleFilterPack(pack.id, toggle.checked);
   });
 
   const removeBtn = document.createElement('button');
@@ -173,7 +179,7 @@ function createPackItem(entry: FilterPackEntry): HTMLElement {
 }
 
 export function bindFilterEvents(settings: Settings): void {
-  // Edit custom filter
+  // 필터 편집 → options 페이지
   document
     .getElementById('edit-custom-filter-btn')
     ?.addEventListener('click', () => {
@@ -182,7 +188,7 @@ export function bindFilterEvents(settings: Settings): void {
       });
     });
 
-  // Default filter toggle
+  // 기본 필터 토글 → 카테고리 리스트 활성/비활성
   document
     .getElementById('defaultFilterEnabled')
     ?.addEventListener('change', () => {
@@ -196,69 +202,63 @@ export function bindFilterEvents(settings: Settings): void {
       }
     });
 
-  // Export modal
-  bindExportModal(settings);
-}
-
-function bindExportModal(settings: Settings): void {
-  const modal = document.getElementById('export-modal');
-  if (!modal) return;
-
+  // 팩으로 내보내기 → 커스텀 키워드를 JSON 다운로드
   document
     .getElementById('export-pack-btn')
-    ?.addEventListener('click', () => {
-      modal.style.display = 'flex';
-    });
-
-  document
-    .getElementById('export-cancel-btn')
-    ?.addEventListener('click', () => {
-      modal.style.display = 'none';
-    });
-
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) modal.style.display = 'none';
-  });
-
-  document
-    .getElementById('export-copy-btn')
     ?.addEventListener('click', async () => {
-      const json = await buildExportJson();
-      await navigator.clipboard.writeText(json);
-      const btn = document.getElementById('export-copy-btn') as HTMLButtonElement;
-      btn.textContent = '복사됨!';
-      setTimeout(() => {
-        btn.textContent = 'JSON 복사';
-      }, 1500);
-    });
-
-  document
-    .getElementById('export-download-btn')
-    ?.addEventListener('click', async () => {
-      const json = await buildExportJson();
-      const name = getInputVal('export-name') || 'filter-pack';
+      const rules = await getCustomFilterList();
+      if (!rules.trim()) {
+        const btn = document.getElementById('export-pack-btn') as HTMLButtonElement;
+        btn.textContent = '키워드가 비어 있습니다';
+        setTimeout(() => { btn.textContent = '팩으로 내보내기'; }, 2000);
+        return;
+      }
+      const pack: FilterPack = {
+        id: `custom-${Date.now()}`,
+        name: '내 키워드 필터',
+        description: '커스텀 키워드 필터 팩',
+        author: '',
+        version: '1.0.0',
+        updatedAt: new Date().toISOString(),
+        rules,
+      };
+      const json = JSON.stringify(pack, null, 2);
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${name}.json`;
+      a.download = 'keyword-filter-pack.json';
       a.click();
       URL.revokeObjectURL(url);
     });
-}
 
-async function buildExportJson(): Promise<string> {
-  const filters = await getCustomFilterList();
-  const pack = {
-    name: getInputVal('export-name'),
-    author: getInputVal('export-author'),
-    description: getInputVal('export-description'),
-    category: getInputVal('export-category'),
-    filters,
-  };
-  return JSON.stringify(pack, null, 2);
-}
+  // 팩 가져오기 → 파일 선택
+  const fileInput = document.getElementById('import-pack-file') as HTMLInputElement | null;
+  document
+    .getElementById('import-pack-btn')
+    ?.addEventListener('click', () => {
+      fileInput?.click();
+    });
 
-function getInputVal(id: string): string {
-  return (document.getElementById(id) as HTMLInputElement | null)?.value.trim() ?? '';
+  fileInput?.addEventListener('change', async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text) as FilterPack;
+      if (!json.id || !json.name || typeof json.rules !== 'string') {
+        throw new Error('Invalid pack format');
+      }
+      await saveFilterPack(json);
+      await renderFilterPacks();
+      const btn = document.getElementById('import-pack-btn') as HTMLButtonElement;
+      btn.textContent = '가져오기 완료!';
+      setTimeout(() => { btn.textContent = '팩 가져오기'; }, 2000);
+    } catch {
+      const btn = document.getElementById('import-pack-btn') as HTMLButtonElement;
+      btn.textContent = '잘못된 파일';
+      setTimeout(() => { btn.textContent = '팩 가져오기'; }, 2000);
+    }
+    fileInput.value = '';
+  });
 }

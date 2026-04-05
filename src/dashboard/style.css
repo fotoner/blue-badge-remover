@@ -60,6 +60,14 @@ body {
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-icon {
+  width: 28px;
+  height: 28px;
 }
 
 .subtitle {
@@ -193,6 +201,44 @@ h3 {
   font-size: 13px;
   color: #71767b;
   margin-top: 4px;
+}
+
+.total-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #71767b;
+  border-top: 1px solid rgba(56, 68, 77, 0.3);
+}
+
+.total-count {
+  font-weight: 600;
+  color: #e7e9ea;
+}
+
+.btn-reset {
+  display: block;
+  width: 100%;
+  background: transparent;
+  color: #536471;
+  padding: 8px;
+  border: 1px solid #38444d;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  text-align: center;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.btn-reset:hover {
+  color: #f4212e;
+  border-color: #67070f;
 }
 
 /* Share button */
@@ -442,6 +488,16 @@ input[type="text"]::placeholder {
   display: flex;
   gap: 8px;
   margin-top: 10px;
+}
+
+.pack-actions-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.pack-actions-row .btn-secondary {
+  flex: 1;
 }
 
 /* Sync info — same as popup */

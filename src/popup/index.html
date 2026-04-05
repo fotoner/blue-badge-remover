@@ -10,13 +10,13 @@
   <div class="container">
     <header class="header">
       <div class="header-top">
-        <h1>Blue Badge Remover</h1>
+        <h1><img src="/icons/icon48.png" alt="" class="app-icon">Blue Badge Remover</h1>
         <span id="version" class="version"></span>
       </div>
     </header>
 
     <div id="update-banner" class="section update-banner" style="display:none;">
-      <span data-i18n="updateBanner">새 버전으로 업데이트되었습니다!</span>
+      <span id="update-text">새 버전으로 업데이트되었습니다!</span>
       <button type="button" id="update-dismiss" class="update-dismiss" data-i18n="dismiss">닫기</button>
     </div>
 
@@ -32,11 +32,27 @@
       <button type="button" id="share-btn" class="btn-share" data-i18n="share">공유</button>
     </div>
 
+    <div class="section info-list">
+      <div class="info-row">
+        <span class="info-label">총 숨김</span>
+        <span class="info-value" id="total-hidden">0개</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label" data-i18n="keywordFilterBeta">키워드 필터</span>
+        <span class="info-value" id="keyword-filter-status">OFF</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">팔로우 동기화</span>
+        <span class="info-value" id="follow-sync-status">-</span>
+      </div>
+    </div>
+
     <div class="section">
       <button type="button" id="open-settings-btn" class="btn-settings" data-i18n="openSettings">설정 열기</button>
     </div>
 
     <div class="section footer">
+      <a href="https://forms.gle/F1hyx1uo8yaFE3Tt6" target="_blank" class="feedback-link" data-i18n="feedback">피드백 보내기</a>
       <p class="credit">made by <a href="https://x.com/fotoner_p" target="_blank" rel="noopener">@fotoner_p</a></p>
     </div>
   </div>

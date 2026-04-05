@@ -317,3 +317,21 @@ input[type="checkbox"]:checked::after {
 .guide-content li .guide-desc {
   color: #536471;
 }
+
+/* Pack section */
+.btn-secondary {
+  background: #273340;
+  color: #e7e9ea;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-secondary:hover {
+  background: #2f3d4c;
+}

@@ -41,6 +41,25 @@ export async function getStatsRange(days: number): Promise<DailyStats[]> {
   return keys.map((k) => (result[k] as DailyStats | undefined) ?? emptyStats(k.slice(KEY_PREFIX.length)));
 }
 
+export async function getAllTimeTotal(): Promise<number> {
+  const all = await browser.storage.local.get(null);
+  let total = 0;
+  for (const [key, value] of Object.entries(all)) {
+    if (key.startsWith(KEY_PREFIX) && value && typeof value === 'object') {
+      total += (value as DailyStats).totalHidden ?? 0;
+    }
+  }
+  return total;
+}
+
+export async function resetAllStats(): Promise<void> {
+  const all = await browser.storage.local.get(null);
+  const statsKeys = Object.keys(all).filter((k) => k.startsWith(KEY_PREFIX));
+  if (statsKeys.length > 0) {
+    await browser.storage.local.remove(statsKeys);
+  }
+}
+
 export async function cleanupOldStats(): Promise<void> {
   const all = await browser.storage.local.get(null);
   const statsKeys = Object.keys(all).filter((k) => k.startsWith(KEY_PREFIX));
