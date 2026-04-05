@@ -250,8 +250,8 @@ function extractArticleDataFromFiber(article: HTMLElement): ArticleData | null {
   function processArticle(article: HTMLElement) {
     const data = extractArticleDataFromFiber(article);
     if (!data?.following) return;
-    // 노딱(금딱/기관)은 팔로우 목록에 추가하지 않음 — blue premium만 대상
-    if (!data.isBluePremium) return;
+    // 팔로우 중인 모든 인증 계정을 팔로우 리스트에 추가 (금딱/회딱 포함)
+    // 팔로우 리스트는 필터링 예외 처리용이므로, 뱃지 유형과 무관하게 추가해야 함
     window.postMessage({
       type: MESSAGE_TYPES.FOLLOW_DATA,
       handles: [data.handle.toLowerCase()],
