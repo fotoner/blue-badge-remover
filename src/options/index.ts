@@ -281,26 +281,11 @@ function createPackItem(entry: FilterPackEntry): HTMLElement {
 function bindPackEvents(): void {
   const customEl = document.getElementById('custom-filters') as HTMLTextAreaElement;
 
-  // 팩으로 내보내기 → 커스텀 키워드를 JSON 다운로드
+  // 팩으로 내보내기 → 메타 입력 모달 → JSON 다운로드
   document.getElementById('export-pack-btn')?.addEventListener('click', () => {
     const rules = customEl.value.trim();
     if (!rules) return;
-    const pack: FilterPack = {
-      id: `custom-${Date.now()}`,
-      name: '내 키워드 필터',
-      description: '커스텀 키워드 필터 팩',
-      author: '',
-      version: '1.0.0',
-      updatedAt: new Date().toISOString(),
-      rules,
-    };
-    const blob = new Blob([JSON.stringify(pack, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'keyword-filter-pack.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    showExportModal(rules);
   });
 
   // 팩 가져오기 → 파일 선택
@@ -314,17 +299,94 @@ function bindPackEvents(): void {
     if (!file) return;
     try {
       const text = await file.text();
-      const json = JSON.parse(text) as FilterPack;
+      const json = JSON.parse(text) as Record<string, unknown>;
       if (!json.id || !json.name || typeof json.rules !== 'string') {
         throw new Error('Invalid pack format');
       }
-      await saveFilterPack(json);
+      // 허용된 필드만 추출 — 악성 필드 주입 방지
+      const sanitized: FilterPack = {
+        id: String(json.id),
+        name: String(json.name).slice(0, 100),
+        description: typeof json.description === 'string' ? json.description.slice(0, 500) : '',
+        author: typeof json.author === 'string' ? json.author.slice(0, 100) : '',
+        version: typeof json.version === 'string' ? json.version.slice(0, 20) : '1.0.0',
+        updatedAt: typeof json.updatedAt === 'string' ? json.updatedAt : new Date().toISOString(),
+        rules: String(json.rules),
+        category: typeof json.category === 'string' ? json.category.slice(0, 50) : undefined,
+        homepage: typeof json.homepage === 'string' && json.homepage.startsWith('https://') ? json.homepage : undefined,
+      };
+      await saveFilterPack(sanitized);
       await renderFilterPacks();
     } catch {
       // 잘못된 파일 — 조용히 실패
     }
     fileInput.value = '';
   });
+}
+
+function showExportModal(rules: string): void {
+  const overlay = document.createElement('div');
+  overlay.className = 'export-modal-overlay';
+
+  const modal = document.createElement('div');
+  modal.className = 'export-modal';
+
+  modal.innerHTML = `
+    <h3>필터 팩 내보내기</h3>
+    <label>팩 이름 *</label>
+    <input type="text" id="export-name" value="내 키워드 필터" placeholder="필터 팩 이름">
+    <label>설명</label>
+    <textarea id="export-desc" placeholder="이 필터 팩에 대한 설명"></textarea>
+    <label>작성자</label>
+    <input type="text" id="export-author" placeholder="@handle 또는 이름">
+    <label>카테고리</label>
+    <input type="text" id="export-category" placeholder="예: 정치, 금융, 어그로">
+    <label>버전</label>
+    <input type="text" id="export-version" value="1.0.0" placeholder="1.0.0">
+    <div class="btn-row">
+      <button class="btn-secondary" id="export-cancel">취소</button>
+      <button class="btn-primary" id="export-confirm">내보내기</button>
+    </div>
+  `;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  document.getElementById('export-cancel')?.addEventListener('click', () => overlay.remove());
+
+  document.getElementById('export-confirm')?.addEventListener('click', () => {
+    const name = (document.getElementById('export-name') as HTMLInputElement).value.trim() || '내 키워드 필터';
+    const description = (document.getElementById('export-desc') as HTMLTextAreaElement).value.trim();
+    const author = (document.getElementById('export-author') as HTMLInputElement).value.trim();
+    const category = (document.getElementById('export-category') as HTMLInputElement).value.trim();
+    const version = (document.getElementById('export-version') as HTMLInputElement).value.trim() || '1.0.0';
+
+    const pack: FilterPack = {
+      id: `custom-${Date.now()}`,
+      name,
+      description: description || '',
+      author: author || '',
+      category: category || undefined,
+      version,
+      updatedAt: new Date().toISOString(),
+      rules,
+    };
+
+    const blob = new Blob([JSON.stringify(pack, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${name.replace(/\s+/g, '-').toLowerCase()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    overlay.remove();
+  });
+
+  (document.getElementById('export-name') as HTMLInputElement)?.focus();
 }
 
 init();

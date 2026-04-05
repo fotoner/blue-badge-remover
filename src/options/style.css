@@ -358,7 +358,7 @@ input[type="checkbox"]:checked::after {
 .btn-secondary {
   background: var(--surface-2);
   color: var(--text-primary);
-  padding: 8px 16px;
+  padding: 9px 24px;
   border: none;
   border-radius: 4px;
   font-size: 13px;
@@ -370,4 +370,63 @@ input[type="checkbox"]:checked::after {
 
 .btn-secondary:hover {
   background: var(--surface-3);
+}
+
+/* Export modal */
+.export-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.export-modal {
+  background: var(--surface-1);
+  padding: 28px;
+  width: 420px;
+  max-width: 90vw;
+}
+
+.export-modal h3 {
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.export-modal label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  margin-top: 14px;
+}
+
+.export-modal label:first-of-type {
+  margin-top: 0;
+}
+
+.export-modal input,
+.export-modal textarea {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.export-modal textarea {
+  height: 60px;
+  resize: vertical;
+}
+
+.export-modal .btn-row {
+  margin-top: 20px;
+  justify-content: flex-end;
 }
