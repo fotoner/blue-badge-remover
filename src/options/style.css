@@ -1,11 +1,32 @@
+/* Design System Tokens */
+:root {
+  --bg: #0E1418;
+  --surface-1: #131B21;
+  --surface-2: #18232B;
+  --surface-3: #21303A;
+  --text-primary: #F5F9FC;
+  --text-secondary: #D7E1E8;
+  --text-muted: #8C9AA5;
+  --accent: #1d9bf0;
+  --accent-soft: rgba(29, 155, 240, 0.14);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(29, 155, 240, 0.32);
+  --success: #6EE7B7;
+  --warning: #F7C66B;
+  --danger: #FF7B72;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'IBM Plex Sans KR', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 14px;
-  color: #e7e9ea;
-  background: #15202b;
-  line-height: 1.6;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg);
+  line-height: 1.5;
 }
 
 .container {
@@ -20,22 +41,23 @@ header {
 }
 
 header h1 {
+  font-family: var(--font-display);
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.3px;
 }
 
 .subtitle {
-  color: #71767b;
+  color: var(--text-muted);
   font-size: 13px;
   margin-top: 4px;
 }
 
 /* Sections */
 .section {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   padding-bottom: 20px;
-  border-bottom: 1px solid rgba(56, 68, 77, 0.4);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .section:last-child {
@@ -43,9 +65,10 @@ header h1 {
 }
 
 .section-title {
+  font-family: var(--font-display);
   font-size: 11px;
-  font-weight: 600;
-  color: #71767b;
+  font-weight: 700;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 0;
@@ -63,13 +86,13 @@ header h1 {
   margin-bottom: 0;
 }
 
-/* Toggle switch — same as popup */
+/* Toggle switch — interactive pill */
 input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
   width: 36px;
   height: 20px;
-  background: #38444d;
+  background: var(--surface-3);
   border-radius: 10px;
   position: relative;
   cursor: pointer;
@@ -82,7 +105,7 @@ input[type="checkbox"]::after {
   position: absolute;
   width: 16px;
   height: 16px;
-  background: #e7e9ea;
+  background: var(--text-primary);
   border-radius: 50%;
   top: 2px;
   left: 2px;
@@ -90,7 +113,7 @@ input[type="checkbox"]::after {
 }
 
 input[type="checkbox"]:checked {
-  background: #1d9bf0;
+  background: var(--accent);
 }
 
 input[type="checkbox"]:checked::after {
@@ -108,21 +131,21 @@ input[type="checkbox"]:checked::after {
 
 .toggle-text {
   font-size: 13px;
-  color: #71767b;
+  color: var(--text-muted);
 }
 
-/* Category cards */
+/* Category cards — has border, radius 0 */
 .category-card {
-  background: #1e2732;
-  border: 1px solid #2f3336;
-  border-radius: 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0;
   padding: 14px 16px;
   margin-bottom: 10px;
   transition: border-color 0.15s, opacity 0.2s;
 }
 
 .category-card:hover {
-  border-color: #38444d;
+  border-color: var(--border-strong);
 }
 
 .category-card.is-disabled {
@@ -148,20 +171,21 @@ input[type="checkbox"]:checked::after {
 .category-name {
   font-size: 14px;
   font-weight: 600;
-  color: #e7e9ea;
+  color: var(--text-primary);
   white-space: nowrap;
 }
 
+/* Count badge — pill, no border */
 .category-count {
   font-size: 11px;
-  color: #536471;
-  background: #273340;
+  color: var(--text-muted);
+  background: var(--surface-2);
   padding: 2px 8px;
   border-radius: 10px;
   white-space: nowrap;
 }
 
-/* Keyword chips */
+/* Keyword chips — interactive pill */
 .category-keywords {
   display: flex;
   flex-wrap: wrap;
@@ -172,12 +196,12 @@ input[type="checkbox"]:checked::after {
 
 .keyword-chip {
   font-size: 12px;
-  color: #8899a6;
-  background: #273340;
+  color: var(--text-muted);
+  background: var(--surface-2);
   padding: 3px 10px;
-  border-radius: 14px;
+  border-radius: 10px;
   white-space: nowrap;
-  font-family: 'SF Mono', 'Courier New', monospace;
+  font-family: var(--font-mono);
   line-height: 1.4;
 }
 
@@ -187,20 +211,20 @@ input[type="checkbox"]:checked::after {
 }
 
 .categories-disabled {
-  color: #536471;
+  color: var(--text-muted);
   font-size: 13px;
   font-style: italic;
   padding: 16px 0;
 }
 
-/* Stats bar */
+/* Stats bar — has border, radius 0 */
 .stats-bar {
   display: flex;
   align-items: center;
   gap: 16px;
-  background: #1e2732;
-  border: 1px solid #2f3336;
-  border-radius: 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0;
   padding: 12px 16px;
 }
 
@@ -209,30 +233,31 @@ input[type="checkbox"]:checked::after {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #71767b;
+  color: var(--text-muted);
 }
 
 .stat-value {
-  font-weight: 600;
-  color: #e7e9ea;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--text-primary);
 }
 
 .stat-divider {
   width: 1px;
   height: 16px;
-  background: #2f3336;
+  background: var(--border-subtle);
 }
 
-/* Custom filter textarea */
+/* Custom filter textarea — has border, radius 0 */
 .filter-textarea {
   width: 100%;
   min-height: 140px;
-  background: #1e2732;
-  border: 1px solid #2f3336;
-  color: #e7e9ea;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
   padding: 14px;
-  border-radius: 12px;
-  font-family: 'SF Mono', 'Courier New', monospace;
+  border-radius: 0;
+  font-family: var(--font-mono);
   font-size: 13px;
   resize: vertical;
   outline: none;
@@ -241,11 +266,11 @@ input[type="checkbox"]:checked::after {
 }
 
 .filter-textarea:focus {
-  border-color: #1d9bf0;
+  border-color: var(--accent);
 }
 
 .filter-textarea::placeholder {
-  color: #536471;
+  color: var(--text-muted);
 }
 
 /* Buttons */
@@ -256,12 +281,13 @@ input[type="checkbox"]:checked::after {
   margin-top: 14px;
 }
 
+/* Primary button — pill, no border */
 .btn-primary {
-  background: #1d9bf0;
+  background: var(--accent);
   color: #fff;
   border: none;
   padding: 9px 24px;
-  border-radius: 20px;
+  border-radius: 4px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -279,14 +305,18 @@ input[type="checkbox"]:checked::after {
   line-height: 36px;
 }
 
-.save-status.success { color: #00ba7c; }
-.save-status.error { color: #f4212e; }
+.save-status.success { color: var(--success); }
+.save-status.error { color: var(--danger); }
 
-/* Guide */
+/* Guide — has border, radius 0 */
+.guide {
+  margin-bottom: 20px;
+}
+
 .guide-content {
-  background: #1e2732;
-  border: 1px solid #2f3336;
-  border-radius: 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0;
   padding: 16px 20px;
 }
 
@@ -301,30 +331,36 @@ input[type="checkbox"]:checked::after {
   gap: 10px;
   padding: 5px 0;
   font-size: 13px;
-  color: #8899a6;
+  color: var(--text-muted);
 }
 
+/* Code inline — icon container, radius 3-4px */
 .guide-content li code {
-  background: #273340;
+  background: var(--surface-2);
   padding: 2px 8px;
   border-radius: 4px;
-  font-family: 'SF Mono', 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
-  color: #e7e9ea;
+  color: var(--text-primary);
   white-space: nowrap;
 }
 
 .guide-content li .guide-desc {
-  color: #536471;
+  color: var(--text-muted);
 }
 
-/* Pack section */
+.guide-desc {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* Secondary button — no border, radius 4px */
 .btn-secondary {
-  background: #273340;
-  color: #e7e9ea;
+  background: var(--surface-2);
+  color: var(--text-primary);
   padding: 8px 16px;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   font-size: 13px;
   font-weight: 500;
   font-family: inherit;
@@ -333,5 +369,5 @@ input[type="checkbox"]:checked::after {
 }
 
 .btn-secondary:hover {
-  background: #2f3d4c;
+  background: var(--surface-3);
 }
