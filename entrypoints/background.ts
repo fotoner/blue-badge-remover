@@ -14,12 +14,10 @@ export default defineBackground(() => {
   // MV2/MV3 호환: browser.action (MV3) 또는 browser.browserAction (MV2)
   const actionApi = browser.action ?? (browser as unknown as Record<string, unknown>).browserAction as typeof browser.action | undefined;
 
-  // 확장 설치/업데이트 감지
+  // 확장 업데이트 감지
   browser.runtime.onInstalled.addListener((details) => {
-    if (details.reason === 'update') {
-      if (!isFirefoxAndroid) {
-        void browser.storage.local.set({ [UPDATE_NOTI_FLAG]: true });
-      }
+    if (details.reason === 'update' && !isFirefoxAndroid) {
+      void browser.storage.local.set({ [UPDATE_NOTI_FLAG]: true });
     }
   });
 
