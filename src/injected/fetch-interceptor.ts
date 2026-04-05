@@ -31,7 +31,7 @@ window.addEventListener('message', (event) => {
   }
   // Content script signals it's ready — replay cached profiles so none are missed
   if (data?.type === MESSAGE_TYPES.CONTENT_READY && cachedProfiles.size > 0) {
-    window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles: Array.from(cachedProfiles.values()) }, '*');
+    window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles: Array.from(cachedProfiles.values()) }, window.location.origin);
   }
 });
 
@@ -118,7 +118,7 @@ function extractBadgeData(data: unknown, endpointHint?: string): void {
     window.postMessage({
       type: MESSAGE_TYPES.BADGE_DATA,
       users,
-    }, '*');
+    }, window.location.origin);
 
     // Derive profiles from already-collected users — avoids a second full traversal
     const profiles: ProfileEntry[] = [];
@@ -152,7 +152,7 @@ function extractBadgeData(data: unknown, endpointHint?: string): void {
           cachedProfiles.set(p.userId, p);
         }
       }
-      window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles }, '*');
+      window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles }, window.location.origin);
 
       if (bbrDebugMode) {
         const withBio = profiles.filter((p) => p.bio);
@@ -175,7 +175,7 @@ function extractFollowData(data: unknown): void {
     window.postMessage({
       type: MESSAGE_TYPES.FOLLOW_DATA,
       handles,
-    }, '*');
+    }, window.location.origin);
   }
 }
 
@@ -192,6 +192,7 @@ interface ProfileEntry {
 interface ArticleData {
   handle: string;
   following: boolean;
+  isBluePremium: boolean;
 }
 
 function extractArticleDataFromFiber(article: HTMLElement): ArticleData | null {
@@ -206,7 +207,11 @@ function extractArticleDataFromFiber(article: HTMLElement): ArticleData | null {
     seenProps.add(obj as object);
     const r = obj as Record<string, unknown>;
     if (typeof r['screen_name'] === 'string' && typeof r['following'] === 'boolean') {
-      return { handle: r['screen_name'], following: r['following'] };
+      const isBlueVerified = r['is_blue_verified'] === true;
+      const verifiedType = typeof r['verified_type'] === 'string' ? r['verified_type'] : '';
+      const isLegacy = r['legacy'] && typeof r['legacy'] === 'object' && (r['legacy'] as Record<string, unknown>)['verified'] === true;
+      const isBluePremium = isBlueVerified && verifiedType !== 'Business' && !isLegacy;
+      return { handle: r['screen_name'], following: r['following'], isBluePremium };
     }
     if (Array.isArray(obj)) {
       for (const item of obj) { const f = scanProps(item, depth + 1); if (f) return f; }
@@ -245,11 +250,13 @@ function extractArticleDataFromFiber(article: HTMLElement): ArticleData | null {
   function processArticle(article: HTMLElement) {
     const data = extractArticleDataFromFiber(article);
     if (!data?.following) return;
+    // 팔로우 중인 모든 인증 계정을 팔로우 리스트에 추가 (금딱/회딱 포함)
+    // 팔로우 리스트는 필터링 예외 처리용이므로, 뱃지 유형과 무관하게 추가해야 함
     window.postMessage({
       type: MESSAGE_TYPES.FOLLOW_DATA,
       handles: [data.handle.toLowerCase()],
       source: 'inline',
-    }, '*');
+    }, window.location.origin);
   }
 
   const observer = new MutationObserver((mutations) => {

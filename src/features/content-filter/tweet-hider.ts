@@ -13,14 +13,17 @@ export function setTweetHiderLanguage(lang: Language): void {
 }
 
 export interface HideContext {
-  reason: 'fadak' | 'retweet' | 'quote-entire';
+  reason: string;
   handle?: string;
   retweetedBy?: string;
   quotedBy?: string;
+  category?: string;
+  matchedRule?: string;
 }
 
 export interface HideQuoteContext {
   handle?: string;
+  category?: string;
 }
 
 function injectStyles(): void {
@@ -87,8 +90,9 @@ function injectStyles(): void {
 
 const SHIELD_ICON = `<svg class="bbr-placeholder-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1L2 3.5v4c0 3.5 2.6 6.4 6 7.5 3.4-1.1 6-4 6-7.5v-4L8 1zm0 2.2l4 1.7v2.6c0 2.6-1.9 4.8-4 5.7-2.1-.9-4-3.1-4-5.7V4.9l4-1.7z"/></svg>`;
 
-export function hideTweet(element: HTMLElement, mode: 'remove' | 'collapse', context?: HideContext): void {
+export function hideTweet(element: HTMLElement, mode: 'remove' | 'collapse', context?: HideContext, onExpand?: (el: HTMLElement) => void): void {
   if (element.hasAttribute(ORIGINAL_CONTENT_KEY)) return;
+  if (element.hasAttribute(EXPANDED_ATTR)) return;
 
   if (mode === 'remove') {
     element.style.display = 'none';
@@ -115,7 +119,12 @@ export function hideTweet(element: HTMLElement, mode: 'remove' | 'collapse', con
   textSpan.textContent = label;
   placeholder.appendChild(textSpan);
 
-  placeholder.addEventListener('click', () => showTweet(element), { once: true });
+  placeholder.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    showTweet(element);
+    onExpand?.(element);
+  }, { once: true });
   element.appendChild(placeholder);
 }
 
@@ -141,16 +150,27 @@ export function hideQuoteBlock(quoteElement: HTMLElement, context?: HideQuoteCon
   textSpan.textContent = t('hiddenQuoteTweet', currentLanguage, { handle });
   placeholder.appendChild(textSpan);
 
-  placeholder.addEventListener('click', () => showQuoteBlock(quoteElement), { once: true });
+  placeholder.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    showQuoteBlock(quoteElement);
+  }, { once: true });
   quoteElement.appendChild(placeholder);
 }
+
+const EXPANDED_ATTR = 'data-bbr-expanded';
 
 export function showTweet(element: HTMLElement): void {
   element.style.display = '';
   element.removeAttribute(ORIGINAL_CONTENT_KEY);
+  element.setAttribute(EXPANDED_ATTR, '1');
 
-  const placeholder = element.querySelector(`[${COLLAPSED_ATTR}]`);
-  placeholder?.remove();
+  // 직접 자식 placeholder만 제거 — 인용 블록 안의 placeholder는 유지
+  for (const child of Array.from(element.children)) {
+    if (child.hasAttribute(COLLAPSED_ATTR)) {
+      child.remove();
+    }
+  }
 
   Array.from(element.childNodes).forEach((child) => {
     if (child instanceof HTMLElement) {
@@ -175,20 +195,21 @@ function showQuoteBlock(element: HTMLElement): void {
 function buildHideLabel(context?: HideContext): string {
   if (!context) return t('hiddenTweetClick', currentLanguage);
 
+  const handle = context.handle ?? '';
+
+  let label: string;
   switch (context.reason) {
     case 'fadak':
-      return t('hiddenTweetFadak', currentLanguage, { handle: context.handle ?? '' });
+      label = t('hiddenTweetFadak', currentLanguage, { handle });
+      break;
     case 'retweet':
-      return t('hiddenTweetRetweet', currentLanguage, {
-        retweetedBy: context.retweetedBy ?? '',
-        handle: context.handle ?? '',
-      });
+      label = t('hiddenTweetRetweet', currentLanguage, { handle, retweetedBy: context.retweetedBy ?? '' });
+      break;
     case 'quote-entire':
-      return t('hiddenTweetQuoteEntire', currentLanguage, {
-        quotedBy: context.quotedBy ?? '',
-        handle: context.handle ?? '',
-      });
+      label = t('hiddenTweetQuoteEntire', currentLanguage, { handle, quotedBy: context.quotedBy ?? '' });
+      break;
     default:
       return t('hiddenTweetClick', currentLanguage);
   }
+  return label;
 }

@@ -1,45 +1,34 @@
 const VERIFIED_BADGE_SELECTOR = '[data-testid="icon-verified"]';
 
-// 금딱 gradient에 사용되는 stop-color 값들
-const GOLD_STOP_COLORS = [
-  '#f4e72a', '#cd8105', '#cb7b00', '#f4ec26', '#e2b719', '#f9e87f', '#d18800',
-  '#E8B829', '#F4D03F', '#D4A72C', '#CFB53B',
-];
-const GREY_COLORS = ['#829AAB', '#829aab'];
-
+/**
+ * SVG 폴백: 트윗 요소 내 뱃지를 확인하여 파딱(파란 뱃지) 여부를 반환.
+ *
+ * X 뱃지 SVG 구조 (2026-04 기준):
+ * - 파딱(블루): path 1개, fill 속성 없음 (CSS currentColor 사용)
+ * - 금딱(골드): path 3개, linearGradient 있음, fill="url(#gradient)"
+ * - 회딱(그레이): path 3개, linearGradient 있음
+ *
+ * 판별: linearGradient 없음 + path 1개 + fill 속성 없음 = 파딱.
+ * getComputedStyle 호출하지 않음 (reflow 방지).
+ */
 export function detectBadgeSvg(tweetElement: Element): boolean {
   const badge = tweetElement.querySelector(VERIFIED_BADGE_SELECTOR);
   if (!badge) return false;
 
   const svg = badge.closest('svg') ?? badge;
 
-  // 금딱은 linearGradient를 사용함 — 파란 뱃지는 단색
+  // 금딱/회딱: linearGradient 있으면 즉시 false
   if (svg.querySelector('linearGradient')) return false;
 
-  // 직접 fill 색상 확인 (회색딱 등)
-  const fill = (svg.getAttribute('fill') ?? '').toLowerCase();
-  const style = (svg.getAttribute('style') ?? '').toLowerCase();
+  // 파딱: path 정확히 1개 (금딱/회딱은 3개)
+  if (svg.querySelectorAll('path').length !== 1) return false;
 
-  if (isNonBlueColor(fill) || isNonBlueColor(style)) return false;
-
-  // 자식 요소 fill 확인
-  const children = svg.querySelectorAll('path, circle, g');
-  for (const child of children) {
-    const childFill = (child.getAttribute('fill') ?? '').toLowerCase();
-    if (isNonBlueColor(childFill)) return false;
-  }
+  // 파딱: path에 fill 속성이 없음 (CSS currentColor 사용)
+  // 금딱/회딱: fill="url(#gradient)" 또는 fill="#d18800" 등
+  const path = svg.querySelector('path');
+  if (!path) return false;
+  const fill = path.getAttribute('fill');
+  if (fill) return false; // fill 속성이 있으면 파딱 아님
 
   return true;
-}
-
-function isNonBlueColor(colorStr: string): boolean {
-  if (!colorStr) return false;
-  for (const gold of GOLD_STOP_COLORS) {
-    if (colorStr.includes(gold.toLowerCase())) return true;
-  }
-  for (const grey of GREY_COLORS) {
-    if (colorStr.includes(grey.toLowerCase())) return true;
-  }
-  if (colorStr.includes('gold') || colorStr.includes('grey') || colorStr.includes('gray')) return true;
-  return false;
 }

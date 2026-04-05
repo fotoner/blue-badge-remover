@@ -30,6 +30,10 @@ export function setActiveFilterRules(r: FilterRule[]): void { _activeFilterRules
 export function getCurrentUserHandle(): string | null { return _currentUserHandle; }
 export function setCurrentUserHandle(h: string | null): void { _currentUserHandle = h; }
 
+// 사용자가 펼친 트윗의 status path (DOM 재생성 시에도 유지)
+const _expandedSet = new Set<string>();
+export function getExpandedSet(): Set<string> { return _expandedSet; }
+
 export function isHandleFollowed(handle: string): boolean {
   return _followSet.has(handle.toLowerCase());
 }

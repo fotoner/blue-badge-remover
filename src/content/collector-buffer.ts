@@ -1,11 +1,8 @@
 // src/content/collector-buffer.ts
 // 키워드 수집기 버퍼: 파딱 계정 데이터를 메모리에 버퍼링하고 주기적으로 storage에 플러시.
-import { browser } from 'wxt/browser';
 import { getCollectedFadaks, saveCollectedFadaks } from '@features/keyword-collector';
-import { DEFAULT_FILTER_LIST, getCustomFilterList, buildActiveRules, parseCategories, buildFilterTextFromCategories } from '@features/keyword-filter';
-import { STORAGE_KEYS } from '@shared/constants';
 import type { CollectedFadak } from '@shared/types';
-import { collectorBuffer, getSettings, setActiveFilterRules } from './state';
+import { collectorBuffer } from './state';
 
 const MAX_TWEET_TEXTS_PER_USER = 50;
 
@@ -60,14 +57,3 @@ export async function flushCollector(): Promise<void> {
   collectorBuffer.clear();
 }
 
-export async function loadFilterRules(): Promise<void> {
-  const settings = getSettings();
-  const [custom, stored] = await Promise.all([
-    getCustomFilterList(),
-    browser.storage.local.get([STORAGE_KEYS.DISABLED_FILTER_CATEGORIES]),
-  ]);
-  const disabledCategories = (stored[STORAGE_KEYS.DISABLED_FILTER_CATEGORIES] as string[] | undefined) ?? [];
-  const categories = parseCategories(DEFAULT_FILTER_LIST);
-  const activeBuiltinText = buildFilterTextFromCategories(categories, disabledCategories);
-  setActiveFilterRules(buildActiveRules(settings.defaultFilterEnabled, activeBuiltinText, custom));
-}

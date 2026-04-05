@@ -1,8 +1,11 @@
 import { browser } from 'wxt/browser';
 import { getSettings, saveSettings } from '@features/settings';
+import { getTodayStats, getAllTimeTotal } from '@features/stats';
+import { t } from '@shared/i18n';
 import { STORAGE_KEYS } from '@shared/constants';
-import { t, type Language } from '@shared/i18n';
 import type { Settings } from '@shared/types';
+
+const UPDATE_FLAG_KEY = 'bbr-update-available';
 
 let settings: Settings;
 
@@ -23,11 +26,24 @@ async function init(): Promise<void> {
     document.body.style.width = '100vw';
   }
   settings = await getSettings();
-  renderSettings();
+  renderVersion();
+  renderToggle();
   applyTranslations();
-  renderSyncStatus();
-  renderOnboarding();
+  await renderStats();
+  await renderInfo();
+  await renderUpdateBanner();
   bindEvents();
+}
+
+function renderVersion(): void {
+  const versionEl = document.getElementById('version');
+  if (versionEl) {
+    versionEl.textContent = `v${browser.runtime.getManifest().version}`;
+  }
+}
+
+function renderToggle(): void {
+  (document.getElementById('enabled') as HTMLInputElement).checked = settings.enabled;
 }
 
 function applyTranslations(): void {
@@ -35,179 +51,102 @@ function applyTranslations(): void {
 
   document.querySelectorAll('[data-i18n]').forEach((el) => {
     const key = el.getAttribute('data-i18n');
-    if (key) {
-      el.textContent = t(key as Parameters<typeof t>[0], lang);
-    }
-  });
-
-  document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
-    const key = el.getAttribute('data-i18n-placeholder');
-    if (key && el instanceof HTMLInputElement) {
-      el.placeholder = t(key as Parameters<typeof t>[0], lang);
-    }
+    if (!key) return;
+    // Skip todayHidden — rendered dynamically with count param
+    if (key === 'todayHidden') return;
+    el.textContent = t(key as Parameters<typeof t>[0], lang);
   });
 }
 
-function renderSettings(): void {
-  (document.getElementById('enabled') as HTMLInputElement).checked = settings.enabled;
-  (document.getElementById('filter-timeline') as HTMLInputElement).checked = settings.filter.timeline;
-  (document.getElementById('filter-replies') as HTMLInputElement).checked = settings.filter.replies;
-  (document.getElementById('filter-search') as HTMLInputElement).checked = settings.filter.search;
-  (document.getElementById('filter-bookmarks') as HTMLInputElement).checked = settings.filter.bookmarks;
-  (document.getElementById('retweetFilter') as HTMLInputElement).checked = settings.retweetFilter;
-  (document.getElementById('debugMode') as HTMLInputElement).checked = settings.debugMode;
-
-  const languageSelect = document.getElementById('language') as HTMLSelectElement;
-  languageSelect.value = settings.language;
-
-  const hideModeRadio = document.querySelector(`input[name="hideMode"][value="${settings.hideMode}"]`) as HTMLInputElement | null;
-  if (hideModeRadio) hideModeRadio.checked = true;
-
-  const quoteModeRadio = document.querySelector(`input[name="quoteMode"][value="${settings.quoteMode}"]`) as HTMLInputElement | null;
-  if (quoteModeRadio) quoteModeRadio.checked = true;
-
-  (document.getElementById('keywordFilterEnabled') as HTMLInputElement).checked =
-    settings.keywordFilterEnabled;
-  (document.getElementById('keywordCollectorEnabled') as HTMLInputElement).checked =
-    settings.keywordCollectorEnabled;
-  const filterModeGroup = document.getElementById('filter-mode-group') as HTMLElement;
-  filterModeGroup.style.display = settings.keywordFilterEnabled ? 'block' : 'none';
-}
-
-async function renderSyncStatus(): Promise<void> {
+async function renderStats(): Promise<void> {
   const lang = settings.language;
-  const stored = await browser.storage.local.get([STORAGE_KEYS.LAST_SYNC_AT, STORAGE_KEYS.FOLLOW_LIST, STORAGE_KEYS.CURRENT_USER_ID]);
-  const lastSync = stored[STORAGE_KEYS.LAST_SYNC_AT] as string | null;
-  const followList = (stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? [];
-  const currentAccount = stored[STORAGE_KEYS.CURRENT_USER_ID] as string | null;
-  const accountEl = document.getElementById('current-account');
-  if (accountEl) {
-    accountEl.textContent = currentAccount
-      ? t('currentAccount', lang, { account: currentAccount })
-      : t('accountNotDetected', lang);
-  }
+  const statsEl = document.getElementById('today-stats');
+  if (!statsEl) return;
 
-  const localeMap: Record<Language, string> = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP' };
-  const timeStr = lastSync ? new Date(lastSync).toLocaleString(localeMap[lang]) : '-';
-  document.getElementById('sync-status')!.textContent = t('lastSync', lang, { time: timeStr });
-
-  const countEl = document.getElementById('follow-count');
-  if (countEl) {
-    countEl.textContent = t('collectedFollows', lang, { count: String(followList.length) });
+  try {
+    const todayStats = await getTodayStats();
+    const count = todayStats.totalHidden;
+    statsEl.textContent = t('todayHidden', lang, { count: String(count) });
+  } catch {
+    statsEl.textContent = t('todayHidden', lang, { count: '0' });
   }
 }
 
-async function renderOnboarding(): Promise<void> {
-  const banner = document.getElementById('onboarding-banner');
-  if (!banner) return;
-  try {
-    const result = await browser.storage.local.get([
-      STORAGE_KEYS.FOLLOW_LIST,
-      STORAGE_KEYS.LAST_SYNC_AT,
-      'onboardingDismissed',
-    ]);
-    const followList = (result[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? [];
-    const lastSyncAt = result[STORAGE_KEYS.LAST_SYNC_AT] as string | null ?? null;
-    const dismissed = (result['onboardingDismissed'] as boolean | undefined) ?? false;
+async function renderInfo(): Promise<void> {
+  // 총 숨김
+  const totalEl = document.getElementById('total-hidden');
+  if (totalEl) {
+    const total = await getAllTimeTotal();
+    totalEl.textContent = `${total}개`;
+  }
 
-    banner.style.display = followList.length === 0 && lastSyncAt === null && !dismissed ? 'block' : 'none';
+  // 키워드 필터 상태
+  const kwEl = document.getElementById('keyword-filter-status');
+  if (kwEl) {
+    kwEl.textContent = settings.keywordFilterEnabled ? 'ON' : 'OFF';
+    kwEl.style.color = settings.keywordFilterEnabled ? '#00ba7c' : '#536471';
+  }
+
+  // 팔로우 동기화 상태
+  const followEl = document.getElementById('follow-sync-status');
+  if (followEl) {
+    try {
+      const stored = await browser.storage.local.get([STORAGE_KEYS.FOLLOW_LIST]);
+      const followList = (stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? [];
+      followEl.textContent = followList.length > 0 ? `${followList.length}명` : '미동기화';
+      followEl.style.color = followList.length > 0 ? '#e7e9ea' : '#536471';
+    } catch {
+      followEl.textContent = '-';
+    }
+  }
+}
+
+async function renderUpdateBanner(): Promise<void> {
+  const banner = document.getElementById('update-banner');
+  if (!banner) return;
+
+  try {
+    const result = await browser.storage.local.get([UPDATE_FLAG_KEY]);
+    const showBanner = (result[UPDATE_FLAG_KEY] as boolean | undefined) ?? false;
+    banner.style.display = showBanner ? 'flex' : 'none';
+    if (showBanner) {
+      const version = browser.runtime.getManifest().version;
+      const textEl = document.getElementById('update-text');
+      if (textEl) textEl.textContent = t('updateBannerVersion', settings.language, { version });
+    }
   } catch {
     banner.style.display = 'none';
   }
 }
 
+function getShareUrl(): string {
+  const statsEl = document.getElementById('today-stats');
+  const countMatch = statsEl?.textContent?.match(/\d+/);
+  const count = countMatch ? countMatch[0] : '0';
+  const lang = settings.language;
+  const text = t('shareText', lang, { count });
+  const landingUrl = 'https://blue-badge.fotone.moe/';
+  return `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(landingUrl)}`;
+}
+
 function bindEvents(): void {
-  const save = async (): Promise<void> => {
+  document.getElementById('enabled')!.addEventListener('change', async () => {
     settings.enabled = (document.getElementById('enabled') as HTMLInputElement).checked;
-    settings.filter.timeline = (document.getElementById('filter-timeline') as HTMLInputElement).checked;
-    settings.filter.replies = (document.getElementById('filter-replies') as HTMLInputElement).checked;
-    settings.filter.search = (document.getElementById('filter-search') as HTMLInputElement).checked;
-    settings.filter.bookmarks = (document.getElementById('filter-bookmarks') as HTMLInputElement).checked;
-    settings.retweetFilter = (document.getElementById('retweetFilter') as HTMLInputElement).checked;
-    settings.debugMode = (document.getElementById('debugMode') as HTMLInputElement).checked;
-    settings.language = (document.getElementById('language') as HTMLSelectElement).value as Settings['language'];
-    settings.hideMode = (document.querySelector('input[name="hideMode"]:checked') as HTMLInputElement).value as Settings['hideMode'];
-    settings.quoteMode = (document.querySelector('input[name="quoteMode"]:checked') as HTMLInputElement).value as Settings['quoteMode'];
-    settings.keywordFilterEnabled = (
-      document.getElementById('keywordFilterEnabled') as HTMLInputElement
-    ).checked;
-    settings.keywordCollectorEnabled = (
-      document.getElementById('keywordCollectorEnabled') as HTMLInputElement
-    ).checked;
     await saveSettings(settings);
-  };
-
-  document.querySelectorAll('input').forEach((input) => {
-    input.addEventListener('change', save);
   });
 
-  const languageSelect = document.getElementById('language') as HTMLSelectElement;
-  languageSelect.addEventListener('change', async () => {
-    await save();
-    applyTranslations();
-    await renderSyncStatus();
+  document.getElementById('share-btn')!.addEventListener('click', () => {
+    openPage(getShareUrl());
   });
 
-  document.getElementById('sync-btn')!.addEventListener('click', async () => {
-    openPage('https://x.com/following');
-    const btn = document.getElementById('sync-btn') as HTMLButtonElement;
-    btn.textContent = t('scrollOnFollowingPage', settings.language);
-    setTimeout(() => { btn.textContent = t('openFollowingPage', settings.language); }, 3000);
+  document.getElementById('open-settings-btn')!.addEventListener('click', () => {
+    openPage((browser.runtime.getURL as (path: string) => string)('/dashboard.html'));
   });
 
-  document.getElementById('open-whitelist-btn')!.addEventListener('click', () => {
-    openPage(browser.runtime.getURL('/whitelist.html'));
-  });
-
-  document.getElementById('clear-cache-btn')!.addEventListener('click', async () => {
-    const stored = await browser.storage.local.get([STORAGE_KEYS.CURRENT_USER_ID, STORAGE_KEYS.FOLLOW_CACHE]);
-    const currentAccount = stored[STORAGE_KEYS.CURRENT_USER_ID] as string | null;
-    if (!currentAccount) return;
-    const cache = (stored[STORAGE_KEYS.FOLLOW_CACHE] as Record<string, string[]> | undefined) ?? {};
-    delete cache[currentAccount];
-    await browser.storage.local.set({
-      [STORAGE_KEYS.FOLLOW_CACHE]: cache,
-      [STORAGE_KEYS.FOLLOW_LIST]: [],
-      [STORAGE_KEYS.LAST_SYNC_AT]: null,
-      onboardingDismissed: false,
-    });
-    await renderSyncStatus();
-    await renderOnboarding();
-    const btn = document.getElementById('clear-cache-btn') as HTMLButtonElement;
-    btn.textContent = t('clearCacheDone', settings.language);
-    setTimeout(() => { btn.textContent = t('clearFollowCache', settings.language); }, 2000);
-  });
-
-  document.getElementById('keywordFilterEnabled')!.addEventListener('change', async () => {
-    const enabled = (document.getElementById('keywordFilterEnabled') as HTMLInputElement).checked;
-    const filterModeGroup = document.getElementById('filter-mode-group') as HTMLElement;
-    filterModeGroup.style.display = enabled ? 'block' : 'none';
-    await save();
-  });
-
-  document.getElementById('open-options-btn')!.addEventListener('click', () => {
-    openPage(browser.runtime.getURL('/options.html'));
-  });
-
-  document.getElementById('open-collector-btn')!.addEventListener('click', () => {
-    openPage(browser.runtime.getURL('/collector.html'));
-  });
-
-  document.getElementById('onboarding-dismiss')?.addEventListener('click', async () => {
-    await browser.storage.local.set({ onboardingDismissed: true });
-    const banner = document.getElementById('onboarding-banner');
+  document.getElementById('update-dismiss')?.addEventListener('click', async () => {
+    await browser.storage.local.set({ [UPDATE_FLAG_KEY]: false });
+    const banner = document.getElementById('update-banner');
     if (banner) banner.style.display = 'none';
-  });
-
-  document.getElementById('onboarding-cta')?.addEventListener('click', () => {
-    openPage('https://x.com/following');
-  });
-
-  browser.storage.onChanged.addListener((changes) => {
-    if (changes[STORAGE_KEYS.LAST_SYNC_AT]) {
-      const banner = document.getElementById('onboarding-banner');
-      if (banner) banner.style.display = 'none';
-    }
   });
 }
 

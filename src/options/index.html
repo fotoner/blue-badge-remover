@@ -10,7 +10,7 @@
   <div class="container">
     <header>
       <h1>Blue Badge Remover</h1>
-      <p class="subtitle">고급 필터 설정 (Beta)</p>
+      <p class="subtitle">고급 필터 설정</p>
     </header>
 
     <section class="section">
@@ -53,6 +53,18 @@
       <div class="btn-row">
         <button id="save-btn" class="btn-primary">저장</button>
         <span id="save-status" class="save-status"></span>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title" style="margin-bottom:14px">필터 팩</h2>
+      <p class="guide-desc" style="margin-bottom:12px">커스텀 키워드를 팩으로 내보내거나, 다른 사람의 팩을 가져올 수 있습니다</p>
+      <div id="filter-pack-list"></div>
+      <p id="packs-empty" class="guide-desc" style="display:none;margin-top:8px">등록된 필터 팩�� 없습니다</p>
+      <div class="btn-row" style="margin-top:12px">
+        <button id="export-pack-btn" class="btn-secondary">팩으로 내보내기</button>
+        <button id="import-pack-btn" class="btn-secondary">팩 가져���기</button>
+        <input type="file" id="import-pack-file" accept=".json" style="display:none">
       </div>
     </section>
 

@@ -1,7 +1,7 @@
 // src/features/content-filter/tweet-processor.ts
 import type { Settings } from '@shared/types';
 
-export type PageType = 'timeline' | 'replies' | 'search' | 'bookmarks';
+export type PageType = 'timeline' | 'replies' | 'search' | 'bookmarks' | 'lists';
 
 export interface TweetContext {
   settings: Settings;
@@ -24,6 +24,7 @@ export function shouldHideTweet(ctx: TweetContext): boolean {
     replies: ctx.settings.filter.replies,
     search: ctx.settings.filter.search,
     bookmarks: ctx.settings.filter.bookmarks,
+    lists: ctx.settings.filter.lists,
   };
 
   return filterMap[ctx.pageType] ?? false;

@@ -19,9 +19,14 @@ export function getProfileLinkHref(): string | null {
   return document.querySelector(PROFILE_LINK_SELECTOR)?.getAttribute('href') ?? null;
 }
 
+export function isDetailPage(): boolean {
+  return window.location.pathname.includes('/status/');
+}
+
 export function getPageType(): PageType {
   const path = window.location.pathname;
   if (path.includes('/i/bookmarks')) return 'bookmarks';
+  if (path.includes('/i/lists/') || path.includes('/lists/')) return 'lists';
   if (path.includes('/search')) return 'search';
   if (path.includes('/status/')) return 'replies';
   return 'timeline';

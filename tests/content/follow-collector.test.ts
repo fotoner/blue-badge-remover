@@ -65,7 +65,7 @@ describe('collectFollowsFromDOM - guard: myHandle !== pathUser', () => {
     deps = {
       getCurrentSettings: () => ({
         enabled: true,
-        filter: { timeline: true, replies: true, search: true, bookmarks: false },
+        filter: { timeline: true, replies: true, search: true, bookmarks: false, lists: true },
         hideMode: 'remove',
         retweetFilter: true,
         quoteMode: 'off',

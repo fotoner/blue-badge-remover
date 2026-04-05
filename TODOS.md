@@ -13,7 +13,7 @@
 ### 스토어 API 키 발급
 - [x] Chrome Web Store: 완료
 - [x] Firefox AMO: 완료
-- [ ] Edge Add-ons: Microsoft Partner Center → API 키
+- [x] Edge Add-ons: 완료
 - [ ] GitHub Secrets에 Edge 키 등록 후 release.yml의 자동 제출 활성화
 
 ### 웹스토어 페이지 개선
@@ -32,12 +32,49 @@
 ### ~~Firefox 설정 저장 호환성~~ (v1.3.6)
 - chrome.* → wxt/browser 전환으로 Firefox MV2 storage 호환 수정
 
-## 버그
+## 완료 (v1.4.0)
 
-### fiber 기반 팔로우 감지에서 노딱(금딱/기관) 미인식
-- fiber에서 following 상태만 확인하고, 뱃지 유형(blue/gold/grey)을 구분하지 않음
-- 노딱 계정이 팔로우 목록에 추가되면서 필터링 예외 처리됨
-- 관련 파일: `src/injected/fetch-interceptor.ts` (extractArticleDataFromFiber)
+### ~~fiber 기반 팔로우 감지에서 노딱(금딱/기관) 미인식~~
+- isBluePremium 체크 추가, API→SVG 타이밍 경합 시 reprocess로 복원
+
+### ~~SVG 뱃지 감지 안정화~~
+- SVG true 캐시 안 함 (금딱 부분 렌더링 오감지 방지)
+- handleBadgeData 양방향 reprocess + restore 분리
+- restoreHiddenTweets expanded 마커 제거 순서 수정
+
+### ~~펼침 상태 유지~~
+- 사용자 펼친 트윗을 메모리(expandedSet)에 기록, 스크롤 후 DOM 재생성 시에도 유지
+
+### ~~트윗 상세 페이지 파딱 배너~~
+- 상세 페이지(`/user/status/123`) 메인 트윗 숨기지 않고 빨간 배너 + 화이트리스트 버튼 표시
+
+### ~~showTweet 비숨김 트윗 DOM 조작 방지~~
+- `data-bbr-original` 가드 추가, 불필요한 DOM write 제거
+
+### ~~filterPacks storage listener 누락~~
+- `FILTER_PACKS` storage key + handler 추가, 열린 탭에 팩 변경 즉시 반영
+
+### ~~통계 시스템 정비~~
+- UTC → 로컬 타임존 날짜 키
+- 자정 경계 buffer.date 기반 저장
+- `stats-total` 별도 key로 분리 (전체 storage 로드 제거)
+
+### ~~regex backtracking 방지~~
+- wildcard 5개 초과 시 리터럴 fallback
+
+### ~~dead code 정리~~
+- `filter-section.ts` 264줄 삭제
+
+## 완료 (CSO 보안 감사 2026-04-05)
+
+### ~~postMessage targetOrigin 수정~~
+- `fetch-interceptor.ts`의 5개 `postMessage`를 `'*'` → `window.location.origin`으로 변경
+
+### ~~innerHTML 이스케이프~~
+- `account-list.ts`에서 `fadak.handle`에 `escapeHtml()` 적용
+
+### ~~host_permissions 범위 축소~~
+- `wxt.config.ts`의 `raw.githubusercontent.com/*` → `fotoner/blue-badge-remover/*`로 스코핑
 
 ## 향후
 

@@ -51,6 +51,7 @@ type TranslationKeys =
   | 'hiddenTweetQuoteEntire'
   | 'hiddenQuoteTweet'
   | 'fadakProfileBanner'
+  | 'fadakDetailBanner'
   | 'feedback'
   | 'feedbackDesc'
   | 'manageWhitelist'
@@ -60,6 +61,7 @@ type TranslationKeys =
   | 'keywordFilterBetaDesc'
   | 'advancedFilterSettings'
   | 'bookmarks'
+  | 'lists'
   | 'addToWhitelist'
   | 'addedToWhitelist'
   | 'onboardingBanner'
@@ -67,7 +69,15 @@ type TranslationKeys =
   | 'onboardingDismiss'
   | 'followSyncBanner'
   | 'onboardingSiteBanner'
-  | 'onboardingSiteCta';
+  | 'onboardingSiteCta'
+  | 'todayHidden'
+  | 'share'
+  | 'openSettings'
+  | 'updateBanner'
+  | 'updateBannerVersion'
+  | 'milestoneMessage'
+  | 'dismiss'
+  | 'shareText';
 
 type Translations = Record<TranslationKeys, string>;
 
@@ -118,6 +128,7 @@ const ko: Translations = {
   hiddenTweetQuoteEntire: '{quotedBy}님이 파딱 {handle}을 인용한 트윗이 숨겨졌습니다 (클릭하여 펼치기)',
   hiddenQuoteTweet: '파딱 {handle}의 인용 트윗이 숨겨졌습니다 (클릭하여 펼치기)',
   fadakProfileBanner: '@{handle}은(는) 파딱 계정입니다',
+  fadakDetailBanner: '이 트윗은 파딱 계정 @{handle}의 게시물입니다',
   feedback: '피드백 보내기',
   feedbackDesc: '버그 제보, 기능 제안 등 여러분의 피드백이 서비스 개선에 큰 도움이 됩니다',
   manageWhitelist: '화이트리스트 관리',
@@ -127,6 +138,7 @@ const ko: Translations = {
   keywordFilterBetaDesc: '모든 파딱이 아닌, 특정 키워드에 해당하는 바이오(프로필)나 이름, 본문을 가지고 있는 글만 가립니다. 가끔 유용한 정보 파딱 등의 글을 보고 싶은 분들에게 추천입니다.',
   advancedFilterSettings: '고급 필터 설정',
   bookmarks: '북마크',
+  lists: '리스트',
   addToWhitelist: '화이트리스트에 추가',
   addedToWhitelist: '화이트리스트에 추가됨',
   onboardingBanner: '팔로잉 목록을 동기화하면 팔로우 중인 계정이 필터링에서 제외됩니다.',
@@ -135,6 +147,14 @@ const ko: Translations = {
   followSyncBanner: '전체 팔로우 목록을 가져오려면 최하단까지 스크롤해주세요',
   onboardingSiteBanner: '팔로잉 페이지에서 스크롤하면 팔로우 중인 계정을 필터에서 제외할 수 있습니다',
   onboardingSiteCta: '동기화하기',
+  todayHidden: '오늘 {count}개 숨김',
+  share: '공유',
+  openSettings: '설정 열기',
+  updateBanner: '새 버전으로 업데이트되었습니다!',
+  updateBannerVersion: 'v{version}으로 업데이트되었습니다!',
+  dismiss: '닫기',
+  shareText: '오늘 파딱 트윗 {count}개를 숨겼습니다 🧹\n\n#파딱제거기 #BlueBadgeRemover',
+  milestoneMessage: '🎉 {count}번째 파딱 트윗을 숨겼습니다!',
 };
 
 const en: Translations = {
@@ -184,6 +204,7 @@ const en: Translations = {
   hiddenTweetQuoteEntire: 'Quote of paid badge {handle} by {quotedBy} hidden (click to expand)',
   hiddenQuoteTweet: 'Quote tweet by paid badge {handle} hidden (click to expand)',
   fadakProfileBanner: '@{handle} is a paid blue badge account',
+  fadakDetailBanner: 'This tweet is from paid badge account @{handle}',
   feedback: 'Send Feedback',
   feedbackDesc: 'Bug reports and feature suggestions help us improve the extension',
   manageWhitelist: 'Manage Whitelist',
@@ -193,6 +214,7 @@ const en: Translations = {
   keywordFilterBetaDesc: 'It does not hide all Paid badge posts, but only those containing specific keywords in the bio, name or the main text. This is recommended for users who occasionally want to see useful information from Paid badge holders.',
   advancedFilterSettings: 'Advanced Filter Settings',
   bookmarks: 'Bookmarks',
+  lists: 'Lists',
   addToWhitelist: 'Add to Whitelist',
   addedToWhitelist: 'Added to Whitelist',
   onboardingBanner: 'Sync your following list to exclude followed accounts from filtering.',
@@ -201,6 +223,14 @@ const en: Translations = {
   followSyncBanner: 'Scroll to the bottom to import your full following list',
   onboardingSiteBanner: 'Scroll the Following page to exclude accounts you follow from filtering',
   onboardingSiteCta: 'Sync now',
+  todayHidden: 'Hidden {count} today',
+  share: 'Share',
+  openSettings: 'Open Settings',
+  updateBanner: 'Updated to a new version!',
+  updateBannerVersion: 'Updated to v{version}!',
+  dismiss: 'Dismiss',
+  shareText: 'Hid {count} paid badge tweets today 🧹\n\n#BlueBadgeRemover',
+  milestoneMessage: '🎉 Hidden {count} paid badge tweets!',
 };
 
 const ja: Translations = {
@@ -250,6 +280,7 @@ const ja: Translations = {
   hiddenTweetQuoteEntire: '{quotedBy}が課金バッジ {handle}を引用したツイートが非表示になりました (クリックで展開)',
   hiddenQuoteTweet: '課金バッジ {handle}の引用ツイートが非表示になりました (クリックで展開)',
   fadakProfileBanner: '@{handle}は課金バッジアカウントです',
+  fadakDetailBanner: 'このツイートは課金バッジアカウント@{handle}の投稿です',
   feedback: 'フィードバックを送る',
   feedbackDesc: 'バグ報告や機能提案は、サービス改善に大きく役立ちます',
   manageWhitelist: 'ホワイトリスト管理',
@@ -259,6 +290,7 @@ const ja: Translations = {
   keywordFilterBetaDesc: 'すべての課金バッジの投稿を非表示にするのではなく、プロフィールや名前、本文に特定のキーワードが含まれている投稿のみを非表示にします。時々、課金バッジユーザーによる有益な情報を確認したい方に適しています。',
   advancedFilterSettings: '高度なフィルター設定',
   bookmarks: 'ブックマーク',
+  lists: 'リスト',
   addToWhitelist: 'ホワイトリストに追加',
   addedToWhitelist: 'ホワイトリストに追加済み',
   onboardingBanner: 'フォローリストを同期すると、フォロー中のアカウントがフィルタリングから除外されます。',
@@ -267,6 +299,14 @@ const ja: Translations = {
   followSyncBanner: '全フォローリストを取得するには一番下までスクロールしてください',
   onboardingSiteBanner: 'フォローページでスクロールするとフォロー中のアカウントをフィルタから除外できます',
   onboardingSiteCta: '同期する',
+  todayHidden: '今日 {count}件非表示',
+  share: '共有',
+  openSettings: '設定を開く',
+  updateBanner: '新しいバージョンに更新されました！',
+  updateBannerVersion: 'v{version}に更新されました！',
+  dismiss: '閉じる',
+  shareText: '今日{count}件の課金バッジツイートを非表示にしました 🧹\n\n#BlueBadgeRemover',
+  milestoneMessage: '🎉 {count}件の課金バッジツイートを非表示にしました！',
 };
 
 const translations: Record<Language, Translations> = { ko, en, ja };

@@ -15,7 +15,9 @@ function setupDOM(): void {
     <div data-testid="primaryColumn">
       <div>
         <div>
-          <span data-testid="icon-verified"></span>
+          <svg viewBox="0 0 22 22" data-testid="icon-verified">
+            <g><path d="M20.396 11c-.018-.137-.065-.27-.148-.385Z"></path></g>
+          </svg>
         </div>
       </div>
     </div>

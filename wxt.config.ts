@@ -8,12 +8,13 @@ export default defineConfig({
     name: '__MSG_extName__',
     description: '__MSG_extDescription__',
     default_locale: 'ko',
-    permissions: ['storage', 'unlimitedStorage'],
+    permissions: ['storage', 'unlimitedStorage', 'alarms'],
     host_permissions: [
       'https://x.com/*',
       'https://api.x.com/*',
       'https://twitter.com/*',
       'https://api.twitter.com/*',
+      'https://raw.githubusercontent.com/fotoner/blue-badge-remover/*',
     ],
     icons: {
       16: 'icons/icon16.png',

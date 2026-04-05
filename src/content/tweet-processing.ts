@@ -15,6 +15,19 @@ export function extractTweetAuthor(tweetEl: HTMLElement): { handle: string } | n
   return null;
 }
 
+export function extractTweetStatusPath(tweetEl: HTMLElement): string | null {
+  // <time> 요소의 부모 <a>를 사용 — 인용/사진 링크보다 정확
+  const timeEls = tweetEl.querySelectorAll('time');
+  for (const timeEl of timeEls) {
+    const link = timeEl.closest('a');
+    const href = link?.getAttribute('href');
+    if (!href || !href.includes('/status/')) continue;
+    const match = href.match(/\/\w+\/status\/\d+/);
+    if (match) return match[0];
+  }
+  return null;
+}
+
 export function extractRetweeterName(tweetEl: HTMLElement): string | null {
   const socialContext = tweetEl.querySelector('[data-testid="socialContext"]');
   if (!socialContext) return null;

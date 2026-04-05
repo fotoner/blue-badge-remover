@@ -1,7 +1,15 @@
 import type { FilterRule } from '@shared/types';
 
+const MAX_WILDCARDS = 5;
+
 function wildcardToRegExp(pattern: string): RegExp {
-  const parts = pattern.split('*').map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'));
+  const parts = pattern.split('*');
+  // wildcard 과다 시 backtracking 방지 — 초과분은 리터럴로 취급
+  if (parts.length - 1 > MAX_WILDCARDS) {
+    const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(escaped, 'i');
+  }
+  const escapedParts = parts.map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'));
 
   let regex = '';
 
@@ -10,7 +18,7 @@ function wildcardToRegExp(pattern: string): RegExp {
     regex = '^';
   }
 
-  regex += parts.join('.*');
+  regex += escapedParts.join('.*');
 
   // Add anchor at end if pattern doesn't end with *
   if (!pattern.endsWith('*')) {

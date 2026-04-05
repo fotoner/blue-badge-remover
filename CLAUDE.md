@@ -63,6 +63,7 @@ popup/     (Popup UI)        ─┘
 
 | 문서 | 내용 |
 |------|------|
+| `docs/DESIGN.md` | 디자인 시스템 (색상, 타이포, 레이아웃, border/radius 규칙) |
 | `docs/ARCHITECTURE.md` | 아키텍처 맵, 의존성 방향 규칙 |
 | `docs/REQUIREMENTS.md` | EARS 기반 요구사항 (MECE 도메인별) |
 | `docs/QUALITY_RULES.md` | TDD + 코딩 + 아키텍처 제약 규칙 |
@@ -81,18 +82,23 @@ entrypoints/                    # WXT 진입점 (빌드 시스템이 관리)
 ├── content.ts                  # Content Script (ISOLATED world)
 ├── injected.content.ts         # Content Script (MAIN world, fetch 인터셉트)
 ├── popup/                      # Popup UI
+├── dashboard/                  # Dashboard (설정 + 통계)
 ├── options/                    # 고급 필터 설정
 ├── whitelist/                  # 화이트리스트 관리
 └── collector/                  # 키워드 수집기
 
+packs/                          # 기본 제공 필터 팩 (JSON)
+
 src/
-├── content/                    # Content Script 로직 (6개 모듈)
+├── content/                    # Content Script 로직 (8개 모듈)
 │   ├── index.ts                # 초기화 + 모듈 연결
 │   ├── state.ts                # 공유 상태 관리
 │   ├── message-handler.ts      # postMessage 수신
 │   ├── storage-listener.ts     # chrome.storage 변경 감지
 │   ├── tweet-orchestrator.ts   # processTweet + 숨김/표시
 │   ├── tweet-classifier.ts     # 순수 함수 판정 로직
+│   ├── filter-pipeline.ts      # 필터 규칙 로드 (내장+커스텀+팩 병합)
+│   ├── milestone-banner.ts     # 마일스톤 축하 배너
 │   └── collector-buffer.ts     # 키워드 수집기 버퍼
 ├── injected/                   # MAIN world 스크립트
 │   └── fetch-interceptor.ts    # X API 응답 파싱 + fiber 팔로우 감지
@@ -102,12 +108,15 @@ src/
 │   ├── follow-list/            # D3: 팔로우 & 화이트리스트
 │   ├── keyword-filter/         # D5: 키워드 필터
 │   ├── keyword-collector/      # 키워드 수집기 스토리지
+│   ├── filter-pack/            # 필터 팩 관리 (로더 + 스토리지)
+│   ├── stats/                  # 숨김 통계 수집/저장
 │   └── settings/               # D4: 설정 관리
 ├── shared/                     # 공통 타입, 유틸, 상수
 │   ├── types/
 │   ├── utils/
 │   └── constants/
 ├── popup/                      # Popup UI 로직
+├── dashboard/                  # Dashboard 로직 (설정 + 통계)
 ├── options/                    # Options 페이지 로직
 ├── whitelist/                  # 화이트리스트 페이지 로직
 └── collector/                  # 키워드 수집기 페이지 로직

@@ -178,7 +178,7 @@ describe('message-handler', () => {
   // ── BBR_BADGE_DATA ───────────────────────────────────────────────────
 
   describe('BBR_BADGE_DATA', () => {
-    it('parseBadgeInfo 결과를 rest_id와 handle.toLowerCase() 양쪽으로 badgeCache에 저장한다', () => {
+    it('handleBadgeData는 no-op (SVG 기반 감지로 전환)', () => {
       mockParseBadgeInfo.mockReturnValue({
         userId: 'rest123', handle: 'TestUser',
         isBluePremium: true, isLegacyVerified: false, isBusiness: false,
@@ -189,57 +189,14 @@ describe('message-handler', () => {
         users: [{ rest_id: 'rest123' }],
       });
 
-      expect(mockParseBadgeInfo).toHaveBeenCalledWith({ rest_id: 'rest123' });
-      expect(badgeCache.get('rest123')).toBe(true);
-      expect(badgeCache.get('testuser')).toBe(true);
-    });
-
-    it('parseBadgeInfo가 null을 반환하면 캐시에 저장하지 않는다', () => {
-      mockParseBadgeInfo.mockReturnValue(null);
-
-      dispatchMessage({
-        type: MESSAGE_TYPES.BADGE_DATA,
-        users: [{ rest_id: 'unknown' }],
-      });
-
-      expect(badgeCache.get('unknown')).toBeUndefined();
-    });
-
-    it('handle이 없는 경우 userId로만 저장한다', () => {
-      mockParseBadgeInfo.mockReturnValue({
-        userId: 'rest456', handle: null,
-        isBluePremium: false, isLegacyVerified: true, isBusiness: false,
-      });
-
-      dispatchMessage({
-        type: MESSAGE_TYPES.BADGE_DATA,
-        users: [{ rest_id: 'rest456' }],
-      });
-
-      expect(badgeCache.get('rest456')).toBe(false);
-    });
-
-    it('여러 유저 데이터를 한 번에 처리한다', () => {
-      mockParseBadgeInfo
-        .mockReturnValueOnce({
-          userId: 'u1', handle: 'Alice',
-          isBluePremium: true, isLegacyVerified: false, isBusiness: false,
-        })
-        .mockReturnValueOnce({
-          userId: 'u2', handle: 'Bob',
-          isBluePremium: false, isLegacyVerified: false, isBusiness: true,
-        });
-
-      dispatchMessage({
-        type: MESSAGE_TYPES.BADGE_DATA,
-        users: [{}, {}],
-      });
-
-      expect(mockParseBadgeInfo).toHaveBeenCalledTimes(2);
-      expect(badgeCache.get('u1')).toBe(true);
-      expect(badgeCache.get('alice')).toBe(true);
-      expect(badgeCache.get('u2')).toBe(false);
-      expect(badgeCache.get('bob')).toBe(false);
+      // SVG 기반 감지로 전환 — parseBadgeInfo 호출 안 함
+      expect(mockParseBadgeInfo).not.toHaveBeenCalled();
+      // badgeCache에 저장하지 않음
+      expect(badgeCache.get('rest123')).toBeUndefined();
+      expect(badgeCache.get('testuser')).toBeUndefined();
+      // reprocess/restore 호출하지 않음
+      expect(mockReprocessExistingTweets).not.toHaveBeenCalled();
+      expect(mockRestoreHiddenTweets).not.toHaveBeenCalled();
     });
   });
 

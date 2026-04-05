@@ -6,7 +6,8 @@ import { STORAGE_KEYS } from '@shared/constants';
 import type { Settings } from '@shared/types';
 import { getSettings, setSettings, setFollowSet, setWhitelistSet } from './state';
 import { restoreHiddenTweets, reprocessExistingTweets } from './tweet-orchestrator';
-import { loadFilterRules, flushCollector } from './collector-buffer';
+import { flushCollector } from './collector-buffer';
+import { loadFilterRules } from './filter-pipeline';
 import { removeFadakBanner } from './fadak-banner';
 
 export function listenForSettingsChanges(setDebugFlag: (enabled: boolean) => void): void {
@@ -27,6 +28,9 @@ export function listenForSettingsChanges(setDebugFlag: (enabled: boolean) => voi
       void loadFilterRules().then(() => { restoreHiddenTweets(); reprocessExistingTweets(); });
     }
     if (changes[STORAGE_KEYS.DISABLED_FILTER_CATEGORIES]) {
+      void loadFilterRules().then(() => { restoreHiddenTweets(); reprocessExistingTweets(); });
+    }
+    if (changes[STORAGE_KEYS.FILTER_PACKS]) {
       void loadFilterRules().then(() => { restoreHiddenTweets(); reprocessExistingTweets(); });
     }
   });
@@ -51,7 +55,8 @@ function handleSettingsChange(newSettings: Settings, setDebugFlag: (enabled: boo
     prev.filter.timeline !== newSettings.filter.timeline ||
     prev.filter.replies !== newSettings.filter.replies ||
     prev.filter.search !== newSettings.filter.search ||
-    prev.filter.bookmarks !== newSettings.filter.bookmarks;
+    prev.filter.bookmarks !== newSettings.filter.bookmarks ||
+    prev.filter.lists !== newSettings.filter.lists;
 
   if (needsReprocess) {
     restoreHiddenTweets();

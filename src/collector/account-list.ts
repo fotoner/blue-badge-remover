@@ -14,7 +14,7 @@ function buildEntry(fadak: CollectedFadak): HTMLElement {
   const header = document.createElement('div');
   header.className = 'entry-header';
   header.innerHTML = `
-    <span class="handle">@${fadak.handle}</span>
+    <span class="handle">@${escapeHtml(fadak.handle)}</span>
     <span class="display-name">${escapeHtml(fadak.displayName)}</span>
     <span class="tweet-count">${fadak.tweetTexts.length}개 트윗</span>
   `;

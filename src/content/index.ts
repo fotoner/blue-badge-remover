@@ -5,16 +5,19 @@ import { FeedObserver, setTweetHiderLanguage } from '@features/content-filter';
 import { getSettings as loadSettings, addToWhitelist } from '@features/settings';
 import { MESSAGE_TYPES, STORAGE_KEYS, TIMINGS } from '@shared/constants';
 import { logger } from '@shared/utils/logger';
-import { showFadakProfileBanner, removeFadakBanner } from './fadak-banner';
+import { showFadakProfileBanner, showFadakDetailBanner, removeFadakBanner } from './fadak-banner';
 import { listenForNavigation, setOnNavigate } from './navigation';
 import { collectFollowsFromDOM, saveFollowHandles, disconnectFollowObserver, listenForFollowButtonClicks, getMyHandle } from './follow-collector';
 import { isProfilePage, getProfileLinkHref } from './page-utils';
 import { observeSettingsShortcut } from './settings-shortcut';
 import { setSettings, setFollowSet, setWhitelistSet, setCurrentUserHandle, getSettings, getFollowSet, getCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, profileCache, collectorBuffer } from './state';
-import { loadFilterRules, flushCollector } from './collector-buffer';
+import { flushCollector } from './collector-buffer';
+import { loadFilterRules } from './filter-pipeline';
 import { processTweet, restoreHiddenTweets, reprocessExistingTweets } from './tweet-orchestrator';
 import { listenForMessages } from './message-handler';
 import { listenForSettingsChanges } from './storage-listener';
+import { startStatsFlush, stopStatsFlush, flushStats, setOnFlush } from '@features/stats';
+import { checkMilestone } from './milestone-banner';
 
 let feedObserver: FeedObserver;
 let accountSwitchTimerId: ReturnType<typeof setInterval> | null = null;
@@ -86,6 +89,7 @@ function startObserving(): void {
 function handleNavigate(): void {
   const settings = getSettings();
   if (settings.keywordCollectorEnabled) void flushCollector();
+  void flushStats();
   feedObserver.disconnect();
   removeFadakBanner();
   if (!window.location.pathname.includes('/following')) {
@@ -95,6 +99,7 @@ function handleNavigate(): void {
     startObserving();
     reprocessExistingTweets();
     showFadakProfileBanner(fadakBannerDeps);
+    showFadakDetailBanner(fadakBannerDeps);
     if (window.location.pathname.includes('/following')) {
       collectFollowsFromDOM(followCollectorDeps);
     }
@@ -172,6 +177,11 @@ async function init(): Promise<void> {
   listenForSettingsChanges(setDebugFlag);
   if (collectorFlushTimerId !== null) clearInterval(collectorFlushTimerId);
   collectorFlushTimerId = setInterval(() => { if (getSettings().keywordCollectorEnabled) void flushCollector(); }, TIMINGS.COLLECTOR_FLUSH_INTERVAL);
+  setOnFlush((totalHidden) => void checkMilestone(totalHidden));
+  startStatsFlush();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') void flushStats();
+  });
 
   window.postMessage({ type: MESSAGE_TYPES.CONTENT_READY }, window.location.origin);
 
@@ -192,6 +202,7 @@ async function init(): Promise<void> {
       setCurrentUserHandle(getMyHandle());
     }
     showFadakProfileBanner(fadakBannerDeps);
+    showFadakDetailBanner(fadakBannerDeps);
     startAccountSwitchWatcher();
   }, TIMINGS.INITIAL_SETUP_DELAY);
 
