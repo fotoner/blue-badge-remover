@@ -1,55 +1,45 @@
 const VERIFIED_BADGE_SELECTOR = '[data-testid="icon-verified"]';
 
-// 금딱 gradient에 사용되는 stop-color 값들
-const GOLD_STOP_COLORS = [
-  '#f4e72a', '#cd8105', '#cb7b00', '#f4ec26', '#e2b719', '#f9e87f', '#d18800',
-  '#E8B829', '#F4D03F', '#D4A72C', '#CFB53B',
-];
-const GREY_COLORS = ['#829AAB', '#829aab'];
+// X 파란 뱃지의 고유 fill 색상
+const BLUE_BADGE_COLOR = '#1d9bf0';
 
+/**
+ * SVG 폴백: 트윗 요소 내 뱃지를 확인하여 파딱(파란 뱃지) 여부를 반환.
+ *
+ * 접근법: "금딱/회딱이 아니면 파딱"이 아니라,
+ *         "파란색 단색 뱃지가 확인되면 파딱, 아니면 false".
+ *
+ * 이렇게 하면 새로운 뱃지 유형이 추가되어도 안전하게 동작.
+ */
 export function detectBadgeSvg(tweetElement: Element): boolean {
   const badge = tweetElement.querySelector(VERIFIED_BADGE_SELECTOR);
   if (!badge) return false;
 
   const svg = badge.closest('svg') ?? badge;
 
-  // 금딱은 linearGradient를 사용함 — 파란 뱃지는 단색
+  // linearGradient가 있으면 금딱 — 확실히 파딱 아님
   if (svg.querySelector('linearGradient')) return false;
 
-  // stop-color로 금딱 감지 (linearGradient가 아닌 다른 방식으로 렌더링될 때)
-  const stops = svg.querySelectorAll('stop');
-  for (const stop of stops) {
-    const stopColor = (stop.getAttribute('stop-color') ?? '').toLowerCase();
-    if (isNonBlueColor(stopColor)) return false;
-  }
+  // stop 요소가 있으면 그래디언트 뱃지 — 파딱 아님
+  if (svg.querySelectorAll('stop').length > 0) return false;
 
-  // 직접 fill 색상 확인 (회색딱 등)
-  const fill = (svg.getAttribute('fill') ?? '').toLowerCase();
-  const style = (svg.getAttribute('style') ?? '').toLowerCase();
+  // 파란색 단색 fill을 명시적으로 확인
+  const allFills: string[] = [];
 
-  if (isNonBlueColor(fill) || isNonBlueColor(style)) return false;
+  const svgFill = svg.getAttribute('fill');
+  if (svgFill) allFills.push(svgFill.toLowerCase());
 
-  // 자식 요소 fill 확인
   const children = svg.querySelectorAll('path, circle, g');
   for (const child of children) {
-    const childFill = (child.getAttribute('fill') ?? '').toLowerCase();
-    if (isNonBlueColor(childFill)) return false;
+    const childFill = child.getAttribute('fill');
+    if (childFill && !childFill.startsWith('url(')) {
+      allFills.push(childFill.toLowerCase());
+    }
   }
 
-  // aria-label로 추가 감지 — 금딱은 "인증된 계정" 라벨 사용
-  // (파딱도 동일 라벨 사용하므로 이것만으로 판단 불가, 위 체크와 함께 사용)
+  // fill이 하나도 없으면 판단 불가 — 안전하게 false
+  if (allFills.length === 0) return false;
 
-  return true;
-}
-
-function isNonBlueColor(colorStr: string): boolean {
-  if (!colorStr) return false;
-  for (const gold of GOLD_STOP_COLORS) {
-    if (colorStr.includes(gold.toLowerCase())) return true;
-  }
-  for (const grey of GREY_COLORS) {
-    if (colorStr.includes(grey.toLowerCase())) return true;
-  }
-  if (colorStr.includes('gold') || colorStr.includes('grey') || colorStr.includes('gray')) return true;
-  return false;
+  // 파란색(#1d9bf0)이 포함되어 있으면 파딱
+  return allFills.some((f) => f.includes(BLUE_BADGE_COLOR));
 }
