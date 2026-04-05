@@ -206,35 +206,34 @@ h3 {
   padding: 8px 0;
 }
 
-/* Hero stat */
+/* Hero stat — signal-line pattern (left-aligned with accent border) */
 .hero-stat {
-  text-align: center;
-  padding: 20px 0 16px;
+  border-left: 3px solid var(--accent);
+  padding-left: 16px;
+  margin-bottom: 20px;
 }
 
 .hero-number {
-  display: block;
   font-family: var(--font-mono);
   font-size: 36px;
   font-weight: 500;
   color: var(--accent);
-  line-height: 1.2;
+  line-height: 1.1;
 }
 
 .hero-subtitle {
-  display: block;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .total-stat {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 0;
-  margin-bottom: 12px;
-  font-size: 13px;
+  padding: 8px 0;
+  margin-top: 8px;
+  font-size: 12px;
   color: var(--text-muted);
   border-top: 1px solid var(--border-subtle);
 }
@@ -304,8 +303,8 @@ h3 {
 
 .category-bar-name {
   width: 100px;
-  font-size: 12px;
-  color: var(--text-primary);
+  font-size: 11px;
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -447,7 +446,7 @@ button, .btn-secondary, .btn-small {
   display: block;
   width: 100%;
   background: var(--surface-2);
-  color: var(--text-primary);
+  color: var(--text-secondary);
   padding: 10px;
   border-radius: 4px;
   font-size: 13px;

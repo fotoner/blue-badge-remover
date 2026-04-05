@@ -113,11 +113,12 @@ body {
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* Master toggle */
+/* Master toggle — signal-line pattern (border-left + accent-soft bg) */
 .master-toggle {
   background: var(--accent-soft);
+  border-left: 3px solid var(--accent);
   margin: 0 -16px 12px;
-  padding: 14px 16px;
+  padding: 10px 12px;
   border-bottom: none;
 }
 
@@ -217,8 +218,8 @@ button {
   display: block;
   width: 100%;
   background: var(--surface-2);
-  color: var(--text-primary);
-  padding: 10px;
+  color: var(--text-secondary);
+  padding: 8px;
   border-radius: 4px;
   font-size: 13px;
   font-weight: 500;
@@ -248,7 +249,7 @@ button {
 }
 
 .info-value {
-  color: var(--text-primary);
+  color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 500;
