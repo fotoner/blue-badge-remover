@@ -20,14 +20,15 @@ export function parseBadgeInfo(userData: unknown): BadgeInfo | null {
   }
 
   const isBusiness = data.verified_type === 'Business';
+  const isGovernment = data.verified_type === 'Government';
   const isLegacyVerified = data.legacy?.verified === true;
 
-  // is_blue_verified가 false여도 Business/Legacy 인증이면 non-fadak으로 캐시해야 함
-  if (!data.is_blue_verified && !isBusiness && !isLegacyVerified) {
+  // is_blue_verified가 false여도 Business/Government/Legacy 인증이면 non-fadak으로 캐시해야 함
+  if (!data.is_blue_verified && !isBusiness && !isGovernment && !isLegacyVerified) {
     return null;
   }
 
-  const isBluePremium = data.is_blue_verified && !isBusiness && !isLegacyVerified;
+  const isBluePremium = data.is_blue_verified && !isBusiness && !isGovernment && !isLegacyVerified;
   const handle = data.legacy?.screen_name ?? data.core?.screen_name ?? null;
 
   return {
