@@ -47,17 +47,14 @@ function handleBadgeData(data: { users: unknown[] }): void {
   for (const userData of data.users) {
     const badge = parseBadgeInfo(userData);
     if (badge) {
-      const prevById = badgeCache.get(badge.userId);
       badgeCache.set(badge.userId, badge.isBluePremium);
       if (badge.handle) {
         const prevByHandle = badgeCache.get(badge.handle.toLowerCase());
         badgeCache.set(badge.handle.toLowerCase(), badge.isBluePremium);
-        if (!badge.isBluePremium && (prevById === true || prevByHandle === true)) {
+        // non-fadak 계정인데 캐시가 없었거나(SVG로 숨겨졌을 수 있음) true였으면 복원
+        if (!badge.isBluePremium && prevByHandle !== false) {
           needsReprocess = true;
         }
-      } else if (!badge.isBluePremium && prevById === true) {
-        // handle을 못 찾아도 rest_id 기반으로 fadak→non-fadak 변경 감지
-        needsReprocess = true;
       }
     }
   }

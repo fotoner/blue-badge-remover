@@ -15,10 +15,15 @@ function checkFadak(userId: string, element: HTMLElement): boolean {
   if (cached !== undefined) return cached;
 
   const svgResult = detectBadgeSvg(element);
-  // SVG가 non-fadak(false)이면 확정 캐시. fadak(true)이면 API 교정 가능하도록 캐시하되,
-  // API 데이터 도착 시 handleBadgeData에서 reprocess로 교정됨.
-  badgeCache.set(userId, svgResult);
-  return svgResult;
+  if (!svgResult) {
+    // SVG가 non-fadak(false): 확정 캐시 (금딱/회딱/뱃지없음)
+    badgeCache.set(userId, false);
+    return false;
+  }
+  // SVG가 파딱(true)으로 판단해도 캐시하지 않음.
+  // API 데이터(handleBadgeData)가 도착하면 확정 캐시되고 reprocess됨.
+  // 캐시 안 하면 다음 processTweet 호출 시 다시 SVG 체크 → API 도착 후에는 캐시 히트.
+  return true;
 }
 
 export function processTweet(tweetEl: HTMLElement): void {
