@@ -16,6 +16,13 @@ export function detectBadgeSvg(tweetElement: Element): boolean {
   // 금딱은 linearGradient를 사용함 — 파란 뱃지는 단색
   if (svg.querySelector('linearGradient')) return false;
 
+  // stop-color로 금딱 감지 (linearGradient가 아닌 다른 방식으로 렌더링될 때)
+  const stops = svg.querySelectorAll('stop');
+  for (const stop of stops) {
+    const stopColor = (stop.getAttribute('stop-color') ?? '').toLowerCase();
+    if (isNonBlueColor(stopColor)) return false;
+  }
+
   // 직접 fill 색상 확인 (회색딱 등)
   const fill = (svg.getAttribute('fill') ?? '').toLowerCase();
   const style = (svg.getAttribute('style') ?? '').toLowerCase();
@@ -28,6 +35,9 @@ export function detectBadgeSvg(tweetElement: Element): boolean {
     const childFill = (child.getAttribute('fill') ?? '').toLowerCase();
     if (isNonBlueColor(childFill)) return false;
   }
+
+  // aria-label로 추가 감지 — 금딱은 "인증된 계정" 라벨 사용
+  // (파딱도 동일 라벨 사용하므로 이것만으로 판단 불가, 위 체크와 함께 사용)
 
   return true;
 }

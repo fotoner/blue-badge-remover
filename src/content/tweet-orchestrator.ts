@@ -11,12 +11,14 @@ import type { ClassifyResult, QuoteClassifyResult } from './tweet-classifier';
 import { recordHide } from '@features/stats';
 
 function checkFadak(userId: string, element: HTMLElement): boolean {
-  let isFadak = badgeCache.get(userId);
-  if (isFadak === undefined) {
-    isFadak = detectBadgeSvg(element);
-    badgeCache.set(userId, isFadak);
-  }
-  return isFadak;
+  const cached = badgeCache.get(userId);
+  if (cached !== undefined) return cached;
+
+  const svgResult = detectBadgeSvg(element);
+  // SVG가 non-fadak(false)이면 확정 캐시. fadak(true)이면 API 교정 가능하도록 캐시하되,
+  // API 데이터 도착 시 handleBadgeData에서 reprocess로 교정됨.
+  badgeCache.set(userId, svgResult);
+  return svgResult;
 }
 
 export function processTweet(tweetEl: HTMLElement): void {

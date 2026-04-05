@@ -52,10 +52,12 @@ function handleBadgeData(data: { users: unknown[] }): void {
       if (badge.handle) {
         const prevByHandle = badgeCache.get(badge.handle.toLowerCase());
         badgeCache.set(badge.handle.toLowerCase(), badge.isBluePremium);
-        // SVG 감지가 잘못 캐시한 경우(fadak→non-fadak) 복원 필요
         if (!badge.isBluePremium && (prevById === true || prevByHandle === true)) {
           needsReprocess = true;
         }
+      } else if (!badge.isBluePremium && prevById === true) {
+        // handle을 못 찾아도 rest_id 기반으로 fadak→non-fadak 변경 감지
+        needsReprocess = true;
       }
     }
   }
