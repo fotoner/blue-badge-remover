@@ -82,9 +82,6 @@ function extractHandlesFromDOM(): string[] {
 export function collectFollowsFromDOM(deps: FollowCollectorDeps): void {
   if (!window.location.pathname.includes('/following')) return;
 
-  // 배너는 /following 진입 시 항상 표시
-  showSyncBanner(deps);
-
   // myHandle이 아직 없으면 재시도
   const myHandle = getMyHandle();
   if (!myHandle) {
