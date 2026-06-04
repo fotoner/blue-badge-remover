@@ -27,5 +27,13 @@
     "vite": "^8.0.5",
     "vitest": "^4.1.2",
     "wxt": "^0.20.20"
+  },
+  "overrides": {
+    "node-notifier": {
+      "uuid": "11.1.1"
+    },
+    "web-ext-run": {
+      "tmp": "0.2.7"
+    }
   }
 }

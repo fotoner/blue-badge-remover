@@ -1,5 +1,5 @@
 // tests/content/follow-collector.test.ts
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock browser.storage.local
 const mockChromeStorage: Record<string, unknown> = {};
@@ -24,7 +24,7 @@ vi.mock('wxt/browser', () => ({
   },
 }));
 
-const { collectFollowsFromDOM, getMyHandle } = await import('../../src/content/follow-collector');
+const { collectFollowsFromDOM, disconnectFollowObserver, getMyHandle } = await import('../../src/content/follow-collector');
 type FollowCollectorDeps = import('../../src/content/follow-collector').FollowCollectorDeps;
 
 function setPath(path: string): void {
@@ -77,6 +77,10 @@ describe('collectFollowsFromDOM - guard: myHandle !== pathUser', () => {
       }),
       setFollowSet: vi.fn(),
     };
+  });
+
+  afterEach(() => {
+    disconnectFollowObserver();
   });
 
   it('should not collect when on another user following page', () => {

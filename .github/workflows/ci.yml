@@ -34,6 +34,9 @@ jobs:
       - name: Build Firefox
         run: npm run build:firefox
 
+      - name: Build Edge
+        run: npm run build:edge
+
       - name: Upload Chrome build
         if: github.event_name == 'push'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -47,6 +50,13 @@ jobs:
         with:
           name: firefox-mv2
           path: dist/firefox-mv2/
+
+      - name: Upload Edge build
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: edge-mv3
+          path: dist/edge-mv3/
 
   e2e:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
