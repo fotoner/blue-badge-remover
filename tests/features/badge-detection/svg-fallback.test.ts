@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectBadgeSvg } from '@features/badge-detection/svg-fallback';
+import { detectBadgeSvg, detectBlueBadgeElement } from '@features/badge-detection/svg-fallback';
 
 /** 현행 detectBadgeSvg 로직 (2026-04 기준):
  *  linearGradient 없음 + path 1개 + fill 속성 없음 = 파딱(true)
@@ -81,5 +81,24 @@ describe('detectBadgeSvg', () => {
       <g><path d="M20 11Z"></path><path d="M11 1Z"></path></g>
     </svg>`;
     expect(detectBadgeSvg(el)).toBe(false);
+  });
+
+  it('detectBlueBadgeElement는 이미 찾은 badge element를 같은 규칙으로 판정한다', () => {
+    const el = document.createElement('div');
+    el.innerHTML = createBlueBadge();
+    const badge = el.querySelector('[data-testid="icon-verified"]')!;
+
+    expect(detectBlueBadgeElement(badge)).toBe(true);
+    expect(detectBlueBadgeElement(el)).toBe(true);
+  });
+
+  it('detectBlueBadgeElement는 금딱/회딱/부분 렌더링을 false로 판정한다', () => {
+    const gold = document.createElement('div');
+    gold.innerHTML = createGoldBadge();
+    expect(detectBlueBadgeElement(gold.querySelector('[data-testid="icon-verified"]')!)).toBe(false);
+
+    const partial = document.createElement('div');
+    partial.innerHTML = '<svg viewBox="0 0 22 22" data-testid="icon-verified"><g></g></svg>';
+    expect(detectBlueBadgeElement(partial.querySelector('[data-testid="icon-verified"]')!)).toBe(false);
   });
 });

@@ -1,10 +1,12 @@
 // src/content/fadak-banner.ts
+import { detectBlueBadgeElement } from '@features/badge-detection';
 import { t } from '@shared/i18n';
 import { TIMINGS } from '@shared/constants';
 import type { Settings } from '@shared/types';
 import { extractTweetStatusPath } from './tweet-processing';
 
 export const FADAK_BANNER_ID = 'bbr-fadak-profile-banner';
+export const DETAIL_BANNER_ID = 'bbr-fadak-detail-banner';
 const BANNER_STYLE_ATTR = 'data-bbr-banner-styles';
 let fadakBannerObserver: MutationObserver | null = null;
 
@@ -15,6 +17,8 @@ export interface FadakBannerDeps {
   getCurrentSettings: () => Settings;
   addToWhitelist: (handle: string) => Promise<void>;
 }
+
+type BannerMessageKey = 'fadakProfileBanner' | 'fadakDetailBanner';
 
 function injectBannerStyles(): void {
   if (document.querySelector(`[${BANNER_STYLE_ATTR}]`)) return;
@@ -60,77 +64,114 @@ function injectBannerStyles(): void {
   document.head.appendChild(style);
 }
 
-function isBlueBadge(badgeEl: Element): boolean {
-  // detectBadgeSvg와 동일 로직이지만, 이미 배지 요소를 받으므로 querySelector 생략
-  const svg = badgeEl.closest('svg') ?? badgeEl;
-  if (svg.querySelector('linearGradient')) return false;
-  if (svg.querySelectorAll('path').length !== 1) return false;
-  const path = svg.querySelector('path');
-  if (!path) return false;
-  if (path.getAttribute('fill')) return false;
-  return true;
+function getPathHandle(): string | null {
+  return window.location.pathname.split('/')[1]?.toLowerCase() ?? null;
+}
+
+function getStickyHeader(): Element | null {
+  return document.querySelector('[data-testid="primaryColumn"] > div > div:first-child');
+}
+
+function getEligibleHandle(
+  deps: FadakBannerDeps,
+  settings: Settings,
+  bannerId: string,
+  pageGuard: boolean,
+): string | null {
+  if (!pageGuard || !settings.enabled) return null;
+  if (document.getElementById(bannerId)) return null;
+
+  const pathHandle = getPathHandle();
+  if (!pathHandle) return null;
+  if (deps.isHandleFollowed(pathHandle)) return null;
+  if (deps.isHandleWhitelisted(pathHandle)) return null;
+  return pathHandle;
+}
+
+function createWhitelistBanner(
+  id: string,
+  messageKey: BannerMessageKey,
+  handle: string,
+  settings: Settings,
+  deps: FadakBannerDeps,
+): HTMLElement {
+  injectBannerStyles();
+  const lang = settings.language;
+
+  const banner = document.createElement('div');
+  banner.id = id;
+  banner.className = 'bbr-fadak-banner bbr-banner-warning';
+
+  const text = document.createElement('span');
+  text.textContent = t(messageKey, lang, { handle });
+  banner.appendChild(text);
+
+  const btn = document.createElement('button');
+  btn.className = 'bbr-banner-btn';
+  btn.textContent = t('addToWhitelist', lang);
+  btn.addEventListener('click', async () => {
+    await deps.addToWhitelist('@' + handle);
+    text.textContent = t('addedToWhitelist', lang);
+    banner.className = 'bbr-fadak-banner bbr-banner-success';
+    btn.remove();
+    setTimeout(() => banner.remove(), TIMINGS.BANNER_SUCCESS_DISMISS);
+  });
+  banner.appendChild(btn);
+
+  return banner;
+}
+
+function observeUntilInserted(
+  getObserver: () => MutationObserver | null,
+  setObserver: (observer: MutationObserver | null) => void,
+  target: Element,
+  tryInsert: () => boolean,
+): void {
+  getObserver()?.disconnect();
+  const observer = new MutationObserver(() => {
+    if (tryInsert()) {
+      observer.disconnect();
+      setObserver(null);
+    }
+  });
+  setObserver(observer);
+  observer.observe(target, { childList: true, subtree: true });
+  setTimeout(() => {
+    if (getObserver() !== observer) return;
+    observer.disconnect();
+    setObserver(null);
+  }, TIMINGS.BANNER_OBSERVER_TIMEOUT);
 }
 
 export function showFadakProfileBanner(deps: FadakBannerDeps): void {
   const settings = deps.getCurrentSettings();
-  if (!deps.isProfilePage() || !settings.enabled) return;
-  if (document.getElementById(FADAK_BANNER_ID)) return;
-
-  const pathHandle = window.location.pathname.split('/')[1]?.toLowerCase();
+  const pathHandle = getEligibleHandle(deps, settings, FADAK_BANNER_ID, deps.isProfilePage());
   if (!pathHandle) return;
-  if (deps.isHandleFollowed(pathHandle)) return;
-  if (deps.isHandleWhitelisted(pathHandle)) return;
+  const handle = pathHandle;
 
   function tryInsertBanner(): boolean {
-    const stickyHeader = document.querySelector('[data-testid="primaryColumn"] > div > div:first-child');
+    const stickyHeader = getStickyHeader();
     if (!stickyHeader) return false;
     const verifiedBadge = stickyHeader.querySelector('[data-testid="icon-verified"]');
     if (!verifiedBadge) return false;
     if (document.getElementById(FADAK_BANNER_ID)) return true;
 
     // 금딱이면 배너 표시하지 않음
-    if (!isBlueBadge(verifiedBadge)) return true;
+    if (!detectBlueBadgeElement(verifiedBadge)) return true;
 
-    injectBannerStyles();
-    const lang = settings.language;
-
-    const banner = document.createElement('div');
-    banner.id = FADAK_BANNER_ID;
-    banner.className = 'bbr-fadak-banner bbr-banner-warning';
-
-    const text = document.createElement('span');
-    text.textContent = t('fadakProfileBanner', lang, { handle: pathHandle ?? '' });
-    banner.appendChild(text);
-
-    const btn = document.createElement('button');
-    btn.className = 'bbr-banner-btn';
-    btn.textContent = t('addToWhitelist', lang);
-    btn.addEventListener('click', async () => {
-      await deps.addToWhitelist('@' + pathHandle);
-      text.textContent = t('addedToWhitelist', lang);
-      banner.className = 'bbr-fadak-banner bbr-banner-success';
-      btn.remove();
-      setTimeout(() => banner.remove(), TIMINGS.BANNER_SUCCESS_DISMISS);
-    });
-    banner.appendChild(btn);
-
-    stickyHeader.appendChild(banner);
+    stickyHeader.appendChild(createWhitelistBanner(FADAK_BANNER_ID, 'fadakProfileBanner', handle, settings, deps));
     return true;
   }
 
   if (tryInsertBanner()) return;
 
-  // Wait for badge to render via MutationObserver
-  if (fadakBannerObserver) fadakBannerObserver.disconnect();
   const target = document.querySelector('[data-testid="primaryColumn"]') ?? document.body;
-  fadakBannerObserver = new MutationObserver(() => {
-    if (tryInsertBanner()) {
-      fadakBannerObserver?.disconnect();
-      fadakBannerObserver = null;
-    }
-  });
-  fadakBannerObserver.observe(target, { childList: true, subtree: true });
-  setTimeout(() => { fadakBannerObserver?.disconnect(); fadakBannerObserver = null; }, TIMINGS.BANNER_OBSERVER_TIMEOUT);
+  observeUntilInserted(
+    () => fadakBannerObserver,
+    (observer) => { fadakBannerObserver = observer; },
+    target,
+    tryInsertBanner,
+  );
 }
 
 export function removeFadakBanner(): void {
@@ -148,21 +189,16 @@ export function removeFadakBanner(): void {
 
 // ── 트윗 상세 페이지 파딱 배너 ────────────────────────────────────
 
-const DETAIL_BANNER_ID = 'bbr-fadak-detail-banner';
 let detailBannerObserver: MutationObserver | null = null;
 
 export function showFadakDetailBanner(deps: FadakBannerDeps): void {
   const settings = deps.getCurrentSettings();
-  if (!window.location.pathname.includes('/status/') || !settings.enabled) return;
-  if (document.getElementById(DETAIL_BANNER_ID)) return;
-
-  const pathHandle = window.location.pathname.split('/')[1]?.toLowerCase();
+  const pathHandle = getEligibleHandle(deps, settings, DETAIL_BANNER_ID, window.location.pathname.includes('/status/'));
   if (!pathHandle) return;
-  if (deps.isHandleFollowed(pathHandle)) return;
-  if (deps.isHandleWhitelisted(pathHandle)) return;
+  const handle = pathHandle;
 
   function tryInsertBanner(): boolean {
-    const stickyHeader = document.querySelector('[data-testid="primaryColumn"] > div > div:first-child');
+    const stickyHeader = getStickyHeader();
     if (!stickyHeader) return false;
 
     // URL의 status path와 일치하는 article을 찾아 해당 트윗의 뱃지 확인
@@ -182,45 +218,19 @@ export function showFadakDetailBanner(deps: FadakBannerDeps): void {
     if (document.getElementById(DETAIL_BANNER_ID)) return true;
 
     // 금딱/회딱이면 배너 표시하지 않음
-    if (!isBlueBadge(verifiedBadge)) return true;
+    if (!detectBlueBadgeElement(verifiedBadge)) return true;
 
-    injectBannerStyles();
-    const lang = settings.language;
-
-    const banner = document.createElement('div');
-    banner.id = DETAIL_BANNER_ID;
-    banner.className = 'bbr-fadak-banner bbr-banner-warning';
-
-    const text = document.createElement('span');
-    text.textContent = t('fadakDetailBanner', lang, { handle: pathHandle ?? '' });
-    banner.appendChild(text);
-
-    const btn = document.createElement('button');
-    btn.className = 'bbr-banner-btn';
-    btn.textContent = t('addToWhitelist', lang);
-    btn.addEventListener('click', async () => {
-      await deps.addToWhitelist('@' + pathHandle);
-      text.textContent = t('addedToWhitelist', lang);
-      banner.className = 'bbr-fadak-banner bbr-banner-success';
-      btn.remove();
-      setTimeout(() => banner.remove(), TIMINGS.BANNER_SUCCESS_DISMISS);
-    });
-    banner.appendChild(btn);
-
-    stickyHeader.appendChild(banner);
+    stickyHeader.appendChild(createWhitelistBanner(DETAIL_BANNER_ID, 'fadakDetailBanner', handle, settings, deps));
     return true;
   }
 
   if (tryInsertBanner()) return;
 
-  if (detailBannerObserver) detailBannerObserver.disconnect();
   const target = document.querySelector('[data-testid="primaryColumn"]') ?? document.body;
-  detailBannerObserver = new MutationObserver(() => {
-    if (tryInsertBanner()) {
-      detailBannerObserver?.disconnect();
-      detailBannerObserver = null;
-    }
-  });
-  detailBannerObserver.observe(target, { childList: true, subtree: true });
-  setTimeout(() => { detailBannerObserver?.disconnect(); detailBannerObserver = null; }, TIMINGS.BANNER_OBSERVER_TIMEOUT);
+  observeUntilInserted(
+    () => detailBannerObserver,
+    (observer) => { detailBannerObserver = observer; },
+    target,
+    tryInsertBanner,
+  );
 }

@@ -31,9 +31,13 @@ export interface StorageSchema {
   settings: Settings;
   whitelist: string[];
   followList: string[];
+  followCache: Record<string, string[]>;
   currentUserId: string | null;
   lastSyncAt: string | null;
   customFilterList: string;
+  collectedFadaks: CollectedFadak[];
+  disabledFilterCategories: string[];
+  filterPacks: FilterPackEntry[];
 }
 
 export interface BadgeInfo {

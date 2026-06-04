@@ -65,8 +65,15 @@ src/
 
 4. **Cross-import 금지**: feature 간 직접 import 금지. shared 레이어를 통해서만 공유
 5. **Public API**: 각 feature는 `index.ts`를 통해서만 export
-6. **Chrome API 격리**: Chrome API 직접 호출은 진입점(entrypoints) 또는 shared/utils에서만 허용. feature 내부에서는 추상화된 인터페이스 사용
+6. **Browser API 격리**: Chrome/WXT API 직접 호출은 기본적으로 entrypoints 또는 shared/utils에서만 허용한다. 단, feature storage module(`src/features/**/storage.ts`, `src/features/**/stats-storage.ts`, `src/features/**/pack-storage.ts`)은 `wxt/browser`의 `browser.storage` 접근을 허용한다.
 7. **DOM 조작 격리**: DOM 직접 조작은 content/ 모듈과 content-filter feature에서만 허용
+
+### Browser API 예외
+
+- `src/features/**/storage.ts` 계열 모듈은 저장소 경계 역할을 하므로 `browser.storage.local`을 직접 사용할 수 있다.
+- `src/content/storage-listener.ts`, `src/content/follow-collector.ts`, `src/content/filter-pipeline.ts`, `src/content/milestone-banner.ts`처럼 content script 런타임 이벤트나 현재 페이지 상태와 결합된 모듈은 필요한 범위에서 `wxt/browser` 사용을 허용한다.
+- storage key는 `STORAGE_KEYS`를 기준으로 사용하고, `StorageSchema`와의 동기화는 테스트로 검증한다.
+- 새 browser API 사용처를 추가할 때는 이 예외 목록에 맞는 경계인지 먼저 확인한다.
 
 ## 데이터 흐름
 

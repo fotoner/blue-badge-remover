@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, vi, afterEach } from 'vitest';
 import type { BadgeInfo } from '../../src/shared/types';
-import { DEFAULT_SETTINGS } from '../../src/shared/constants';
+import { DEFAULT_SETTINGS, TIMINGS } from '../../src/shared/constants';
 
 // --- Mock external modules BEFORE importing anything that depends on them ---
 
@@ -138,6 +138,7 @@ describe('message-handler', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   // ── Origin / source guard ────────────────────────────────────────────
@@ -255,6 +256,43 @@ describe('message-handler', () => {
 
       expect(profileCache.get('user1')).toEqual({ handle: 'User1', displayName: 'D1', bio: 'bio1' });
       expect(profileCache.get('user2')).toEqual({ handle: 'User2', displayName: 'D2', bio: 'bio2' });
+    });
+
+    it('keyword filter 활성 시 PROFILE_DATA 재처리를 합치고 chunk로 처리한다', () => {
+      const rafCallbacks: FrameRequestCallback[] = [];
+      vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+        rafCallbacks.push(cb);
+        return rafCallbacks.length;
+      });
+      setSettings({ ...DEFAULT_SETTINGS, keywordFilterEnabled: true });
+      document.body.innerHTML = '<main></main>';
+      const main = document.querySelector('main')!;
+      for (let i = 0; i < TIMINGS.REPROCESS_CHUNK_SIZE + 2; i++) {
+        const article = document.createElement('article');
+        article.setAttribute('data-testid', 'tweet');
+        article.setAttribute('data-handle', i % 2 === 0 ? 'alice' : 'bob');
+        main.appendChild(article);
+      }
+      mockExtractTweetAuthor.mockImplementation((tweet: HTMLElement) => ({
+        handle: tweet.getAttribute('data-handle') ?? '',
+      }));
+
+      dispatchMessage({
+        type: MESSAGE_TYPES.PROFILE_DATA,
+        profiles: [{ userId: 'p1', handle: 'Alice', displayName: 'Alice', bio: '' }],
+      });
+      dispatchMessage({
+        type: MESSAGE_TYPES.PROFILE_DATA,
+        profiles: [{ userId: 'p2', handle: 'Bob', displayName: 'Bob', bio: '' }],
+      });
+
+      expect(rafCallbacks).toHaveLength(1);
+      rafCallbacks.shift()?.(0);
+      expect(mockProcessTweet).toHaveBeenCalledTimes(TIMINGS.REPROCESS_CHUNK_SIZE);
+      expect(rafCallbacks).toHaveLength(1);
+
+      rafCallbacks.shift()?.(0);
+      expect(mockProcessTweet).toHaveBeenCalledTimes(TIMINGS.REPROCESS_CHUNK_SIZE + 2);
     });
   });
 

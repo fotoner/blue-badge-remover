@@ -1,4 +1,4 @@
-import type { Settings } from '@shared/types';
+import type { Settings, StorageKey } from '@shared/types';
 
 export const DEFAULT_SETTINGS: Settings = {
   enabled: true,
@@ -30,7 +30,7 @@ export const STORAGE_KEYS = {
   COLLECTED_FADAKS: 'collectedFadaks',
   DISABLED_FILTER_CATEGORIES: 'disabledFilterCategories',
   FILTER_PACKS: 'filterPacks',
-} as const;
+} as const satisfies Record<string, StorageKey>;
 
 export const X_GRAPHQL_ENDPOINTS = [
   '/i/api/graphql/',

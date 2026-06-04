@@ -1,9 +1,7 @@
 // src/content/filter-pipeline.ts
 // 필터 규칙 로드 파이프라인: 기본 필터 + 커스텀 + 팩을 하나의 FilterRule[]로 병합.
-import { browser } from 'wxt/browser';
-import { DEFAULT_FILTER_LIST, getCustomFilterList, parseCategories, parseFilterList } from '@features/keyword-filter';
+import { DEFAULT_FILTER_LIST, getCustomFilterList, getDisabledFilterCategories, parseCategories, parseFilterList } from '@features/keyword-filter';
 import { getActiveFilterPacks } from '@features/filter-pack';
-import { STORAGE_KEYS } from '@shared/constants';
 import type { FilterRule } from '@shared/types';
 import { getSettings, setActiveFilterRules } from './state';
 
@@ -13,11 +11,10 @@ function tagRules(rules: FilterRule[], category: string, packId?: string): Filte
 
 export async function loadFilterRules(): Promise<void> {
   const settings = getSettings();
-  const [custom, stored] = await Promise.all([
+  const [custom, disabledCategories] = await Promise.all([
     getCustomFilterList(),
-    browser.storage.local.get([STORAGE_KEYS.DISABLED_FILTER_CATEGORIES]),
+    getDisabledFilterCategories(),
   ]);
-  const disabledCategories = (stored[STORAGE_KEYS.DISABLED_FILTER_CATEGORIES] as string[] | undefined) ?? [];
   const disabledSet = new Set(disabledCategories);
 
   // 내장 필터: 카테고리별로 파싱 + 카테고리명 태깅

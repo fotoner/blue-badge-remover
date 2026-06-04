@@ -1,6 +1,6 @@
 // src/content/message-handler.ts
 // MAIN world(fetch-interceptor)에서 postMessage로 전달되는 데이터 수신 처리.
-import { MESSAGE_TYPES } from '@shared/constants';
+import { MESSAGE_TYPES, TIMINGS } from '@shared/constants';
 import { profileCache, collectorBuffer, getSettings, getFollowSet, setFollowSet } from './state';
 import { extractTweetAuthor } from './tweet-processing';
 import { processTweet, restoreHiddenTweets, reprocessExistingTweets } from './tweet-orchestrator';
@@ -8,6 +8,8 @@ import { saveFollowHandles, getMyHandle, type FollowCollectorDeps } from './foll
 import { removeFadakBanner } from './fadak-banner';
 
 let domFollowReprocessTimer: ReturnType<typeof setTimeout> | null = null;
+let profileReprocessScheduled = false;
+const pendingProfileHandles = new Set<string>();
 
 function isProfileDataPayload(data: unknown): data is { profiles: Array<{ userId: string; handle: string; displayName: string; bio: string }> } {
   if (!data || typeof data !== 'object') return false;
@@ -69,18 +71,51 @@ function handleProfileData(data: { profiles: Array<{ userId: string; handle: str
   // 키워드 필터 활성 시, 업데이트된 프로필의 트윗을 재처리
   if (settings.keywordFilterEnabled) {
     const updatedHandles = new Set(data.profiles.map((p) => p.handle.toLowerCase()));
+    scheduleProfileReprocess(updatedHandles);
+  }
+}
+
+function scheduleProfileReprocess(updatedHandles: Set<string>): void {
+  for (const handle of updatedHandles) {
+    pendingProfileHandles.add(handle);
+  }
+  if (profileReprocessScheduled) return;
+  profileReprocessScheduled = true;
+  requestAnimationFrame(() => {
+    const handles = new Set(pendingProfileHandles);
+    pendingProfileHandles.clear();
     const feed = document.querySelector('main') ?? document.body;
-    feed.querySelectorAll('article[data-testid="tweet"]').forEach((tweet) => {
-      const author = extractTweetAuthor(tweet as HTMLElement);
-      if (author && updatedHandles.has(author.handle.toLowerCase())) {
-        tweet.querySelector('[data-bbr-debug]')?.remove();
-        try {
-          processTweet(tweet as HTMLElement);
-        } catch (e) {
-          if (settings?.debugMode) console.error('[BBR] processTweet error', e);
-        }
-      }
-    });
+    const tweets = Array.from(feed.querySelectorAll<HTMLElement>('article[data-testid="tweet"]'))
+      .filter((tweet) => {
+        const author = extractTweetAuthor(tweet);
+        return author && handles.has(author.handle.toLowerCase());
+      });
+    processProfileReprocessChunk(tweets, 0);
+  });
+}
+
+function processProfileReprocessChunk(tweets: HTMLElement[], startIndex: number): void {
+  const settings = getSettings();
+  const endIndex = Math.min(startIndex + TIMINGS.REPROCESS_CHUNK_SIZE, tweets.length);
+  for (let i = startIndex; i < endIndex; i++) {
+    const tweet = tweets[i];
+    if (!tweet) continue;
+    tweet.querySelector('[data-bbr-debug]')?.remove();
+    try {
+      processTweet(tweet);
+    } catch (e) {
+      if (settings?.debugMode) console.error('[BBR] processTweet error', e);
+    }
+  }
+
+  if (endIndex < tweets.length) {
+    requestAnimationFrame(() => processProfileReprocessChunk(tweets, endIndex));
+    return;
+  }
+
+  profileReprocessScheduled = false;
+  if (pendingProfileHandles.size > 0) {
+    scheduleProfileReprocess(new Set());
   }
 }
 

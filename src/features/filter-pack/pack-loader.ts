@@ -3,6 +3,7 @@
 import { browser } from 'wxt/browser';
 import type { FilterPack } from '@shared/types';
 import { getFilterPacks, saveFilterPack } from './pack-storage';
+import { parseFilterPackJson } from './pack-parser';
 
 const LAST_UPDATE_KEY = 'filterPackLastUpdate';
 
@@ -22,23 +23,7 @@ export async function fetchPack(url: string): Promise<FilterPack> {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const text = await response.text();
-
-  // JSON 파싱 + 허용된 필드만 추출
-  const json = JSON.parse(text) as Record<string, unknown>;
-  if (!json.id || !json.name || typeof json.rules !== 'string') {
-    throw new Error('Invalid pack format: expected JSON with id, name, rules fields');
-  }
-  return {
-    id: String(json.id),
-    name: String(json.name).slice(0, 100),
-    description: typeof json.description === 'string' ? json.description.slice(0, 500) : '',
-    author: typeof json.author === 'string' ? json.author.slice(0, 100) : '',
-    version: typeof json.version === 'string' ? json.version.slice(0, 20) : '1.0.0',
-    updatedAt: typeof json.updatedAt === 'string' ? json.updatedAt : new Date().toISOString(),
-    rules: String(json.rules),
-    category: typeof json.category === 'string' ? json.category.slice(0, 50) : undefined,
-    homepage: typeof json.homepage === 'string' && json.homepage.startsWith('https://') ? json.homepage : undefined,
-  };
+  return parseFilterPackJson(text);
 }
 
 export async function updateAllPacks(): Promise<void> {

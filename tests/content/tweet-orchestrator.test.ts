@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
-import { DEFAULT_SETTINGS } from '../../src/shared/constants';
+import { DEFAULT_SETTINGS, TIMINGS } from '../../src/shared/constants';
 
 // --- Mocks ---
 
@@ -53,7 +53,7 @@ import {
   setWhitelistSet,
   setCurrentUserHandle,
 } from '../../src/content/state';
-import { processTweet, restoreHiddenTweets } from '../../src/content/tweet-orchestrator';
+import { processTweet, reprocessExistingTweets, restoreHiddenTweets } from '../../src/content/tweet-orchestrator';
 
 let doc: Document;
 
@@ -97,6 +97,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   // SVG 기반 감지: 기본 false, 개별 테스트에서 true로 설정
   mockDetectBadgeSvg.mockReturnValue(false);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe('processTweet', () => {
@@ -178,5 +182,45 @@ describe('restoreHiddenTweets', () => {
     restoreHiddenTweets();
 
     expect(mockShowTweet).toHaveBeenCalledWith(tweet);
+  });
+});
+
+describe('reprocessExistingTweets', () => {
+  it('processes existing tweets in frame chunks', () => {
+    const rafCallbacks: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      rafCallbacks.push(cb);
+      return rafCallbacks.length;
+    });
+    mockDetectBadgeSvg.mockReturnValue(true);
+    const main = doc.querySelector('main')!;
+    for (let i = 0; i < TIMINGS.REPROCESS_CHUNK_SIZE + 2; i++) {
+      main.appendChild(createTweetEl(`user${i}`));
+    }
+
+    reprocessExistingTweets();
+    expect(rafCallbacks).toHaveLength(1);
+
+    rafCallbacks.shift()?.(0);
+    expect(mockHideTweet).toHaveBeenCalledTimes(TIMINGS.REPROCESS_CHUNK_SIZE);
+    expect(rafCallbacks).toHaveLength(1);
+
+    rafCallbacks.shift()?.(0);
+    expect(mockHideTweet).toHaveBeenCalledTimes(TIMINGS.REPROCESS_CHUNK_SIZE + 2);
+  });
+
+  it('does not schedule another reprocess while one is pending', () => {
+    const rafCallbacks: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      rafCallbacks.push(cb);
+      return rafCallbacks.length;
+    });
+    const main = doc.querySelector('main')!;
+    main.appendChild(createTweetEl('user1'));
+
+    reprocessExistingTweets();
+    reprocessExistingTweets();
+
+    expect(rafCallbacks).toHaveLength(1);
   });
 });

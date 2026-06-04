@@ -9,6 +9,8 @@ import { bufferCollectedFadak } from './collector-buffer';
 import { classifyTweet, classifyQuote } from './tweet-classifier';
 import type { ClassifyResult, QuoteClassifyResult } from './tweet-classifier';
 import { recordHide } from '@features/stats';
+import { TIMINGS } from '@shared/constants';
+import type { FilterRule, ProfileInfo, Settings } from '@shared/types';
 
 function checkFadak(_userId: string, element: HTMLElement): boolean {
   // SVG 구조만으로 판정. API 캐시 사용 안 함 (이중 팝 + API 엣지 케이스 제거).
@@ -16,76 +18,151 @@ function checkFadak(_userId: string, element: HTMLElement): boolean {
   return detectBadgeSvg(element);
 }
 
+interface BaseTweetContext {
+  handle: string;
+  statusPath: string | null;
+  currentUserHandle: string | null;
+  settings: Settings;
+  whitelistSet: Set<string>;
+  activeFilterRules: FilterRule[];
+}
+
+interface TweetContext extends BaseTweetContext {
+  displayName: string | null;
+  isFadak: boolean;
+  userLabel: string;
+  isRetweet: boolean;
+  inFollow: boolean;
+  profile: ProfileInfo;
+  tweetText: string;
+}
+
 export function processTweet(tweetEl: HTMLElement): void {
-  if (isProfilePage()) return;
-  const author = extractTweetAuthor(tweetEl);
-  if (!author) return;
+  const baseContext = buildTweetContext(tweetEl);
+  if (!baseContext) return;
+  if (shouldSkipTweet(tweetEl, baseContext)) return;
 
-  const { handle } = author;
-  const currentUserHandle = getCurrentUserHandle();
-  const settings = getSettings();
-  const whitelistSet = getWhitelistSet();
-  const activeFilterRules = getActiveFilterRules();
-
-  if (currentUserHandle && handle.toLowerCase() === currentUserHandle.toLowerCase()) return;
-
-  // 사용자가 펼친 트윗은 재숨김 안 함 (가상 리스트 DOM 재생성 대응)
-  const statusPath = extractTweetStatusPath(tweetEl);
-  if (statusPath && getExpandedSet().has(statusPath)) {
-    showTweet(tweetEl);
-    return;
-  }
-
-  // 상세 페이지 메인 트윗은 숨기지 않음 (배너로 대체)
-  if (isDetailPage() && statusPath) {
-    const currentPath = window.location.pathname;
-    if (currentPath.includes(statusPath)) return;
-  }
-
-  const isFadak = checkFadak(handle.toLowerCase(), tweetEl);
-  const displayName = extractDisplayName(tweetEl, handle);
-  const userLabel = formatUserLabel(handle, displayName);
-
-  const socialContext = tweetEl.querySelector('[data-testid="socialContext"]');
-  const isRetweet = socialContext !== null;
-  const inFollow = isHandleFollowed(handle);
-
-  if (settings.debugMode) {
-    const hasQuote = !!findQuoteBlock(tweetEl);
-    addDebugLabel(tweetEl, { handle: `@${handle}`, isFadak, isRetweet, hasQuote, inFollow, retweeter: isRetweet ? (extractRetweeterName(tweetEl) ?? '?') : undefined });
-    console.log('[BBR]', userLabel, { isFadak, isRetweet, inFollow, hasQuote });
-  }
-
-  const cachedProfile = profileCache.get(handle.toLowerCase());
-  const bio = cachedProfile?.bio ?? '';
-  const tweetText = extractTweetText(tweetEl);
-  const profile = cachedProfile ?? { handle, displayName: displayName ?? handle, bio };
-
-  // 키워드 수집기 버퍼링 (분류와 무관하게 실행)
-  if (isFadak && settings.keywordCollectorEnabled && hasBadgeInAuthorArea(tweetEl)) {
-    bufferCollectedFadak(handle.toLowerCase(), handle, profile.displayName, profile.bio, tweetText);
-  }
+  const context = enrichTweetContext(tweetEl, baseContext);
+  addDebugInfo(tweetEl, context);
+  bufferKeywordCollector(tweetEl, context);
 
   // classifier로 판정
   const result: ClassifyResult = classifyTweet({
-    handle, displayName, isFadak, inFollow,
-    isRetweet,
-    isWhitelisted: whitelistSet.has(`@${handle.toLowerCase()}`),
-    settings, activeFilterRules, profile, tweetText,
+    handle: context.handle,
+    displayName: context.displayName,
+    isFadak: context.isFadak,
+    inFollow: context.inFollow,
+    isRetweet: context.isRetweet,
+    isWhitelisted: context.whitelistSet.has(`@${context.handle.toLowerCase()}`),
+    settings: context.settings,
+    activeFilterRules: context.activeFilterRules,
+    profile: context.profile,
+    tweetText: context.tweetText,
     pageType: getPageType(),
   });
 
-  // DOM 조작 + 통계 수집
+  applyTweetAction(tweetEl, result, context);
+
+  // 인용 트윗 처리 (전역 필터링 OFF면 스킵)
+  if (context.settings.enabled) {
+    processQuoteBlock(tweetEl, context.handle, context.inFollow, context.settings, context.userLabel);
+  }
+}
+
+function buildTweetContext(tweetEl: HTMLElement): BaseTweetContext | null {
+  if (isProfilePage()) return null;
+  const author = extractTweetAuthor(tweetEl);
+  if (!author) return null;
+
+  return {
+    handle: author.handle,
+    statusPath: extractTweetStatusPath(tweetEl),
+    currentUserHandle: getCurrentUserHandle(),
+    settings: getSettings(),
+    whitelistSet: getWhitelistSet(),
+    activeFilterRules: getActiveFilterRules(),
+  };
+}
+
+function shouldSkipTweet(tweetEl: HTMLElement, context: BaseTweetContext): boolean {
+  const { currentUserHandle, handle, statusPath } = context;
+  if (currentUserHandle && handle.toLowerCase() === currentUserHandle.toLowerCase()) return true;
+
+  // 사용자가 펼친 트윗은 재숨김 안 함 (가상 리스트 DOM 재생성 대응)
+  if (statusPath && getExpandedSet().has(statusPath)) {
+    showTweet(tweetEl);
+    return true;
+  }
+
+  // 상세 페이지 메인 트윗은 숨기지 않음 (배너로 대체)
+  if (isDetailPage() && statusPath && window.location.pathname.includes(statusPath)) {
+    return true;
+  }
+
+  return false;
+}
+
+function enrichTweetContext(tweetEl: HTMLElement, base: BaseTweetContext): TweetContext {
+  const displayName = extractDisplayName(tweetEl, base.handle);
+  const cachedProfile = profileCache.get(base.handle.toLowerCase());
+  const bio = cachedProfile?.bio ?? '';
+  const tweetText = extractTweetText(tweetEl);
+  const profile = cachedProfile ?? { handle: base.handle, displayName: displayName ?? base.handle, bio };
+  const isRetweet = tweetEl.querySelector('[data-testid="socialContext"]') !== null;
+
+  return {
+    ...base,
+    displayName,
+    isFadak: checkFadak(base.handle.toLowerCase(), tweetEl),
+    userLabel: formatUserLabel(base.handle, displayName),
+    isRetweet,
+    inFollow: isHandleFollowed(base.handle),
+    profile,
+    tweetText,
+  };
+}
+
+function addDebugInfo(tweetEl: HTMLElement, context: TweetContext): void {
+  if (!context.settings.debugMode) return;
+  const hasQuote = !!findQuoteBlock(tweetEl);
+  addDebugLabel(tweetEl, {
+    handle: `@${context.handle}`,
+    isFadak: context.isFadak,
+    isRetweet: context.isRetweet,
+    hasQuote,
+    inFollow: context.inFollow,
+    retweeter: context.isRetweet ? (extractRetweeterName(tweetEl) ?? '?') : undefined,
+  });
+  console.log('[BBR]', context.userLabel, {
+    isFadak: context.isFadak,
+    isRetweet: context.isRetweet,
+    inFollow: context.inFollow,
+    hasQuote,
+  });
+}
+
+function bufferKeywordCollector(tweetEl: HTMLElement, context: TweetContext): void {
+  if (!context.isFadak || !context.settings.keywordCollectorEnabled || !hasBadgeInAuthorArea(tweetEl)) return;
+  bufferCollectedFadak(
+    context.handle.toLowerCase(),
+    context.handle,
+    context.profile.displayName,
+    context.profile.bio,
+    context.tweetText,
+  );
+}
+
+function applyTweetAction(tweetEl: HTMLElement, result: ClassifyResult, context: TweetContext): void {
   if (result.action === 'show') {
     if (tweetEl.hasAttribute('data-bbr-original')) {
       showTweet(tweetEl);
     }
   } else if (result.action === 'hide') {
-    const retweeterName = isRetweet ? (extractRetweeterName(tweetEl) ?? '') : undefined;
+    const retweeterName = context.isRetweet ? (extractRetweeterName(tweetEl) ?? '') : undefined;
     const expandedSet = getExpandedSet();
-    hideTweet(tweetEl, settings.hideMode, {
+    hideTweet(tweetEl, context.settings.hideMode, {
       reason: result.reason ?? 'fadak',
-      handle: `@${handle}`,
+      handle: `@${context.handle}`,
       retweetedBy: retweeterName || undefined,
       category: result.category,
       matchedRule: result.matchedRule,
@@ -98,11 +175,6 @@ export function processTweet(tweetEl: HTMLElement): void {
   // action === 'skip' → 비파딱. SVG 부분 렌더링으로 오감지 후 숨겨졌을 수 있음 → 복원
   if (result.action === 'skip' && tweetEl.hasAttribute('data-bbr-original')) {
     showTweet(tweetEl);
-  }
-
-  // 인용 트윗 처리 (전역 필터링 OFF면 스킵)
-  if (settings.enabled) {
-    processQuoteBlock(tweetEl, handle, inFollow, settings, userLabel);
   }
 }
 
@@ -156,16 +228,30 @@ export function reprocessExistingTweets(): void {
   if (reprocessScheduled) return;
   reprocessScheduled = true;
   requestAnimationFrame(() => {
-    reprocessScheduled = false;
-    const settings = getSettings();
     const feed = document.querySelector('main') ?? document.body;
-    feed.querySelectorAll('article[data-testid="tweet"]').forEach((tweet) => {
-      tweet.querySelector('[data-bbr-debug]')?.remove();
-      try {
-        processTweet(tweet as HTMLElement);
-      } catch (e) {
-        if (settings?.debugMode) console.error('[BBR] processTweet error', e);
-      }
-    });
+    const tweets = Array.from(feed.querySelectorAll<HTMLElement>('article[data-testid="tweet"]'));
+    processTweetChunk(tweets, 0);
   });
+}
+
+function processTweetChunk(tweets: HTMLElement[], startIndex: number): void {
+  const settings = getSettings();
+  const endIndex = Math.min(startIndex + TIMINGS.REPROCESS_CHUNK_SIZE, tweets.length);
+  for (let i = startIndex; i < endIndex; i++) {
+    const tweet = tweets[i];
+    if (!tweet) continue;
+    tweet.querySelector('[data-bbr-debug]')?.remove();
+    try {
+      processTweet(tweet);
+    } catch (e) {
+      if (settings?.debugMode) console.error('[BBR] processTweet error', e);
+    }
+  }
+
+  if (endIndex < tweets.length) {
+    requestAnimationFrame(() => processTweetChunk(tweets, endIndex));
+    return;
+  }
+
+  reprocessScheduled = false;
 }

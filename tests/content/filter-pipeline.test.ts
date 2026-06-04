@@ -35,6 +35,7 @@ vi.mock('wxt/browser', () => ({
 const mockParseCategories = vi.fn();
 const mockParseFilterList = vi.fn();
 const mockGetCustomFilterList = vi.fn();
+const mockGetDisabledFilterCategories = vi.fn();
 const MOCK_DEFAULT_FILTER_LIST = `! Test Defaults
 
 ! Category A
@@ -49,6 +50,7 @@ vi.mock('@features/keyword-filter', () => ({
   parseCategories: (...args: unknown[]) => mockParseCategories(...args),
   parseFilterList: (...args: unknown[]) => mockParseFilterList(...args),
   getCustomFilterList: (...args: unknown[]) => mockGetCustomFilterList(...args),
+  getDisabledFilterCategories: (...args: unknown[]) => mockGetDisabledFilterCategories(...args),
   DEFAULT_FILTER_LIST: MOCK_DEFAULT_FILTER_LIST,
 }));
 
@@ -77,6 +79,7 @@ beforeEach(() => {
   capturedRules.length = 0;
   mockSettings = { ...DEFAULT_SETTINGS, defaultFilterEnabled: true };
   mockGetCustomFilterList.mockResolvedValue('');
+  mockGetDisabledFilterCategories.mockImplementation(async () => (store.get('disabledFilterCategories') as string[] | undefined) ?? []);
   mockGetActiveFilterPacks.mockResolvedValue([]);
 
   // Default parseCategories returns two categories

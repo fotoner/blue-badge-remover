@@ -2,8 +2,9 @@
 // FilterPack CRUD — chrome.storage.local 기반.
 import { browser } from 'wxt/browser';
 import type { FilterPack, FilterPackEntry } from '@shared/types';
+import { STORAGE_KEYS } from '@shared/constants';
 
-const STORAGE_KEY = 'filterPacks';
+const STORAGE_KEY = STORAGE_KEYS.FILTER_PACKS;
 
 async function readEntries(): Promise<FilterPackEntry[]> {
   const result = await browser.storage.local.get([STORAGE_KEY]);

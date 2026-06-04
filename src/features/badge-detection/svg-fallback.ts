@@ -15,7 +15,11 @@ export function detectBadgeSvg(tweetElement: Element): boolean {
   const badge = tweetElement.querySelector(VERIFIED_BADGE_SELECTOR);
   if (!badge) return false;
 
-  const svg = badge.closest('svg') ?? badge;
+  return detectBlueBadgeElement(badge);
+}
+
+export function detectBlueBadgeElement(badgeElement: Element): boolean {
+  const svg = badgeElement.closest('svg') ?? badgeElement;
 
   // 금딱/회딱: linearGradient 있으면 즉시 false
   if (svg.querySelector('linearGradient')) return false;
