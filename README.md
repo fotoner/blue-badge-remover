@@ -10,12 +10,24 @@
 </p>
 
 <p align="center">
-  <a href="https://chromewebstore.google.com/detail/cjhmbgfnddpcdfmoicfcocekmainhhdm?utm_source=item-share-cb"><img alt="Chrome Web Store" src="https://img.shields.io/badge/Chrome_Web_Store-v1.3.6-4285F4?logo=googlechrome&logoColor=white"></a>
+  <a href="https://chromewebstore.google.com/detail/cjhmbgfnddpcdfmoicfcocekmainhhdm?utm_source=item-share-cb"><img alt="Chrome Web Store" src="https://img.shields.io/badge/Chrome_Web_Store-v1.4.1-4285F4?logo=googlechrome&logoColor=white"></a>
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/blue-badge-remover/"><img alt="Firefox Add-ons" src="https://img.shields.io/badge/Firefox_Add--ons-v1.4.1-FF7139?logo=firefoxbrowser&logoColor=white"></a>
   <img alt="Manifest V3" src="https://img.shields.io/badge/Manifest-V3-blue">
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178c6">
   <img alt="License" src="https://img.shields.io/badge/License-MIT-green">
   <a href="https://x.com/Fotoner_P/status/2037977299191251444"><img alt="Featured on X" src="https://img.shields.io/badge/Featured_on_X-10K+_retweets-000000?logo=x&logoColor=white"></a>
 </p>
+
+## Adoption & Maintenance
+
+| 신호 | 내용 |
+|------|------|
+| **실사용자** | Chrome Web Store 약 4,000 users, 5.0 rating / 21 ratings (2026-06 기준) |
+| **스토어 배포** | [Chrome Web Store](https://chromewebstore.google.com/detail/cjhmbgfnddpcdfmoicfcocekmainhhdm?utm_source=item-share-cb), [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/blue-badge-remover/) 등록 |
+| **모바일** | Firefox Add-ons에서 Firefox Android 지원 |
+| **멀티 브라우저 릴리스** | Chrome MV3, Firefox MV2, Edge MV3 ZIP을 GitHub Releases에 함께 첨부 |
+| **유지보수** | CI, 330+ Vitest 테스트, Playwright E2E, 코드 리뷰, 이슈 triage, 태그 기반 릴리스 자동화 |
+| **보안/개인정보** | 외부 서버/analytics 없이 브라우저 로컬에서 처리. 상세: [PRIVACY_POLICY.md](PRIVACY_POLICY.md), [SECURITY.md](SECURITY.md) |
 
 ## Screenshots
 
@@ -50,19 +62,25 @@
 
 [**Chrome Web Store에서 설치**](https://chromewebstore.google.com/detail/cjhmbgfnddpcdfmoicfcocekmainhhdm?utm_source=item-share-cb)
 
-### Firefox / Edge
+### Firefox Add-ons
+
+[**Firefox Add-ons에서 설치**](https://addons.mozilla.org/en-US/firefox/addon/blue-badge-remover/)
+
+Firefox Desktop과 Firefox Android를 지원합니다.
+
+### Edge / 수동 설치
 
 [GitHub Releases](https://github.com/fotoner/blue-badge-remover/releases)에서 ZIP 다운로드 후 수동 설치.
-Firefox AMO 등록 완료. Edge는 준비 중.
+Edge는 준비 중입니다.
 
 ### 개발 빌드
 
 ```bash
-npm install
+npm ci
 npm run build          # Chrome
 npm run build:firefox  # Firefox
 npm run build:edge     # Edge
-npm test               # 330 tests
+npm test               # 330+ tests
 ```
 
 1. `chrome://extensions` 접속 (Edge: `edge://extensions`)
@@ -141,8 +159,15 @@ public/
 - 수집하는 데이터: 없음
 - 외부 서버 통신: 없음 (모든 처리가 로컬)
 - 인증 토큰 저장: 안 함
-- 권한: `storage` + `x.com`/`twitter.com` host permission만 사용
+- 권한: `storage`, `unlimitedStorage`, `x.com`/`api.x.com`/`twitter.com`/`api.twitter.com` host permission만 사용
 - 상세: [docs/PRIVACY.md](docs/PRIVACY.md)
+
+## Contributing & Maintenance
+
+- 기여/이슈 처리 방식: [CONTRIBUTING.md](CONTRIBUTING.md)
+- 코드 리뷰 기준: [docs/CODE_REVIEW.md](docs/CODE_REVIEW.md)
+- 릴리스/스토어 자동화: [docs/STORE_SETUP.md](docs/STORE_SETUP.md)
+- 보안 정책: [SECURITY.md](SECURITY.md)
 
 ## Disclaimer
 

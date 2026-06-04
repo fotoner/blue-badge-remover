@@ -4,23 +4,39 @@
 
 ### 필수 환경 변수
 
-| 변수 | 용도 | 저장 위치 |
-|------|------|----------|
-| X 세션 토큰 | 팔로우 목록 조회용 인증 | Chrome Storage (로컬, 비동기) |
+런타임 확장에는 필수 환경 변수가 없다.
 
-> 참고: 크롬 익스텐션은 `.env` 파일을 사용하지 않음. 민감 정보는 `chrome.storage.local`에 저장하며, `chrome.storage.sync`에는 민감 정보를 저장하지 않는다.
+> 참고: 크롬 익스텐션은 `.env` 파일을 사용하지 않는다. 스토어 제출 자동화용 API 키는 GitHub Actions Secrets에만 저장한다.
 
 ### 규칙
 
 1. 민감 정보(토큰 등)를 소스 코드나 manifest.json에 하드코딩하지 않는다
-2. 토큰은 `chrome.storage.local`에만 저장하고, `chrome.storage.sync`에는 저장하지 않는다
-3. 빌드 산출물에 민감 정보가 포함되지 않도록 한다
+2. 인증 토큰, 쿠키, CSRF 토큰은 저장하지 않는다
+3. `chrome.storage.sync`에는 민감 정보를 저장하지 않는다
+4. 빌드 산출물에 민감 정보가 포함되지 않도록 한다
 
 ## 데이터 보호
+
+### 로컬 저장 데이터
+
+| 데이터 | 목적 | 저장 위치 |
+|--------|------|----------|
+| 설정 | 필터 토글, 숨김 방식, 언어 | `chrome.storage.local` |
+| 팔로우 핸들 | 팔로우 계정 예외 처리 | `chrome.storage.local` |
+| 화이트리스트 핸들 | 수동 예외 처리 | `chrome.storage.local` |
+| 키워드 필터 규칙 | 선택적 파딱 필터링 | `chrome.storage.local` |
+| 키워드 통계 | opt-in 수집기 분석 | `chrome.storage.local` |
+
+외부 서버, analytics, third-party SDK로 데이터를 보내지 않는다.
 
 ### 입력 검증
 - 사용자 입력: 경계에서 검증 후 정규화하여 사용
 - API 응답: Chrome Storage에 저장하기 전 데이터 형태 검증
+
+### 권한 원칙
+- host permission은 X/Twitter 도메인 처리에 필요한 범위로 제한한다
+- 신규 권한 추가 시 PR에서 사용자 영향과 대안을 설명한다
+- 스토어 배포 전 manifest 권한과 개인정보 문서를 함께 확인한다
 
 ### API 키 노출 방지
 - 에러 메시지에 API 키, URL 등 민감 정보를 포함하지 않는다
