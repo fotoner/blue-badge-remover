@@ -2,23 +2,26 @@
 
 ## New features
 
-- Add multiple whitelist handles at once and collapse long whitelist views
-- Add an account to the whitelist directly from a collapsed hidden post
-- Export and import whitelist, custom filter, and protection lists as validated JSON
+- Add multiple accounts to the whitelist at once and collapse long whitelist views
+- Expand a hidden post, then whitelist its author or collapse it again from inside the post
+- Export and import whitelist, custom filter, and protection keywords as validated JSON
 - Protect accounts by keywords found in their handle, display name, or bio
-- Optionally include new high-reach accounts in selective filtering
+- Optionally hide new high-reach accounts created within six months with at least 1,000 followers and a following-to-follower ratio of 10% or less
 
-## Reliability
+## Accuracy and reliability
 
-- Prevent follow detection storms and bound React fiber scanning work
-- Preserve scroll height during browser history restoration
-- Reduce background observers and writes when related features are disabled
-- Deduplicate hidden-post statistics by post status path
-- Fix quote badge scope, follow exceptions, and current-account recovery
+- Scope blue-badge detection to the author area to reduce false positives from quoted posts
+- Combine X API, React fiber, and DOM signals to improve follow detection, including on list timelines
+- Strengthen exceptions for reposts, quoted posts, your own posts, and whitelisted accounts
+- Normalize whitelist handles to lowercase and migrate existing data automatically
+- Run keyword filtering and the new high-reach account filter independently
+- Preserve scroll height during browser history restoration and prevent duplicate hidden-post statistics
+- Place expanded-post controls in the content column above X's native action bar
+- Reduce unnecessary observer work and storage writes
 
-## Maintenance
+## Settings and maintenance
 
-- Remove the unused API badge cache and stale exports
-- Split oversized options and content modules
-- Add ESLint gates for unsafe types, direct console use, and file/function size
-- Expand the suite to 486 passing tests
+- Make milestone celebration banners opt-in and disabled by default
+- Split oversized options and content modules, and remove the unused API badge cache
+- Add ESLint rules for unsafe types, direct console use, and excessive file or function size
+- Verify the release with Chrome, Firefox, and Edge builds plus 496 tests
