@@ -7,7 +7,38 @@ import { processTweet, restoreHiddenTweets, reprocessExistingTweets } from './tw
 import { saveFollowHandles, getMyHandle, type FollowCollectorDeps } from './follow-collector';
 import { removeFadakBanner } from './fadak-banner';
 
-let domFollowReprocessTimer: ReturnType<typeof setTimeout> | null = null;
+// 팔로우 변경 시 숨겨진 트윗 복원 + 재처리를 디바운스하는 공유 헬퍼 (Defect 3 수정).
+// storage-listener.ts의 handleFollowListChange도 이 함수를 호출한다 — 동일 tick 내
+// 중복 트리거(예: 이 모듈의 즉시 처리 + 뒤이은 storage.onChanged 이벤트)가 타이머
+// 하나로 합쳐져 restore/reprocess가 1회만 실행된다.
+let followReprocessTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function scheduleFollowReprocess(): void {
+  if (followReprocessTimer !== null) clearTimeout(followReprocessTimer);
+  followReprocessTimer = setTimeout(() => {
+    followReprocessTimer = null;
+    restoreHiddenTweets();
+    reprocessExistingTweets();
+  }, 0);
+}
+
+// X 핸들 최대 길이는 15자 — 여유를 두어 32자로 캡.
+const MAX_FOLLOW_HANDLE_LENGTH = 32;
+// 메시지당 처리할 최대 핸들 수 (Defect 4 수정 — MAIN world 페이로드는 신뢰하지 않음).
+const MAX_FOLLOW_HANDLES_PER_MESSAGE = 1000;
+
+// 문자열이 아니거나, trim 후 비어 있거나, 너무 긴 항목은 조용히 무시하고
+// 나머지만 최대 개수만큼 처리한다 (경계에서 검증, 나머지는 무시).
+function sanitizeFollowHandles(raw: unknown[]): string[] {
+  const valid: string[] = [];
+  for (const h of raw) {
+    if (typeof h !== 'string') continue;
+    const trimmed = h.trim();
+    if (trimmed.length === 0 || trimmed.length > MAX_FOLLOW_HANDLE_LENGTH) continue;
+    valid.push(trimmed);
+  }
+  return valid.slice(0, MAX_FOLLOW_HANDLES_PER_MESSAGE);
+}
 
 function isProfileDataPayload(data: unknown): data is { profiles: Array<{ userId: string; handle: string; displayName: string; bio: string }> } {
   if (!data || typeof data !== 'object') return false;
@@ -19,10 +50,10 @@ function isProfileDataPayload(data: unknown): data is { profiles: Array<{ userId
   );
 }
 
-function isFollowDataPayload(data: unknown): data is { handles: string[]; source?: string } {
+function isFollowDataPayload(data: unknown): data is { handles: unknown[]; source?: string } {
   if (!data || typeof data !== 'object') return false;
   const d = data as Record<string, unknown>;
-  return Array.isArray(d['handles']) && d['handles'].every((h: unknown) => typeof h === 'string');
+  return Array.isArray(d['handles']);
 }
 
 export function listenForMessages(followCollectorDeps: FollowCollectorDeps): void {
@@ -84,33 +115,35 @@ function handleProfileData(data: { profiles: Array<{ userId: string; handle: str
   }
 }
 
-function handleFollowData(data: { handles: string[]; source?: string }, followCollectorDeps: FollowCollectorDeps): void {
-  const handles = data.handles;
+function handleFollowData(data: { handles: unknown[]; source?: string }, followCollectorDeps: FollowCollectorDeps): void {
+  // 경계 검증 (Defect 4): MAIN world 페이로드는 신뢰하지 않는다 — 배열 여부부터 재확인하고,
+  // 유효하지 않은 항목은 조용히 걸러내며, 메시지당 처리량을 캡한다.
+  if (!Array.isArray(data.handles)) return;
+  const handles = sanitizeFollowHandles(data.handles);
+
   if (data.source) {
-    // Inline fiber detection — 즉시 followSet 업데이트 + storage 저장
-    if (handles?.length) {
-      const followSet = getFollowSet();
-      for (const h of handles) {
-        followSet.add(h.toLowerCase());
-      }
-      void saveFollowHandles(handles, followCollectorDeps);
-      const pathHandle = window.location.pathname.split('/')[1]?.toLowerCase();
-      if (pathHandle && followSet.has(pathHandle)) {
-        removeFadakBanner();
-      }
-      if (domFollowReprocessTimer !== null) clearTimeout(domFollowReprocessTimer);
-      domFollowReprocessTimer = setTimeout(() => {
-        domFollowReprocessTimer = null;
-        restoreHiddenTweets();
-        reprocessExistingTweets();
-      }, 0);
+    // inline(fiber) + api-timeline 공통 경로 — 즉시 followSet 업데이트 + storage 저장.
+    // Storm guard: 전부 이미 아는 핸들이면 storage 쓰기/재처리 없이 조기 반환.
+    if (!handles.length) return;
+    const followSet = getFollowSet();
+    const newHandles = [...new Set(handles.map((h) => h.toLowerCase()))].filter((h) => !followSet.has(h));
+    if (getSettings().debugMode) console.log('[BBR FOLLOW]', data.source, `incoming=${handles.length} new=${newHandles.length}`);
+    if (newHandles.length === 0) return;
+    for (const h of newHandles) {
+      followSet.add(h);
     }
+    void saveFollowHandles(newHandles, followCollectorDeps);
+    const pathHandle = window.location.pathname.split('/')[1]?.toLowerCase();
+    if (pathHandle && followSet.has(pathHandle)) {
+      removeFadakBanner();
+    }
+    scheduleFollowReprocess();
   } else {
     // API 기반: 자기 팔로잉 페이지에서만 신뢰
     const myHandle = getMyHandle();
     const pathUser = window.location.pathname.split('/')[1]?.toLowerCase();
     if (myHandle && pathUser && pathUser !== myHandle) return;
-    if (handles?.length) {
+    if (handles.length) {
       void saveFollowHandles(handles, followCollectorDeps).then(() => {
         restoreHiddenTweets();
         reprocessExistingTweets();

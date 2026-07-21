@@ -34,11 +34,17 @@ vi.mock('../../src/content/fadak-banner', () => ({
   removeFadakBanner: (...args: unknown[]) => mockRemoveFadakBanner(...args),
 }));
 
+const mockScheduleFollowReprocess = vi.fn();
+vi.mock('../../src/content/message-handler', () => ({
+  scheduleFollowReprocess: (...args: unknown[]) => mockScheduleFollowReprocess(...args),
+}));
+
 // --- Import modules after all mocks are registered ---
 
 import {
   setSettings,
   setFollowSet,
+  getFollowSet,
   getWhitelistSet,
   setWhitelistSet,
   isHandleWhitelisted,
@@ -100,6 +106,50 @@ describe('storage-listener', () => {
       });
 
       expect(getWhitelistSet()).toEqual(new Set(['@existing']));
+    });
+  });
+
+  // ── follow list change (Defect 3) ────────────────────────────────────
+
+  describe('follow list change', () => {
+    it('추가된 핸들이 있으면 scheduleFollowReprocess를 정확히 1회 호출한다', () => {
+      dispatchChanges({
+        [STORAGE_KEYS.FOLLOW_LIST]: { oldValue: ['alice'], newValue: ['alice', 'bob'] },
+      });
+
+      expect(mockScheduleFollowReprocess).toHaveBeenCalledTimes(1);
+    });
+
+    it('제거만 있는 변경(언팔로우)은 scheduleFollowReprocess를 호출하지 않는다', () => {
+      dispatchChanges({
+        [STORAGE_KEYS.FOLLOW_LIST]: { oldValue: ['alice', 'bob'], newValue: ['alice'] },
+      });
+
+      expect(mockScheduleFollowReprocess).not.toHaveBeenCalled();
+    });
+
+    it('변경이 없으면(동일 목록) scheduleFollowReprocess를 호출하지 않는다', () => {
+      dispatchChanges({
+        [STORAGE_KEYS.FOLLOW_LIST]: { oldValue: ['alice'], newValue: ['alice'] },
+      });
+
+      expect(mockScheduleFollowReprocess).not.toHaveBeenCalled();
+    });
+
+    it('oldValue가 없어도(최초 저장) newValue의 핸들을 추가분으로 간주해 스케줄한다', () => {
+      dispatchChanges({
+        [STORAGE_KEYS.FOLLOW_LIST]: { newValue: ['alice'] },
+      });
+
+      expect(mockScheduleFollowReprocess).toHaveBeenCalledTimes(1);
+    });
+
+    it('followSet은 항상 newValue로 재구성된다 (added 여부와 무관)', () => {
+      dispatchChanges({
+        [STORAGE_KEYS.FOLLOW_LIST]: { oldValue: ['alice', 'bob'], newValue: ['alice'] },
+      });
+
+      expect(getFollowSet()).toEqual(new Set(['alice']));
     });
   });
 });

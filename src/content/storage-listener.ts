@@ -9,6 +9,7 @@ import { restoreHiddenTweets, reprocessExistingTweets } from './tweet-orchestrat
 import { flushCollector } from './collector-buffer';
 import { loadFilterRules } from './filter-pipeline';
 import { removeFadakBanner } from './fadak-banner';
+import { scheduleFollowReprocess } from './message-handler';
 
 export function listenForSettingsChanges(setDebugFlag: (enabled: boolean) => void): void {
   browser.storage.onChanged.addListener((changes) => {
@@ -18,7 +19,7 @@ export function listenForSettingsChanges(setDebugFlag: (enabled: boolean) => voi
     }
     const followChange = changes[STORAGE_KEYS.FOLLOW_LIST];
     if (followChange?.newValue) {
-      handleFollowListChange(followChange.newValue as string[]);
+      handleFollowListChange(followChange.newValue as string[], followChange.oldValue as string[] | undefined);
     }
     const whitelistChange = changes[STORAGE_KEYS.WHITELIST];
     if (whitelistChange?.newValue) {
@@ -68,11 +69,21 @@ function handleSettingsChange(newSettings: Settings, setDebugFlag: (enabled: boo
   }
 }
 
-function handleFollowListChange(newFollowList: string[]): void {
+function handleFollowListChange(newFollowList: string[], oldFollowList: string[] | undefined): void {
   setFollowSet(new Set(newFollowList));
   const pathHandle = window.location.pathname.split('/')[1]?.toLowerCase();
   if (pathHandle && newFollowList.map((h) => h.toLowerCase()).includes(pathHandle)) {
     removeFadakBanner();
+  }
+
+  // Defect 3 수정: 팔로우 버튼 클릭이나 다른 탭에서의 팔로우로 STORAGE_KEYS.FOLLOW_LIST가
+  // 바뀐 경우, 이전에는 Set만 재구성하고 끝나서 이미 숨겨진 트윗이 복원되지 않았다.
+  // added(새로 추가된 핸들)가 있을 때만 공유 디바운스로 restore+reprocess를 예약한다 —
+  // 삭제만 있는 변경(언팔로우)은 재처리가 필요 없다.
+  const oldSet = new Set((oldFollowList ?? []).map((h) => h.toLowerCase()));
+  const added = newFollowList.filter((h) => !oldSet.has(h.toLowerCase()));
+  if (added.length > 0) {
+    scheduleFollowReprocess();
   }
 }
 

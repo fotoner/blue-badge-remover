@@ -3,7 +3,7 @@
 // where extension module imports (chrome.runtime, @shared paths) are unavailable.
 // To keep them in sync, tests/injected/fetch-interceptor-constants.test.ts
 // asserts that these values match the shared constants.
-import { findUserObjects, findFollowedHandles } from './data-extractors';
+import { findUserObjects, findFollowedHandles, extractFollowingFromUsers, dedupeFollowHandles } from './data-extractors';
 const MESSAGE_TYPES = {
   BADGE_DATA: 'BBR_BADGE_DATA',
   USER_ID: 'BBR_USER_ID',
@@ -113,57 +113,84 @@ XMLHttpRequest.prototype.send = function patchedXhrSend(body?: Document | XMLHtt
 function extractBadgeData(data: unknown, endpointHint?: string): void {
   const users: Array<Record<string, unknown>> = [];
   findUserObjects(data, users);
+  if (users.length === 0) return;
 
-  if (users.length > 0) {
-    window.postMessage({
-      type: MESSAGE_TYPES.BADGE_DATA,
-      users,
-    }, window.location.origin);
+  window.postMessage({
+    type: MESSAGE_TYPES.BADGE_DATA,
+    users,
+  }, window.location.origin);
 
-    // Derive profiles from already-collected users — avoids a second full traversal
-    const profiles: ProfileEntry[] = [];
-    for (const user of users) {
-      const restId = user['rest_id'];
-      if (typeof restId !== 'string') continue;
-      const legacy = user['legacy'] as Record<string, unknown> | null;
-      if (!legacy) continue;
-      const core = user['core'] as Record<string, unknown> | null;
-      const handle =
-        typeof legacy['screen_name'] === 'string' ? legacy['screen_name'] :
-        typeof core?.['screen_name'] === 'string' ? core['screen_name'] as string : '';
-      const displayName =
-        typeof legacy['name'] === 'string' ? legacy['name'] :
-        typeof core?.['name'] === 'string' ? core['name'] as string : '';
-      profiles.push({
-        userId: restId,
-        handle,
-        displayName,
-        bio: typeof legacy['description'] === 'string' ? legacy['description'] : '',
-      });
-    }
+  postProfileData(users, endpointHint);
+  postTimelineFollowData(users, endpointHint);
+}
 
-    if (profiles.length > 0) {
-      for (const p of profiles) {
-        if (!cachedProfiles.has(p.userId)) {
-          if (cachedProfiles.size >= MAX_CACHED_PROFILES) {
-            const firstKey = cachedProfiles.keys().next().value;
-            if (firstKey !== undefined) cachedProfiles.delete(firstKey);
-          }
-          cachedProfiles.set(p.userId, p);
+function postProfileData(users: Array<Record<string, unknown>>, endpointHint?: string): void {
+  // Derive profiles from already-collected users — avoids a second full traversal
+  const profiles: ProfileEntry[] = [];
+  for (const user of users) {
+    const restId = user['rest_id'];
+    if (typeof restId !== 'string') continue;
+    const legacy = user['legacy'] as Record<string, unknown> | null;
+    if (!legacy) continue;
+    const core = user['core'] as Record<string, unknown> | null;
+    const handle =
+      typeof legacy['screen_name'] === 'string' ? legacy['screen_name'] :
+      typeof core?.['screen_name'] === 'string' ? core['screen_name'] as string : '';
+    const displayName =
+      typeof legacy['name'] === 'string' ? legacy['name'] :
+      typeof core?.['name'] === 'string' ? core['name'] as string : '';
+    profiles.push({
+      userId: restId,
+      handle,
+      displayName,
+      bio: typeof legacy['description'] === 'string' ? legacy['description'] : '',
+    });
+  }
+
+  if (profiles.length > 0) {
+    for (const p of profiles) {
+      if (!cachedProfiles.has(p.userId)) {
+        if (cachedProfiles.size >= MAX_CACHED_PROFILES) {
+          const firstKey = cachedProfiles.keys().next().value;
+          if (firstKey !== undefined) cachedProfiles.delete(firstKey);
         }
+        cachedProfiles.set(p.userId, p);
       }
-      window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles }, window.location.origin);
+    }
+    window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles }, window.location.origin);
 
-      if (bbrDebugMode) {
-        const withBio = profiles.filter((p) => p.bio);
-        const withoutBio = profiles.filter((p) => !p.bio);
-        console.log(
-          `[BBR INTERCEPTOR] ${endpointHint ?? 'unknown'}: ${profiles.length} profiles, ${withBio.length} with bio, ${withoutBio.length} without`,
-          withBio.length > 0 ? withBio.map((p) => `${p.handle}: "${p.bio.slice(0, 30)}"`) : '(none with bio)',
-        );
-      }
+    if (bbrDebugMode) {
+      const withBio = profiles.filter((p) => p.bio);
+      const withoutBio = profiles.filter((p) => !p.bio);
+      console.log(
+        `[BBR INTERCEPTOR] ${endpointHint ?? 'unknown'}: ${profiles.length} profiles, ${withBio.length} with bio, ${withoutBio.length} without`,
+        withBio.length > 0 ? withBio.map((p) => `${p.handle}: "${p.bio.slice(0, 30)}"`) : '(none with bio)',
+      );
     }
   }
+}
+
+// 타임라인 응답에서 following=true 핸들을 FOLLOW_DATA로 포스트.
+// ListLatestTweetsTimeline 등 모든 GraphQL 타임라인이 extractBadgeData를 거치므로 자동 커버.
+// 영구 메모 없음(Defect 1 수정) — 동일 핸들이 여러 응답에 걸쳐 반복 포스트될 수 있으며,
+// 이는 의도된 self-heal: content 측 followSet diff(message-handler.ts)가 흡수한다.
+function postTimelineFollowData(users: Array<Record<string, unknown>>, endpointHint?: string): void {
+  const matches = extractFollowingFromUsers(users);
+  const handles = dedupeFollowHandles(matches);
+  if (bbrDebugMode) {
+    const pathCounts: Record<string, number> = {};
+    for (const m of matches) pathCounts[m.path] = (pathCounts[m.path] ?? 0) + 1;
+    console.log(
+      `[BBR FOLLOW-API] ${endpointHint ?? 'unknown'}: users=${users.length} following=${matches.length} deduped=${handles.length}`,
+      matches.length > 0 ? pathCounts : '(no following flag found)',
+    );
+  }
+  if (handles.length === 0) return;
+  window.postMessage({
+    type: MESSAGE_TYPES.FOLLOW_DATA,
+    handles,
+    source: 'api-timeline',
+  }, window.location.origin);
 }
 
 // extractViewerUserId / findViewerId 제거됨 — 수신 리스너 없는 죽은 코드

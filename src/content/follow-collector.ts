@@ -22,11 +22,28 @@ export function getMyHandle(): string | null {
   return href ? href.slice(1).toLowerCase() : null;
 }
 
-export async function saveFollowHandles(
+// saveFollowHandles의 모든 실행을 직렬화하는 큐 (Defect 2 수정).
+// 호출부들이 전부 fire-and-forget이라 거의 동시에 여러 번 호출될 수 있는데,
+// 기존의 비원자적 read-modify-write(await get → merge → await set)는
+// 두 호출이 같은 스냅샷을 읽고 나중 쓰기가 먼저 쓰기를 덮어써 핸들을 잃어버렸다.
+// 이 큐는 각 저장 작업을 이전 작업이 끝난 뒤에만 시작하도록 강제한다.
+let saveQueue: Promise<void> = Promise.resolve();
+
+export function saveFollowHandles(
   handles: string[],
   deps: FollowCollectorDeps,
 ): Promise<void> {
-  if (!handles.length) return;
+  if (!handles.length) return Promise.resolve();
+  const run = saveQueue.then(() => doSaveFollowHandles(handles, deps));
+  // 이 작업이 실패해도 큐 자체는 오염되지 않도록 별도로 캐치 — 다음 호출은 계속 진행되어야 한다.
+  saveQueue = run.catch(() => {});
+  return run;
+}
+
+async function doSaveFollowHandles(
+  handles: string[],
+  deps: FollowCollectorDeps,
+): Promise<void> {
   const stored = await browser.storage.local.get([STORAGE_KEYS.FOLLOW_CACHE, STORAGE_KEYS.CURRENT_USER_ID]);
   const currentAccount = (stored[STORAGE_KEYS.CURRENT_USER_ID] as string | null) ?? '';
   const cache = (stored[STORAGE_KEYS.FOLLOW_CACHE] as Record<string, string[]> | undefined) ?? {};
