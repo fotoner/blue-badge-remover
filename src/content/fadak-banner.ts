@@ -2,7 +2,8 @@
 import { t } from '@shared/i18n';
 import { TIMINGS } from '@shared/constants';
 import type { Settings } from '@shared/types';
-import { extractTweetStatusPath } from './tweet-processing';
+import { isBlueBadgeElement } from '@features/badge-detection/svg-fallback';
+import { extractTweetStatusPath, findAuthorBadge } from './tweet-processing';
 
 export const FADAK_BANNER_ID = 'bbr-fadak-profile-banner';
 const BANNER_STYLE_ATTR = 'data-bbr-banner-styles';
@@ -60,17 +61,6 @@ function injectBannerStyles(): void {
   document.head.appendChild(style);
 }
 
-function isBlueBadge(badgeEl: Element): boolean {
-  // detectBadgeSvg와 동일 로직이지만, 이미 배지 요소를 받으므로 querySelector 생략
-  const svg = badgeEl.closest('svg') ?? badgeEl;
-  if (svg.querySelector('linearGradient')) return false;
-  if (svg.querySelectorAll('path').length !== 1) return false;
-  const path = svg.querySelector('path');
-  if (!path) return false;
-  if (path.getAttribute('fill')) return false;
-  return true;
-}
-
 export function showFadakProfileBanner(deps: FadakBannerDeps): void {
   const settings = deps.getCurrentSettings();
   if (!deps.isProfilePage() || !settings.enabled) return;
@@ -89,7 +79,7 @@ export function showFadakProfileBanner(deps: FadakBannerDeps): void {
     if (document.getElementById(FADAK_BANNER_ID)) return true;
 
     // 금딱이면 배너 표시하지 않음
-    if (!isBlueBadge(verifiedBadge)) return true;
+    if (!isBlueBadgeElement(verifiedBadge)) return true;
 
     injectBannerStyles();
     const lang = settings.language;
@@ -148,7 +138,7 @@ export function removeFadakBanner(): void {
 
 // ── 트윗 상세 페이지 파딱 배너 ────────────────────────────────────
 
-const DETAIL_BANNER_ID = 'bbr-fadak-detail-banner';
+export const DETAIL_BANNER_ID = 'bbr-fadak-detail-banner';
 let detailBannerObserver: MutationObserver | null = null;
 
 export function showFadakDetailBanner(deps: FadakBannerDeps): void {
@@ -168,21 +158,22 @@ export function showFadakDetailBanner(deps: FadakBannerDeps): void {
     // URL의 status path와 일치하는 article을 찾아 해당 트윗의 뱃지 확인
     const currentPath = window.location.pathname;
     const articles = document.querySelectorAll('article[data-testid="tweet"]');
-    let targetTweet: Element | null = null;
+    let targetTweet: HTMLElement | null = null;
     for (const article of articles) {
       const sp = extractTweetStatusPath(article as HTMLElement);
       if (sp && currentPath.includes(sp)) {
-        targetTweet = article;
+        targetTweet = article as HTMLElement;
         break;
       }
     }
     if (!targetTweet) return false;
-    const verifiedBadge = targetTweet.querySelector('[data-testid="icon-verified"]');
+    // 작성자 영역 스코프 탐색 — 인용 카드 내부 뱃지로 배너 오표시 방지 (#35)
+    const verifiedBadge = findAuthorBadge(targetTweet);
     if (!verifiedBadge) return false;
     if (document.getElementById(DETAIL_BANNER_ID)) return true;
 
     // 금딱/회딱이면 배너 표시하지 않음
-    if (!isBlueBadge(verifiedBadge)) return true;
+    if (!isBlueBadgeElement(verifiedBadge)) return true;
 
     injectBannerStyles();
     const lang = settings.language;

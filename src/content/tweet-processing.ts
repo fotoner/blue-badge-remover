@@ -59,6 +59,32 @@ export function findQuoteBlock(tweetEl: HTMLElement): HTMLElement | null {
   return enFallback;
 }
 
+/**
+ * 작성자 영역의 인증 뱃지 요소 탐색 — 인용 카드 내부 User-Name은 제외 (#35 오귀속 방지).
+ * boolean 대신 Element를 반환하므로 호출자가 isBlueBadgeElement로 파딱 여부를 판정할 수 있다.
+ * User-Name이 하나도 없는 예외적 DOM에서만 요소 전체 폴백 탐색.
+ */
+export function findAuthorBadge(tweetEl: HTMLElement): Element | null {
+  const userNames = tweetEl.querySelectorAll('[data-testid="User-Name"]');
+  const quoteBlock = findQuoteBlock(tweetEl);
+  if (userNames.length === 0) {
+    // User-Name이 전혀 없는 예외적 DOM — 인용 카드 내부 뱃지는 여전히 제외해야 오귀속 방지
+    const candidates = tweetEl.querySelectorAll('[data-testid="icon-verified"]');
+    for (const candidate of candidates) {
+      if (quoteBlock?.contains(candidate)) continue;
+      return candidate;
+    }
+    return null;
+  }
+  for (const userName of userNames) {
+    if (quoteBlock?.contains(userName)) continue;
+    // 첫 번째 비인용 User-Name이 작성자 영역 — 뱃지가 없으면 그대로 null (추가 탐색 안 함)
+    return userName.querySelector('[data-testid="icon-verified"]');
+  }
+  // User-Name이 전부 인용 카드 안 → 외부 작성자는 뱃지 없음 (전체 폴백 금지)
+  return null;
+}
+
 export interface QuoteAuthorInfo {
   handle: string;
   displayName: string | null;
@@ -108,12 +134,11 @@ export function extractDisplayName(tweetEl: HTMLElement, handle: string): string
 
 /**
  * Returns true only if the tweet's own author area ([data-testid="User-Name"]) contains
- * a verified badge. Used by the keyword collector to avoid collecting non-파딱 accounts
- * that happen to quote a 파딱 (whose badge would otherwise appear inside the same article).
+ * a verified badge. Delegates to findAuthorBadge — quote-card User-Names are excluded,
+ * so a non-파딱 account quoting a 파딱 is never treated as badged.
  */
 export function hasBadgeInAuthorArea(tweetEl: HTMLElement): boolean {
-  const userNameEl = tweetEl.querySelector('[data-testid="User-Name"]');
-  return !!(userNameEl ?? tweetEl).querySelector('[data-testid="icon-verified"]');
+  return findAuthorBadge(tweetEl) !== null;
 }
 
 export function formatUserLabel(handle: string, displayName: string | null): string {

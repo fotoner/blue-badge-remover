@@ -1,8 +1,8 @@
 // src/content/tweet-orchestrator.ts
 // 트윗 처리 오케스트레이터: DOM에서 트윗 정보를 추출하고, classifier로 판정하고, DOM을 조작.
-import { detectBadgeSvg } from '@features/badge-detection';
+import { detectBadgeSvg, isBlueBadgeElement } from '@features/badge-detection/svg-fallback';
 import { hideTweet, hideQuoteBlock, showTweet } from '@features/content-filter';
-import { extractTweetAuthor, extractRetweeterName, extractTweetStatusPath, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, formatUserLabel, addDebugLabel, hasBadgeInAuthorArea } from './tweet-processing';
+import { extractTweetAuthor, extractRetweeterName, extractTweetStatusPath, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, formatUserLabel, addDebugLabel, findAuthorBadge } from './tweet-processing';
 import { isProfilePage, isDetailPage, getPageType } from './page-utils';
 import { profileCache, getSettings, getWhitelistSet, getActiveFilterRules, getCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, getExpandedSet } from './state';
 import { bufferCollectedFadak } from './collector-buffer';
@@ -10,10 +10,12 @@ import { classifyTweet, classifyQuote } from './tweet-classifier';
 import type { ClassifyResult, QuoteClassifyResult } from './tweet-classifier';
 import { recordHide } from '@features/stats';
 
-function checkFadak(_userId: string, element: HTMLElement): boolean {
-  // SVG 구조만으로 판정. API 캐시 사용 안 함 (이중 팝 + API 엣지 케이스 제거).
+function checkFadak(element: HTMLElement): boolean {
+  // SVG 구조만으로 판정 + 작성자 영역(User-Name) 스코프 — 인용 카드 내부 뱃지 오귀속 방지 (#35).
+  // API 캐시 사용 안 함 (이중 팝 + API 엣지 케이스 제거).
   // React가 SVG 자식을 원자적으로 커밋하므로 부분 렌더링 리스크 최소.
-  return detectBadgeSvg(element);
+  const badge = findAuthorBadge(element);
+  return badge !== null && isBlueBadgeElement(badge);
 }
 
 export function processTweet(tweetEl: HTMLElement): void {
@@ -42,7 +44,7 @@ export function processTweet(tweetEl: HTMLElement): void {
     if (currentPath.includes(statusPath)) return;
   }
 
-  const isFadak = checkFadak(handle.toLowerCase(), tweetEl);
+  const isFadak = checkFadak(tweetEl);
   const displayName = extractDisplayName(tweetEl, handle);
   const userLabel = formatUserLabel(handle, displayName);
 
@@ -62,7 +64,8 @@ export function processTweet(tweetEl: HTMLElement): void {
   const profile = cachedProfile ?? { handle, displayName: displayName ?? handle, bio };
 
   // 키워드 수집기 버퍼링 (분류와 무관하게 실행)
-  if (isFadak && settings.keywordCollectorEnabled && hasBadgeInAuthorArea(tweetEl)) {
+  // isFadak이 이미 작성자 영역 스코프 판정이므로 별도 hasBadgeInAuthorArea 체크 불필요
+  if (isFadak && settings.keywordCollectorEnabled) {
     bufferCollectedFadak(handle.toLowerCase(), handle, profile.displayName, profile.bio, tweetText);
   }
 
@@ -112,7 +115,8 @@ function processQuoteBlock(tweetEl: HTMLElement, parentHandle: string, parentInF
 
   const quoteAuthor = extractQuoteAuthor(quoteBlock);
   const quotedHandle = quoteAuthor?.handle ?? null;
-  const quotedIsFadak = quotedHandle ? checkFadak(quotedHandle, quoteBlock) : detectBadgeSvg(quoteBlock);
+  // 인용 카드는 그 자체가 뱃지 스코프 — 작성자 영역 스코프(checkFadak) 대신 요소 전체 판정 유지
+  const quotedIsFadak = detectBadgeSvg(quoteBlock);
 
   const result: QuoteClassifyResult = classifyQuote({
     quotedHandle, quotedIsFadak,

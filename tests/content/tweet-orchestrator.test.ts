@@ -9,6 +9,7 @@ vi.mock('wxt/browser', () => ({
 }));
 
 const mockDetectBadgeSvg = vi.fn<(el: HTMLElement) => boolean>().mockReturnValue(false);
+const mockIsBlueBadgeElement = vi.fn<(el: Element) => boolean>();
 vi.mock('@features/badge-detection', () => ({
   detectBadgeSvg: (...args: unknown[]) => mockDetectBadgeSvg(args[0] as HTMLElement),
   BadgeCache: class {
@@ -18,6 +19,11 @@ vi.mock('@features/badge-detection', () => ({
     has(k: string) { return this.m.has(k); }
   },
   parseBadgeInfo: vi.fn(),
+}));
+// tweet-orchestrator는 barrel(index.ts) 대신 svg-fallback에서 직접 import — 동일 mock 함수로 제어
+vi.mock('@features/badge-detection/svg-fallback', () => ({
+  detectBadgeSvg: (...args: unknown[]) => mockDetectBadgeSvg(args[0] as HTMLElement),
+  isBlueBadgeElement: (...args: unknown[]) => mockIsBlueBadgeElement(args[0] as Element),
 }));
 
 const mockHideTweet = vi.fn();
@@ -57,6 +63,8 @@ import { processTweet, restoreHiddenTweets } from '../../src/content/tweet-orche
 
 let doc: Document;
 
+const BADGE_SVG = '<svg data-testid="icon-verified"><g><path d="M1 1Z"></path></g></svg>';
+
 function createTweetEl(handle: string, opts?: { retweet?: boolean; badge?: boolean }): HTMLElement {
   const article = doc.createElement('article');
   article.setAttribute('data-testid', 'tweet');
@@ -75,6 +83,14 @@ function createTweetEl(handle: string, opts?: { retweet?: boolean; badge?: boole
   nameLink.textContent = `Display ${handle}`;
   article.appendChild(nameLink);
 
+  // 작성자 영역 (실제 X DOM처럼 항상 존재; 뱃지는 opts.badge일 때만)
+  const userName = doc.createElement('div');
+  userName.setAttribute('data-testid', 'User-Name');
+  if (opts?.badge) {
+    userName.innerHTML = BADGE_SVG;
+  }
+  article.appendChild(userName);
+
   if (opts?.retweet) {
     const social = doc.createElement('div');
     social.setAttribute('data-testid', 'socialContext');
@@ -83,6 +99,31 @@ function createTweetEl(handle: string, opts?: { retweet?: boolean; badge?: boole
   }
 
   return article;
+}
+
+function appendQuoteBlock(article: HTMLElement, opts?: { badge?: boolean }): HTMLElement {
+  const wrapper = doc.createElement('div');
+
+  const label = doc.createElement('span');
+  label.textContent = '인용'; // 자식 노드 정확히 1개 → findQuoteBlock 매칭
+  wrapper.appendChild(label);
+
+  const quote = doc.createElement('div');
+  const userName = doc.createElement('div');
+  userName.setAttribute('data-testid', 'User-Name');
+  if (opts?.badge) {
+    userName.innerHTML = BADGE_SVG;
+  }
+  quote.appendChild(userName);
+
+  const handleLink = doc.createElement('a');
+  handleLink.setAttribute('href', '/quoted_user');
+  handleLink.textContent = '@quoted_user';
+  quote.appendChild(handleLink);
+
+  wrapper.appendChild(quote);
+  article.appendChild(wrapper);
+  return quote;
 }
 
 beforeEach(() => {
@@ -95,8 +136,11 @@ beforeEach(() => {
   setCurrentUserHandle(null);
 
   vi.clearAllMocks();
-  // SVG 기반 감지: 기본 false, 개별 테스트에서 true로 설정
+  // 파딱 여부는 fixture의 뱃지 배치(구조)로 제어:
+  // - isBlueBadgeElement: 기본 true (뱃지가 발견되면 파랑으로 간주)
+  // - detectBadgeSvg: 인용 카드 경로에서만 사용, 기본 false
   mockDetectBadgeSvg.mockReturnValue(false);
+  mockIsBlueBadgeElement.mockReturnValue(true);
 });
 
 describe('processTweet', () => {
@@ -105,10 +149,9 @@ describe('processTweet', () => {
     // processTweet calls isProfilePage which checks location.pathname
     // Since we're in jsdom, the default path is '/', which is NOT a profile page
     // This test verifies that a tweet on the timeline IS processed
-    mockDetectBadgeSvg.mockReturnValue(true);
-    const tweet = createTweetEl('testuser');
+    const tweet = createTweetEl('testuser', { badge: true });
     processTweet(tweet);
-    // Should attempt to hide since testuser is a known fadak (SVG returns true)
+    // Should attempt to hide since testuser is a known fadak (author-area badge present)
     expect(mockHideTweet).toHaveBeenCalled();
   });
 
@@ -120,9 +163,8 @@ describe('processTweet', () => {
   });
 
   it('파딱 + 팔로우 중이면 숨기지 않는다 (이전에 숨겨진 경우만 showTweet)', () => {
-    mockDetectBadgeSvg.mockReturnValue(true);
     setFollowSet(new Set(['testuser']));
-    const tweet = createTweetEl('testuser');
+    const tweet = createTweetEl('testuser', { badge: true });
     processTweet(tweet);
     // 숨겨진 적 없는 트윗에는 showTweet 호출 안 함 (불필요한 DOM 조작 방지)
     expect(mockShowTweet).not.toHaveBeenCalled();
@@ -130,17 +172,15 @@ describe('processTweet', () => {
   });
 
   it('파딱 + 팔로우 중 + 이전에 숨겨진 트윗이면 showTweet 호출', () => {
-    mockDetectBadgeSvg.mockReturnValue(true);
     setFollowSet(new Set(['testuser']));
-    const tweet = createTweetEl('testuser');
+    const tweet = createTweetEl('testuser', { badge: true });
     tweet.setAttribute('data-bbr-original', 'hidden');
     processTweet(tweet);
     expect(mockShowTweet).toHaveBeenCalled();
   });
 
   it('파딱 + 미팔로우이면 hideTweet 호출', () => {
-    mockDetectBadgeSvg.mockReturnValue(true);
-    const tweet = createTweetEl('testuser');
+    const tweet = createTweetEl('testuser', { badge: true });
     processTweet(tweet);
     expect(mockHideTweet).toHaveBeenCalledWith(
       tweet,
@@ -162,6 +202,54 @@ describe('processTweet', () => {
     empty.setAttribute('data-testid', 'tweet');
     processTweet(empty);
     expect(mockHideTweet).not.toHaveBeenCalled();
+  });
+
+  // --- 인용 카드 뱃지 오귀속 방지 (#35) ---
+
+  it('인용 카드 안 파딱 뱃지는 외부 작성자에게 오귀속되지 않는다', () => {
+    const tweet = createTweetEl('quoter'); // 외부 User-Name에는 뱃지 없음
+    appendQuoteBlock(tweet, { badge: true });
+    processTweet(tweet);
+    expect(mockHideTweet).not.toHaveBeenCalled();
+    expect(mockHideQuoteBlock).not.toHaveBeenCalled();
+  });
+
+  it('외부 User-Name 뱃지가 있으면 인용 뱃지 여부와 무관하게 숨긴다', () => {
+    const tweet = createTweetEl('fadakuser', { badge: true });
+    appendQuoteBlock(tweet, { badge: false });
+    processTweet(tweet);
+    expect(mockHideTweet).toHaveBeenCalledWith(
+      tweet,
+      'remove',
+      expect.objectContaining({ reason: 'fadak', handle: '@fadakuser' }),
+      expect.any(Function),
+    );
+  });
+
+  it('리트윗 + 인용 파딱 → 외부 작성자 오귀속 없음', () => {
+    const tweet = createTweetEl('retweeter', { retweet: true }); // 외부 User-Name 뱃지 없음
+    appendQuoteBlock(tweet, { badge: true });
+    processTweet(tweet);
+    expect(mockHideTweet).not.toHaveBeenCalled();
+  });
+
+  it('리트윗 + 외부 뱃지 → reason retweet으로 숨김', () => {
+    const tweet = createTweetEl('rter', { retweet: true, badge: true });
+    processTweet(tweet);
+    expect(mockHideTweet).toHaveBeenCalledWith(
+      tweet,
+      'remove',
+      expect.objectContaining({ reason: 'retweet' }),
+      expect.any(Function),
+    );
+  });
+
+  it('이전에 숨겨진 인용-오귀속 트윗은 skip 경로로 복원된다', () => {
+    const tweet = createTweetEl('quoter');
+    appendQuoteBlock(tweet, { badge: true });
+    tweet.setAttribute('data-bbr-original', 'hidden');
+    processTweet(tweet);
+    expect(mockShowTweet).toHaveBeenCalled();
   });
 });
 
