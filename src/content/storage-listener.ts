@@ -77,7 +77,7 @@ function handleFollowListChange(newFollowList: string[]): void {
 }
 
 function handleWhitelistChange(newWhitelist: string[]): void {
-  setWhitelistSet(new Set(newWhitelist));
+  setWhitelistSet(new Set(newWhitelist.map((h) => h.toLowerCase())));
   restoreHiddenTweets();
   reprocessExistingTweets();
 }

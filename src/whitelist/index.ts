@@ -6,7 +6,7 @@ import type { Language } from '@shared/i18n';
 export function normalizeHandle(input: string): string | null {
   const handle = input.trim().replace(/^@/, '');
   if (!handle || !/^[A-Za-z0-9_]{1,15}$/.test(handle)) return null;
-  return `@${handle}`;
+  return `@${handle.toLowerCase()}`;
 }
 
 export function renderWhitelistItems(

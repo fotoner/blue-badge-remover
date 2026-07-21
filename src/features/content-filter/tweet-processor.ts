@@ -12,12 +12,17 @@ export interface TweetContext {
   pageType: PageType;
 }
 
+/** whitelist/follow Set 엔트리(state.ts 기준: '@' + lowercase)와 동일한 형식으로 정규화 */
+function toWhitelistProbe(handle: string): string {
+  return `@${handle.replace(/^@/, '').toLowerCase()}`;
+}
+
 export function shouldHideTweet(ctx: TweetContext): boolean {
   if (!ctx.settings.enabled) return false;
   if (!ctx.isFadak) return false;
   // followList 체크는 content script에서 수행 (idToHandle 매핑 필요)
   // 여기서는 whitelist만 체크
-  if (ctx.whitelist.has(ctx.handle)) return false;
+  if (ctx.whitelist.has(toWhitelistProbe(ctx.handle))) return false;
 
   const filterMap: Record<PageType, boolean> = {
     timeline: ctx.settings.filter.timeline,

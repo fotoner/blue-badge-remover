@@ -34,6 +34,18 @@ describe('normalizeHandle', () => {
   it('15자 핸들은 허용한다', () => {
     expect(normalizeHandle('a'.repeat(15))).toBe(`@${'a'.repeat(15)}`);
   });
+
+  it('대소문자가 섞인 핸들을 소문자로 정규화한다', () => {
+    expect(normalizeHandle('MixedCase')).toBe('@mixedcase');
+  });
+
+  it('@ 접두사가 있는 대소문자 섞인 핸들도 소문자로 정규화한다', () => {
+    expect(normalizeHandle('@MixedCase')).toBe('@mixedcase');
+  });
+
+  it('앞뒤 공백과 대소문자를 함께 정규화한다', () => {
+    expect(normalizeHandle('  MixedCase  ')).toBe('@mixedcase');
+  });
 });
 
 describe('renderWhitelistItems', () => {

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Mock } from 'vitest';
 import { DEFAULT_SETTINGS } from '@shared/constants';
 
 const mockStorage: Record<string, unknown> = {};
@@ -23,6 +24,7 @@ vi.mock('wxt/browser', () => ({
 
 // Dynamic import after mock is set up
 const { getSettings, saveSettings, getWhitelist, addToWhitelist, removeFromWhitelist } = await import('@features/settings/storage');
+const { browser } = await import('wxt/browser');
 
 beforeEach(() => {
   Object.keys(mockStorage).forEach((k) => delete mockStorage[k]);
@@ -94,5 +96,61 @@ describe('whitelist', () => {
     mockStorage['whitelist'] = ['@testuser', '@other'];
     await removeFromWhitelist('@testuser');
     expect(mockStorage['whitelist']).toEqual(['@other']);
+  });
+
+  it('should store mixed-case handle as lowercase', async () => {
+    await addToWhitelist('@MixedCase');
+    expect(mockStorage['whitelist']).toEqual(['@mixedcase']);
+  });
+
+  it('should not add a duplicate when a normalized-equivalent handle already exists', async () => {
+    mockStorage['whitelist'] = ['@mixedcase'];
+    await addToWhitelist('@MixedCase');
+    expect((mockStorage['whitelist'] as string[]).length).toBe(1);
+  });
+
+  it('should remove handle regardless of input case', async () => {
+    mockStorage['whitelist'] = ['@foo', '@bar'];
+    await removeFromWhitelist('@FOO');
+    expect(mockStorage['whitelist']).toEqual(['@bar']);
+  });
+
+  it('should migrate mixed-case + duplicate storage on read', async () => {
+    mockStorage['whitelist'] = ['@Foo', '@foo', '@bar'];
+    const list = await getWhitelist();
+    expect(list).toEqual(['@foo', '@bar']);
+    expect(mockStorage['whitelist']).toEqual(['@foo', '@bar']);
+  });
+
+  it('should strip multiple leading "@" characters on migration', async () => {
+    mockStorage['whitelist'] = ['@@Foo'];
+    const list = await getWhitelist();
+    expect(list).toEqual(['@foo']);
+    expect(mockStorage['whitelist']).toEqual(['@foo']);
+  });
+
+  it('should perform exactly one write when migrating dirty storage', async () => {
+    mockStorage['whitelist'] = ['@Foo', '@foo', '@bar'];
+    const before = (browser.storage.local.set as Mock).mock.calls.length;
+    await getWhitelist();
+    const after = (browser.storage.local.set as Mock).mock.calls.length;
+    expect(after - before).toBe(1);
+  });
+
+  it('should not write when storage is already clean', async () => {
+    mockStorage['whitelist'] = ['@foo', '@bar'];
+    const before = (browser.storage.local.set as Mock).mock.calls.length;
+    const list = await getWhitelist();
+    const after = (browser.storage.local.set as Mock).mock.calls.length;
+    expect(after - before).toBe(0);
+    expect(list).toEqual(['@foo', '@bar']);
+  });
+
+  it('should return empty array and perform zero writes when no whitelist is stored', async () => {
+    const before = (browser.storage.local.set as Mock).mock.calls.length;
+    const list = await getWhitelist();
+    const after = (browser.storage.local.set as Mock).mock.calls.length;
+    expect(list).toEqual([]);
+    expect(after - before).toBe(0);
   });
 });

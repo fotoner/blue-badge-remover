@@ -169,7 +169,7 @@ async function init(): Promise<void> {
   const cache = (stored[STORAGE_KEYS.FOLLOW_CACHE] as Record<string, string[]> | undefined) ?? {};
   const cachedFollows = currentAccount ? (cache[currentAccount] ?? []) : ((stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? []);
   setFollowSet(new Set(cachedFollows));
-  setWhitelistSet(new Set((stored[STORAGE_KEYS.WHITELIST] as string[] | undefined) ?? []));
+  setWhitelistSet(new Set(((stored[STORAGE_KEYS.WHITELIST] as string[] | undefined) ?? []).map((h) => h.toLowerCase())));
 
   setTweetHiderLanguage(settings.language);
   setDebugFlag(settings.debugMode);
