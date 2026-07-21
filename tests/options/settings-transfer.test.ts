@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildFilterListBackup, parseFilterListBackup } from '../../src/options/settings-transfer';
+import {
+  buildFilterListBackup,
+  parseFilterListBackup,
+  renderImportedFilterLists,
+} from '../../src/options/settings-transfer';
 
 describe('filter list backup boundary', () => {
   it('화이트리스트와 커스텀 필터를 버전이 있는 백업으로 만든다', () => {
@@ -29,5 +33,16 @@ describe('filter list backup boundary', () => {
       whitelist: [],
       customFilterList: 'x'.repeat(200_001),
     })).toBeNull();
+  });
+
+  it('가져온 커스텀 필터와 보호 키워드를 현재 입력란에 반영한다', () => {
+    const customElement = document.createElement('textarea');
+    const protectedElement = document.createElement('textarea');
+    const backup = buildFilterListBackup([], 'coin', ['Game', 'Anime']);
+
+    renderImportedFilterLists(backup, customElement, protectedElement);
+
+    expect(customElement.value).toBe('coin');
+    expect(protectedElement.value).toBe('Game\nAnime');
   });
 });

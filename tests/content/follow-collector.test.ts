@@ -30,6 +30,7 @@ const {
   collectFollowsFromDOM,
   disconnectFollowObserver,
   getMyHandle,
+  resolveAccountSwitchFollows,
   saveFollowHandles,
 } = await import('../../src/content/follow-collector');
 type FollowCollectorDeps = import('../../src/content/follow-collector').FollowCollectorDeps;
@@ -65,6 +66,30 @@ describe('getMyHandle', () => {
   it('should return lowercase handle from profile link', () => {
     createProfileLink('MyHandle');
     expect(getMyHandle()).toBe('myhandle');
+  });
+});
+
+describe('resolveAccountSwitchFollows', () => {
+  it('최초 계정 감지 전 수집한 임시 팔로우를 계정 캐시와 병합한다', () => {
+    const result = resolveAccountSwitchFollows(
+      { myhandle: ['cached'] },
+      'myhandle',
+      null,
+      ['EarlyFollow', 'cached'],
+    );
+
+    expect(result).toEqual(['cached', 'earlyfollow']);
+  });
+
+  it('기존 계정에서 다른 계정으로 전환할 때 이전 FOLLOW_LIST는 섞지 않는다', () => {
+    const result = resolveAccountSwitchFollows(
+      { second: ['second-follow'] },
+      'second',
+      'first',
+      ['first-follow'],
+    );
+
+    expect(result).toEqual(['second-follow']);
   });
 });
 

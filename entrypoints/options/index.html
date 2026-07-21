@@ -65,6 +65,16 @@
       </div>
     </section>
 
+    <section class="section">
+      <h2 class="section-title" style="margin-bottom:14px">보호 키워드</h2>
+      <p class="guide-desc" style="margin-bottom:12px">키워드를 한 줄에 하나씩 등록하면, 해당 단어가 아이디·이름·프로필 소개에 있는 파딱 계정은 숨기지 않습니다</p>
+      <textarea id="protected-keywords" class="filter-textarea compact" placeholder="예: 원신&#10;예: 버튜버"></textarea>
+      <div class="btn-row">
+        <button id="save-protected-keywords" class="btn-primary">저장</button>
+        <span id="protected-keywords-status" class="save-status"></span>
+      </div>
+    </section>
+
     <section class="section guide">
       <h2 class="section-title" style="margin-bottom:14px">문법 가이드</h2>
       <div class="guide-content">
@@ -85,6 +95,16 @@
       <div class="btn-row" style="margin-top:12px">
         <button id="import-pack-btn" class="btn-secondary">필터 팩 가져오기</button>
         <input type="file" id="import-pack-file" accept=".json" style="display:none">
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title" style="margin-bottom:14px">목록 백업</h2>
+      <p class="guide-desc">화이트리스트, 커스텀 필터, 보호 키워드를 하나의 JSON 파일로 옮깁니다</p>
+      <div class="btn-row">
+        <button id="export-lists-btn" class="btn-secondary">목록 내보내기</button>
+        <button id="import-lists-btn" class="btn-secondary">목록 가져오기</button>
+        <input type="file" id="import-lists-file" accept=".json,application/json" style="display:none">
       </div>
     </section>
   </div>

@@ -41,6 +41,15 @@ function makeInput(overrides: Partial<ClassifyInput> = {}): ClassifyInput {
 }
 
 describe('classifyTweet', () => {
+  it('확장 프로그램이 꺼져 있으면 파딱 리트윗도 표시한다', () => {
+    const result = classifyTweet(makeInput({
+      isRetweet: true,
+      settings: { ...defaultSettings, enabled: false },
+    }));
+    expect(result.action).toBe('show');
+    expect(result.reason).toBe('disabled');
+  });
+
   it('비파딱은 skip', () => {
     const result = classifyTweet(makeInput({ isFadak: false }));
     expect(result.action).toBe('skip');

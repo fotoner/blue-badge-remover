@@ -24,6 +24,19 @@ export function getMyHandle(): string | null {
   return href ? href.slice(1).toLowerCase() : null;
 }
 
+export function resolveAccountSwitchFollows(
+  cache: Record<string, string[]>,
+  currentHandle: string,
+  savedHandle: string | null,
+  pendingFollows: string[],
+): string[] {
+  const cachedFollows = cache[currentHandle] ?? [];
+  const candidates = savedHandle === null
+    ? [...cachedFollows, ...pendingFollows]
+    : cachedFollows;
+  return [...new Set(candidates.map((handle) => handle.toLowerCase()))];
+}
+
 // saveFollowHandles의 모든 실행을 직렬화하는 큐 (Defect 2 수정).
 // 호출부들이 전부 fire-and-forget이라 거의 동시에 여러 번 호출될 수 있는데,
 // 기존의 비원자적 read-modify-write(await get → merge → await set)는

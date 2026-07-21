@@ -69,6 +69,15 @@ export function parseFilterListBackup(input: unknown): FilterListBackup | null {
   );
 }
 
+export function renderImportedFilterLists(
+  backup: FilterListBackup,
+  customElement: HTMLTextAreaElement,
+  protectedElement: HTMLTextAreaElement,
+): void {
+  customElement.value = backup.customFilterList;
+  protectedElement.value = backup.protectedKeywords.join('\n');
+}
+
 async function exportFilterLists(): Promise<void> {
   const [whitelist, stored] = await Promise.all([
     getWhitelist(),
@@ -92,7 +101,11 @@ function downloadBackup(backup: FilterListBackup): void {
   URL.revokeObjectURL(url);
 }
 
-async function importFilterLists(input: HTMLInputElement, customElement: HTMLTextAreaElement): Promise<void> {
+async function importFilterLists(
+  input: HTMLInputElement,
+  customElement: HTMLTextAreaElement,
+  protectedElement: HTMLTextAreaElement,
+): Promise<void> {
   const file = input.files?.[0];
   if (!file) return;
   try {
@@ -103,7 +116,7 @@ async function importFilterLists(input: HTMLInputElement, customElement: HTMLTex
       [STORAGE_KEYS.CUSTOM_FILTER_LIST]: backup.customFilterList,
       [STORAGE_KEYS.PROTECTED_KEYWORDS]: backup.protectedKeywords,
     });
-    customElement.value = backup.customFilterList;
+    renderImportedFilterLists(backup, customElement, protectedElement);
   } catch (error) {
     logger.warn('Filter list backup import rejected', { error: String(error) });
   } finally {
@@ -114,6 +127,11 @@ async function importFilterLists(input: HTMLInputElement, customElement: HTMLTex
 export function bindSettingsTransferEvents(customElement: HTMLTextAreaElement): void {
   document.getElementById('export-lists-btn')?.addEventListener('click', () => { void exportFilterLists(); });
   const fileInput = document.getElementById('import-lists-file') as HTMLInputElement | null;
+  const protectedElement = document.getElementById('protected-keywords') as HTMLTextAreaElement | null;
   document.getElementById('import-lists-btn')?.addEventListener('click', () => fileInput?.click());
-  fileInput?.addEventListener('change', () => { void importFilterLists(fileInput, customElement); });
+  if (fileInput && protectedElement) {
+    fileInput.addEventListener('change', () => {
+      void importFilterLists(fileInput, customElement, protectedElement);
+    });
+  }
 }

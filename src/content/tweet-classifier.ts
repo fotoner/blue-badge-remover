@@ -54,6 +54,7 @@ export interface QuoteClassifyResult {
 export function classifyTweet(input: ClassifyInput): ClassifyResult {
   const { handle, isFadak, inFollow, isRetweet, isWhitelisted, retweeterInFollow, retweeterIsWhitelisted, retweeterIsCurrentUser, settings, activeFilterRules, profile, tweetText, pageType } = input;
 
+  if (!settings.enabled) return { action: 'show', reason: 'disabled' };
   if (!isFadak) return { action: 'skip' };
 
   // 팔로우/화이트리스트 예외

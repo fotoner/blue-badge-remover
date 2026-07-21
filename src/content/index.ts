@@ -2,12 +2,12 @@
 // Content script 진입점. 초기화 + 모듈 연결만 담당.
 import { browser } from 'wxt/browser';
 import { FeedObserver, setTweetHiderLanguage } from '@features/content-filter';
-import { getSettings as loadSettings, addToWhitelist } from '@features/settings';
+import { getSettings as loadSettings, getWhitelist, addToWhitelist } from '@features/settings';
 import { MESSAGE_TYPES, STORAGE_KEYS, TIMINGS } from '@shared/constants';
 import { logger } from '@shared/utils/logger';
 import { showFadakProfileBanner, showFadakDetailBanner, removeFadakBanner } from './fadak-banner';
 import { listenForNavigation, setOnNavigate } from './navigation';
-import { collectFollowsFromDOM, disconnectFollowObserver, listenForFollowButtonClicks, getMyHandle } from './follow-collector';
+import { collectFollowsFromDOM, disconnectFollowObserver, listenForFollowButtonClicks, getMyHandle, resolveAccountSwitchFollows } from './follow-collector';
 import { isProfilePage, getProfileLinkHref } from './page-utils';
 import { observeSettingsShortcut } from './settings-shortcut';
 import { setSettings, setFollowSet, setWhitelistSet, setProtectedKeywords, setCurrentUserHandle, getSettings, getFollowSet, isHandleFollowed, isHandleWhitelisted, profileCache, collectorBuffer } from './state';
@@ -51,14 +51,26 @@ async function detectAndHandleAccountSwitch(): Promise<void> {
   const currentHandle = href.slice(1).toLowerCase();
   if (!currentHandle) return;
 
-  const stored = await browser.storage.local.get([STORAGE_KEYS.CURRENT_USER_ID, STORAGE_KEYS.FOLLOW_CACHE]);
-  const savedHandle = stored[STORAGE_KEYS.CURRENT_USER_ID] as string | null;
+  const stored = await browser.storage.local.get([
+    STORAGE_KEYS.CURRENT_USER_ID,
+    STORAGE_KEYS.FOLLOW_CACHE,
+    STORAGE_KEYS.FOLLOW_LIST,
+  ]);
+  const savedHandle = (stored[STORAGE_KEYS.CURRENT_USER_ID] as string | null | undefined) ?? null;
 
   if (savedHandle !== currentHandle) {
     const cache = (stored[STORAGE_KEYS.FOLLOW_CACHE] as Record<string, string[]> | undefined) ?? {};
-    const cachedFollows = cache[currentHandle] ?? [];
+    const pendingFollows = (stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? [];
+    const cachedFollows = resolveAccountSwitchFollows(
+      cache,
+      currentHandle,
+      savedHandle,
+      pendingFollows,
+    );
+    cache[currentHandle] = cachedFollows;
     await browser.storage.local.set({
       [STORAGE_KEYS.CURRENT_USER_ID]: currentHandle,
+      [STORAGE_KEYS.FOLLOW_CACHE]: cache,
       [STORAGE_KEYS.FOLLOW_LIST]: cachedFollows,
     });
     setFollowSet(new Set(cachedFollows));
@@ -127,17 +139,17 @@ function syncHoverCardObserver(settings: ReturnType<typeof getSettings>): void {
 }
 
 async function init(): Promise<void> {
-  const settings = await loadSettings();
+  const [settings, whitelist] = await Promise.all([loadSettings(), getWhitelist()]);
   setSettings(settings);
   await loadFilterRules();
 
-  const stored = await browser.storage.local.get([STORAGE_KEYS.FOLLOW_LIST, STORAGE_KEYS.WHITELIST, STORAGE_KEYS.FOLLOW_CACHE, STORAGE_KEYS.CURRENT_USER_ID, STORAGE_KEYS.PROTECTED_KEYWORDS]);
+  const stored = await browser.storage.local.get([STORAGE_KEYS.FOLLOW_LIST, STORAGE_KEYS.FOLLOW_CACHE, STORAGE_KEYS.CURRENT_USER_ID, STORAGE_KEYS.PROTECTED_KEYWORDS]);
   const currentAccount = (stored[STORAGE_KEYS.CURRENT_USER_ID] as string | null) ?? '';
   setCurrentUserHandle(currentAccount || null);
   const cache = (stored[STORAGE_KEYS.FOLLOW_CACHE] as Record<string, string[]> | undefined) ?? {};
   const cachedFollows = currentAccount ? (cache[currentAccount] ?? []) : ((stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? []);
   setFollowSet(new Set(cachedFollows));
-  setWhitelistSet(new Set(((stored[STORAGE_KEYS.WHITELIST] as string[] | undefined) ?? []).map((h) => h.toLowerCase())));
+  setWhitelistSet(new Set(whitelist));
   setProtectedKeywords((stored[STORAGE_KEYS.PROTECTED_KEYWORDS] as string[] | undefined) ?? []);
 
   setTweetHiderLanguage(settings.language);
