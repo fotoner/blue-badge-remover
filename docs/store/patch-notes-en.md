@@ -1,27 +1,30 @@
 # Blue Badge Remover v1.6.0 Patch Notes
 
-## New features
+This update improves protection for accounts that should stay visible and makes it easier to add exceptions when you need them.
 
-- Add multiple IDs at once from the whitelist page using line breaks, spaces, or commas, and collapse the saved-account list
-- Expand a hidden post, then whitelist its author or collapse it again from inside the post
-- Export and import whitelist, custom filter, and protection keywords as validated JSON
-- Add a `Protection Keywords` field to Advanced Filter Settings. Enter one keyword per line to keep paid-badge accounts visible when their ID, name, or profile bio contains that word
-- Optionally hide new high-reach accounts created within six months with at least 1,000 followers and a following-to-follower ratio of 10% or less
+## More accurate hiding
 
-## Accuracy and reliability
+- Check only the post author's blue badge, reducing cases where a regular account was hidden because of a quoted post
+- Improve exceptions for followed accounts, your own posts, reposts, quoted posts, and whitelisted accounts
+- Improve follow detection on list timelines so followed accounts remain visible there as well
+- After expanding a collapsed post, whitelist its author or collapse the post again from inside the post
 
-- Scope blue-badge detection to the author area to reduce false positives from quoted posts
-- Use information X already loads for the timeline together with on-screen state to improve follow detection, including on list timelines
-- Strengthen exceptions for reposts, quoted posts, your own posts, and whitelisted accounts
-- Normalize whitelist handles to lowercase and migrate existing data automatically
-- Run keyword filtering and the new high-reach account filter independently
-- Preserve scroll height during browser history restoration and prevent duplicate hidden-post statistics
-- Place expanded-post controls in the content column above X's native action bar
-- Reduce unnecessary observer work and storage writes
+## New filter settings
 
-## Settings and maintenance
+- Turn on **Hide new high-reach accounts** separately under `Dashboard → Filters`. It hides blue-badge accounts created within six months that have at least 1,000 followers and a following-to-follower ratio of 10% or less
+- This setting works independently from the keyword filter. When both are enabled, an account is hidden when either filter matches
+- A new **Protection Keywords** field is available under `Dashboard → Filters → Advanced Filter Settings`. Enter one keyword per line to keep accounts visible when their handle, display name, or bio contains that word
+- Protection keywords are a separate protection list, not new custom-filter syntax
 
-- Make milestone celebration banners opt-in and disabled by default
-- Split oversized options and content modules, and remove the unused API badge cache
-- Add ESLint rules for unsafe types, direct console use, and excessive file or function size
-- Verify the release with Chrome, Firefox, and Edge builds plus 502 tests
+## Whitelist and backup
+
+- Add multiple handles at once from the whitelist page, separated by line breaks, spaces, or commas
+- Collapse the saved whitelist when the list gets long
+- Export and import your whitelist, custom filters, and protection keywords in one JSON file
+- Existing whitelist entries are cleaned up automatically, while your search scope, custom filters, and other saved settings remain unchanged
+
+## Other improvements
+
+- Reduce large scroll jumps when returning to the timeline with the browser's Back button
+- Prevent the same hidden post from being counted more than once in statistics
+- Milestone celebration banners are now off by default and can be enabled in settings
