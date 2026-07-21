@@ -9,10 +9,12 @@ export function setOnFlush(cb: (totalHidden: number) => void): void { onFlushCal
 
 const FLUSH_INTERVAL_MS = 5000;
 const COUNTED_ATTR = 'data-bbr-counted';
+const MAX_COUNTED_STATUS_PATHS = 5000;
 
 // 메모리 버퍼 — flush 시 storage에 병합
 let buffer: DailyStats = emptyBuffer();
 let flushTimerId: ReturnType<typeof setInterval> | null = null;
+const countedStatusPaths = new Set<string>();
 
 function localDateStr(): string {
   const d = new Date();
@@ -26,9 +28,19 @@ function emptyBuffer(): DailyStats {
   return { date: localDateStr(), totalHidden: 0, totalShown: 0, byCategory: {}, byPack: {} };
 }
 
-/** 트윗 숨김 시 호출. tweetEl로 중복 방지. */
-export function recordHide(tweetEl: HTMLElement, category?: string, packId?: string): void {
-  if (tweetEl.hasAttribute(COUNTED_ATTR)) return;
+/** 트윗 숨김 시 호출. statusPath 우선, 없으면 DOM 속성으로 중복 방지. */
+export function recordHide(
+  tweetEl: HTMLElement,
+  category?: string,
+  packId?: string,
+  statusPath?: string | null,
+): void {
+  if (statusPath) {
+    if (countedStatusPaths.has(statusPath)) return;
+    rememberStatusPath(statusPath);
+  } else if (tweetEl.hasAttribute(COUNTED_ATTR)) {
+    return;
+  }
   tweetEl.setAttribute(COUNTED_ATTR, '1');
 
   buffer.totalHidden++;
@@ -38,6 +50,14 @@ export function recordHide(tweetEl: HTMLElement, category?: string, packId?: str
   if (packId) {
     buffer.byPack[packId] = (buffer.byPack[packId] ?? 0) + 1;
   }
+}
+
+function rememberStatusPath(statusPath: string): void {
+  if (countedStatusPaths.size >= MAX_COUNTED_STATUS_PATHS) {
+    const oldest = countedStatusPaths.values().next().value;
+    if (oldest !== undefined) countedStatusPaths.delete(oldest);
+  }
+  countedStatusPaths.add(statusPath);
 }
 
 /** 트윗 표시(예외 처리) 시 호출 */

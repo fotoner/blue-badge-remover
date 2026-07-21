@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=1280">
@@ -151,6 +151,14 @@
     height: 16px;
     fill: #8899a6;
   }
+  .exclude-button {
+    margin-left: auto;
+    border: 1px solid #8899a6;
+    border-radius: 12px;
+    padding: 4px 9px;
+    font-size: 11px;
+    color: #d9d9d9;
+  }
 
   /* ── Slide 3: Features Grid ── */
   .slide-features {
@@ -242,8 +250,8 @@
   <div class="icon">
     <svg viewBox="0 0 24 24"><path d="M12 2L2 7v6c0 5.55 4.16 10.74 10 12 5.84-1.26 10-6.45 10-12V7L12 2zm0 2.18l6 2.73v4.09c0 4.13-2.94 7.98-6 9.23-3.06-1.25-6-5.1-6-9.23V6.91l6-2.73z"/><line x1="8" y1="8" x2="16" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/><line x1="16" y1="8" x2="8" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
   </div>
-  <h1>타임라인에서<br><span>파딱</span>을 지우다</h1>
-  <p>돈 내고 산 파란 뱃지 계정의 트윗을 자동으로 숨기고,<br>내가 팔로우하는 사람들의 트윗만 깨끗하게</p>
+  <h1>Clear paid badges<br>from your <span>timeline</span></h1>
+  <p>Hide paid blue badge posts automatically while keeping<br>accounts you follow and trust visible.</p>
 </div>
 
 <!-- Slide 2: Before/After -->
@@ -254,54 +262,54 @@
     <div class="tweet-mock tweet-follow">
       <div class="tweet-avatar" style="background:#5c6bc0"></div>
       <div class="tweet-body">
-        <div class="tweet-name">팔로우하는 친구</div>
+        <div class="tweet-name">A friend you follow</div>
         <div class="tweet-handle">@my_friend</div>
-        <div class="tweet-text">오늘 날씨 진짜 좋다 🌸</div>
+        <div class="tweet-text">The weather is perfect today 🌸</div>
       </div>
     </div>
 
     <div class="tweet-mock tweet-fadak">
       <div class="tweet-avatar" style="background:#e57373"></div>
       <div class="tweet-body">
-        <div class="tweet-name">광고봇123 <span class="badge-blue"></span></div>
+        <div class="tweet-name">Promo Bot 123 <span class="badge-blue"></span></div>
         <div class="tweet-handle">@ad_bot_123</div>
-        <div class="tweet-text">💰 하루 10분으로 월 500만원! 지금 바로 시작하세요 ▶▶▶</div>
+        <div class="tweet-text">💰 Make thousands in ten minutes a day! Start now ▶▶▶</div>
       </div>
     </div>
 
     <div class="tweet-mock tweet-fadak">
       <div class="tweet-avatar" style="background:#ff8a65"></div>
       <div class="tweet-body">
-        <div class="tweet-name">정치논객 <span class="badge-blue"></span></div>
+        <div class="tweet-name">Rage Commentator <span class="badge-blue"></span></div>
         <div class="tweet-handle">@politics_guy</div>
-        <div class="tweet-text">이게 나라냐? 이 정부는 당장 사퇴해야...</div>
+        <div class="tweet-text">Outrage of the day: everyone must resign right now...</div>
       </div>
     </div>
 
     <div class="tweet-mock tweet-follow">
       <div class="tweet-avatar" style="background:#4db6ac"></div>
       <div class="tweet-body">
-        <div class="tweet-name">일러스트 작가</div>
+        <div class="tweet-name">Illustrator</div>
         <div class="tweet-handle">@artist_momo</div>
-        <div class="tweet-text">새 그림 올렸어요~ 이번엔 봄 테마 🎨</div>
+        <div class="tweet-text">New spring-themed artwork is up 🎨</div>
       </div>
     </div>
 
     <div class="tweet-mock tweet-fadak">
       <div class="tweet-avatar" style="background:#ba68c8"></div>
       <div class="tweet-body">
-        <div class="tweet-name">코인마스터 <span class="badge-blue"></span></div>
+        <div class="tweet-name">Crypto Master <span class="badge-blue"></span></div>
         <div class="tweet-handle">@crypto_master</div>
-        <div class="tweet-text">비트코인 지금 안 사면 후회합니다!!! 📈🚀</div>
+        <div class="tweet-text">Buy this coin now or regret it forever!!! 📈🚀</div>
       </div>
     </div>
 
     <div class="tweet-mock tweet-fadak">
       <div class="tweet-avatar" style="background:#a1887f"></div>
       <div class="tweet-body">
-        <div class="tweet-name">스팸어카운트 <span class="badge-blue"></span></div>
+        <div class="tweet-name">Follow Spam <span class="badge-blue"></span></div>
         <div class="tweet-handle">@spam_acc_99</div>
-        <div class="tweet-text">팔로우하면 맞팔 100% 보장! DM 주세요</div>
+        <div class="tweet-text">Guaranteed follow-back! Send me a DM.</div>
       </div>
     </div>
   </div>
@@ -312,76 +320,77 @@
     <div class="tweet-mock tweet-follow">
       <div class="tweet-avatar" style="background:#5c6bc0"></div>
       <div class="tweet-body">
-        <div class="tweet-name">팔로우하는 친구</div>
+        <div class="tweet-name">A friend you follow</div>
         <div class="tweet-handle">@my_friend</div>
-        <div class="tweet-text">오늘 날씨 진짜 좋다 🌸</div>
+        <div class="tweet-text">The weather is perfect today 🌸</div>
       </div>
     </div>
 
     <div class="hidden-placeholder">
       <svg class="shield-icon" viewBox="0 0 16 16"><path d="M8 1L2 3.5v4c0 3.5 2.6 6.4 6 7.5 3.4-1.1 6-4 6-7.5v-4L8 1zm0 2.2l4 1.7v2.6c0 2.6-1.9 4.8-4 5.7-2.1-.9-4-3.1-4-5.7V4.9l4-1.7z"/></svg>
-      파딱 @ad_bot_123의 트윗이 숨겨졌습니다
+      Paid badge @ad_bot_123 hidden
+      <span class="exclude-button">Never hide</span>
     </div>
 
     <div class="hidden-placeholder">
       <svg class="shield-icon" viewBox="0 0 16 16"><path d="M8 1L2 3.5v4c0 3.5 2.6 6.4 6 7.5 3.4-1.1 6-4 6-7.5v-4L8 1zm0 2.2l4 1.7v2.6c0 2.6-1.9 4.8-4 5.7-2.1-.9-4-3.1-4-5.7V4.9l4-1.7z"/></svg>
-      파딱 @politics_guy의 트윗이 숨겨졌습니다
+      Paid badge @politics_guy hidden
     </div>
 
     <div class="tweet-mock tweet-follow">
       <div class="tweet-avatar" style="background:#4db6ac"></div>
       <div class="tweet-body">
-        <div class="tweet-name">일러스트 작가</div>
+        <div class="tweet-name">Illustrator</div>
         <div class="tweet-handle">@artist_momo</div>
-        <div class="tweet-text">새 그림 올렸어요~ 이번엔 봄 테마 🎨</div>
+        <div class="tweet-text">New spring-themed artwork is up 🎨</div>
       </div>
     </div>
 
     <div class="hidden-placeholder">
       <svg class="shield-icon" viewBox="0 0 16 16"><path d="M8 1L2 3.5v4c0 3.5 2.6 6.4 6 7.5 3.4-1.1 6-4 6-7.5v-4L8 1zm0 2.2l4 1.7v2.6c0 2.6-1.9 4.8-4 5.7-2.1-.9-4-3.1-4-5.7V4.9l4-1.7z"/></svg>
-      파딱 @crypto_master의 트윗이 숨겨졌습니다
+      Paid badge @crypto_master hidden
     </div>
 
     <div class="hidden-placeholder">
       <svg class="shield-icon" viewBox="0 0 16 16"><path d="M8 1L2 3.5v4c0 3.5 2.6 6.4 6 7.5 3.4-1.1 6-4 6-7.5v-4L8 1zm0 2.2l4 1.7v2.6c0 2.6-1.9 4.8-4 5.7-2.1-.9-4-3.1-4-5.7V4.9l4-1.7z"/></svg>
-      파딱 @spam_acc_99의 트윗이 숨겨졌습니다
+      Paid badge @spam_acc_99 hidden
     </div>
   </div>
 </div>
 
 <!-- Slide 3: Features -->
 <div class="slide slide-features" id="slide-3">
-  <h2>주요 기능</h2>
+  <h2>Filter less noise. Keep what matters.</h2>
   <div class="features-grid">
     <div class="feature-card">
       <div class="feature-icon">🛡️</div>
-      <div class="feature-title">자동 파딱 감지</div>
-      <div class="feature-desc">X API + SVG 뱃지 분석으로 파란 뱃지(Premium) 계정을 정확하게 식별</div>
+      <div class="feature-title">Accurate badge detection</div>
+      <div class="feature-desc">Identifies paid blue badges from the author area while preserving gold and gray verification.</div>
     </div>
     <div class="feature-card">
       <div class="feature-icon">👥</div>
-      <div class="feature-title">팔로우 예외</div>
-      <div class="feature-desc">내가 팔로우하는 계정은 파딱이어도 숨기지 않음. 자동 동기화</div>
+      <div class="feature-title">Follow exceptions</div>
+      <div class="feature-desc">Accounts you follow remain visible, with automatic and full-list sync options.</div>
     </div>
     <div class="feature-card">
       <div class="feature-icon">🏢</div>
-      <div class="feature-title">기관 인증 보호</div>
-      <div class="feature-desc">골드(기업)/그레이(정부) 뱃지는 숨기지 않음. 파란 뱃지만 필터링</div>
+      <div class="feature-title">Trusted account protection</div>
+      <div class="feature-desc">Bulk whitelist, expanded-post exclusions, and profile-based protection keywords.</div>
     </div>
     <div class="feature-card">
       <div class="feature-icon">📊</div>
-      <div class="feature-title">통계 대시보드</div>
-      <div class="feature-desc">숨긴 트윗 수, 카테고리별 통계, X에 공유하기</div>
+      <div class="feature-title">Local statistics</div>
+      <div class="feature-desc">See hidden post counts and filter categories without sending analytics anywhere.</div>
     </div>
     <div class="feature-card">
       <div class="feature-icon">🔧</div>
-      <div class="feature-title">세밀한 설정</div>
-      <div class="feature-desc">타임라인/답글/검색/북마크별 토글, 리트윗/인용 개별 설정</div>
+      <div class="feature-title">Selective filtering</div>
+      <div class="feature-desc">Choose scopes, keywords, new high-reach heuristics, retweets, and quote behavior.</div>
     </div>
     <div class="feature-card">
       <div class="feature-icon">🌏</div>
-      <div class="feature-title">다국어 지원</div>
-      <div class="feature-desc">한국어, English, 日本語 완벽 지원</div>
+      <div class="feature-title">Multi-browser and mobile</div>
+      <div class="feature-desc">Chrome, Edge, desktop Firefox, and Firefox for Android.</div>
     </div>
   </div>
 </div>
@@ -389,13 +398,13 @@
 <!-- Slide 4: Privacy -->
 <div class="slide slide-privacy" id="slide-4">
   <div class="privacy-badge">🔒</div>
-  <h2>완전한 프라이버시</h2>
+  <h2>Private by design</h2>
   <div class="privacy-list">
-    <div class="privacy-item"><span class="check">✓</span> 모든 처리는 브라우저 내부에서만</div>
-    <div class="privacy-item"><span class="check">✓</span> 외부 서버 통신 없음</div>
-    <div class="privacy-item"><span class="check">✓</span> 개인정보 수집 없음</div>
-    <div class="privacy-item"><span class="check">✓</span> 인증 토큰 저장 안 함</div>
-    <div class="privacy-item"><span class="check">✓</span> 오픈소스 (MIT 라이선스)</div>
+    <div class="privacy-item"><span class="check">✓</span> All processing stays in your browser</div>
+    <div class="privacy-item"><span class="check">✓</span> No external server or analytics</div>
+    <div class="privacy-item"><span class="check">✓</span> No data sent to us or third parties</div>
+    <div class="privacy-item"><span class="check">✓</span> No authentication token storage</div>
+    <div class="privacy-item"><span class="check">✓</span> Open source under the MIT License</div>
   </div>
 </div>
 

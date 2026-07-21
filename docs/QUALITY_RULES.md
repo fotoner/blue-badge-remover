@@ -21,6 +21,7 @@
    <!-- 스택별 힌트: TypeScript → Zod, Python → Pydantic, Go → validator 등 -->
 3. **파일 크기 제한**: 파일당 최대 300줄 (초과 시 분할)
 4. **함수 크기 제한**: 함수당 최대 50줄
+5. **데이터 테이블 예외**: `src/shared/i18n.ts`는 번역 데이터 테이블이므로 파일 300줄 제한에서 제외하되, 함수 제한과 리뷰는 동일하게 적용
 
 ## 코딩 규칙
 
@@ -28,6 +29,7 @@
    <!-- 스택별 힌트: TypeScript → `any` 금지, Python → type hints 필수, Go → `interface{}` 최소화 -->
 2. **디버그 출력 금지**: 구조화된 로거만 사용. stdout/stderr 직접 출력 금지
    <!-- 스택별 힌트: TypeScript → console.log 금지, Python → print() 금지 -->
+   - 예외: `src/injected/**`는 MAIN world 번들이어서 shared logger를 import하지 않는다. `debugMode`로 게이트된 진단용 `console`만 허용한다.
 3. **매직 넘버 금지**: 상수로 추출하여 이름 부여
 4. **모듈 시스템**: 프로젝트에서 채택한 모듈 시스템의 규칙을 따른다
    <!-- 스택별 힌트: TypeScript ESM → .js 확장자, Python → __init__.py, Go → go.mod -->

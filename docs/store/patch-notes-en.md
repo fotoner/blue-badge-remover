@@ -1,42 +1,30 @@
-# Blue Badge Remover v1.4.0 Patch Notes
+# Blue Badge Remover v1.6.0 Patch Notes
 
-## New Features
+This update improves protection for accounts that should stay visible and makes it easier to add exceptions when you need them.
 
-- Unified dashboard: view hide stats, settings, and filter management in one place
-- Real-time tracking of hidden paid-badge tweets
-- Celebration banner at 100/500/1K/5K/10K milestones
-- Built-in filter packs by topic (politics, crypto/finance, aggro)
-- Hidden tweets now show why they were hidden (category tag)
-- Tweet detail pages show a red warning banner instead of hiding
-- Add accounts to whitelist directly from the banner
-- Expanded tweets stay visible even after scrolling away
-- List page filtering added (toggleable in settings)
+## More accurate hiding
 
-## Improvements
+- Check only the post author's blue badge, reducing cases where a regular account was hidden because of a quoted post
+- Improve exceptions for followed accounts, your own posts, reposts, quoted posts, and whitelisted accounts
+- Improve follow detection on list timelines so followed accounts remain visible there as well
+- After expanding a collapsed post, whitelist its author or collapse the post again from inside the post
 
-- Popup simplified to toggle + mini stats + settings link
-- Consistent design system applied across popup, dashboard, and options
-- Hide stats now use local timezone for accurate daily counts
-- Filter pack changes in options page apply instantly to open tabs
-- Excessive wildcards in filter rules are handled safely
+## New filter settings
 
-## Bug Fixes
+- Turn on **Hide new high-reach accounts** separately under `Dashboard → Filters`. It hides blue-badge accounts created within six months that have at least 1,000 followers and a following-to-follower ratio of 10% or less
+- This setting works independently from the keyword filter. When both are enabled, an account is hidden when either filter matches
+- A new **Protection Keywords** field is available under `Dashboard → Filters → Advanced Filter Settings`. Enter one keyword per line to keep accounts visible when their handle, display name, or bio contains that word
+- Protection keywords are a separate protection list, not new custom-filter syntax
 
-- Fixed gold badge (business) accounts being incorrectly hidden
-- Reduced flicker when scrolling through paid-badge tweets
-- Fixed followed accounts' self-quotes being hidden
-- Fixed hidden tweets not restoring after settings changes
-- Fixed wrong author detection on reply detail pages with quotes
-- Removed unnecessary DOM operations on non-hidden tweets
+## Whitelist and backup
 
-## Security
+- Add multiple handles at once from the whitelist page, separated by line breaks, spaces, or commas
+- Collapse the saved whitelist when the list gets long
+- Export and import your whitelist, custom filters, and protection keywords in one JSON file
+- Existing whitelist entries are cleaned up automatically, while your search scope, custom filters, and other saved settings remain unchanged
 
-- Blocked data leak path to external iframes (postMessage hardening)
-- Minimized extension permission scope
-- Removed HTML injection vulnerability
+## Other improvements
 
-## Infrastructure
-
-- Migrated to WXT framework: Chrome, Firefox, and Edge support
-- 340 tests for stability verification
-- Automated build and deploy via GitHub Actions CI/CD
+- Reduce large scroll jumps when returning to the timeline with the browser's Back button
+- Prevent the same hidden post from being counted more than once in statistics
+- Milestone celebration banners are now off by default and can be enabled in settings

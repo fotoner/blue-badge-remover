@@ -3,6 +3,7 @@ import { browser } from 'wxt/browser';
 import { logger } from '@shared/utils/logger';
 import { MESSAGE_TYPES } from '@shared/constants';
 import { cleanupOldStats } from '@features/stats';
+import { handleWhitelistRequest } from '@features/settings/whitelist-storage';
 
 const UPDATE_NOTI_FLAG = 'bbr-update-available';
 
@@ -26,7 +27,9 @@ export default defineBackground(() => {
 
   // content script → 설정 페이지 열기 요청 처리
   browser.runtime.onMessage.addListener((message, sender) => {
-    if ((message as Record<string, unknown>).type !== MESSAGE_TYPES.OPEN_SETTINGS) return;
+    const type = (message as Record<string, unknown>).type;
+    if (type === MESSAGE_TYPES.WHITELIST) return handleWhitelistRequest(message);
+    if (type !== MESSAGE_TYPES.OPEN_SETTINGS) return;
     const settingsUrl = browser.runtime.getURL('/popup.html');
     if (isFirefoxAndroid && sender.tab?.id != null) {
       void browser.tabs.update(sender.tab.id, { url: settingsUrl });

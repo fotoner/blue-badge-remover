@@ -3,7 +3,6 @@ import { browser } from 'wxt/browser';
 import { STORAGE_KEYS, TIMINGS } from '@shared/constants';
 import type { Settings } from '@shared/types';
 import { logger } from '@shared/utils/logger';
-import { t } from '@shared/i18n';
 import { getProfileLinkHref } from './page-utils';
 
 export interface FollowCollectorDeps {
@@ -15,6 +14,9 @@ export interface FollowCollectorDeps {
 }
 
 let followObserver: MutationObserver | null = null;
+let followRetryTimerId: ReturnType<typeof setTimeout> | null = null;
+let followExtractTimerId: ReturnType<typeof setTimeout> | null = null;
+let followDebounceTimerId: ReturnType<typeof setTimeout> | null = null;
 const SYNC_BANNER_ID = 'bbr-follow-sync-banner';
 
 export function getMyHandle(): string | null {
@@ -22,16 +24,53 @@ export function getMyHandle(): string | null {
   return href ? href.slice(1).toLowerCase() : null;
 }
 
-export async function saveFollowHandles(
+export function resolveAccountSwitchFollows(
+  cache: Record<string, string[]>,
+  currentHandle: string,
+  savedHandle: string | null,
+  pendingFollows: string[],
+): string[] {
+  const cachedFollows = cache[currentHandle] ?? [];
+  const candidates = savedHandle === null
+    ? [...cachedFollows, ...pendingFollows]
+    : cachedFollows;
+  return [...new Set(candidates.map((handle) => handle.toLowerCase()))];
+}
+
+// saveFollowHandles의 모든 실행을 직렬화하는 큐 (Defect 2 수정).
+// 호출부들이 전부 fire-and-forget이라 거의 동시에 여러 번 호출될 수 있는데,
+// 기존의 비원자적 read-modify-write(await get → merge → await set)는
+// 두 호출이 같은 스냅샷을 읽고 나중 쓰기가 먼저 쓰기를 덮어써 핸들을 잃어버렸다.
+// 이 큐는 각 저장 작업을 이전 작업이 끝난 뒤에만 시작하도록 강제한다.
+let saveQueue: Promise<void> = Promise.resolve();
+
+export function saveFollowHandles(
   handles: string[],
   deps: FollowCollectorDeps,
+  expectedAccount?: string,
 ): Promise<void> {
-  if (!handles.length) return;
+  if (!handles.length) return Promise.resolve();
+  const run = saveQueue.then(() => doSaveFollowHandles(handles, deps, expectedAccount));
+  // 이 작업이 실패해도 큐 자체는 오염되지 않도록 별도로 캐치 — 다음 호출은 계속 진행되어야 한다.
+  saveQueue = run.catch(() => {});
+  return run;
+}
+
+async function doSaveFollowHandles(
+  handles: string[],
+  deps: FollowCollectorDeps,
+  expectedAccount?: string,
+): Promise<void> {
   const stored = await browser.storage.local.get([STORAGE_KEYS.FOLLOW_CACHE, STORAGE_KEYS.CURRENT_USER_ID]);
   const currentAccount = (stored[STORAGE_KEYS.CURRENT_USER_ID] as string | null) ?? '';
+  if (expectedAccount && currentAccount !== expectedAccount) return;
   const cache = (stored[STORAGE_KEYS.FOLLOW_CACHE] as Record<string, string[]> | undefined) ?? {};
   const existing = currentAccount ? (cache[currentAccount] ?? []) : [];
-  const merged = [...new Set([...existing, ...handles])];
+  const normalizedHandles = handles.map((handle) => handle.toLowerCase());
+  const existingSet = new Set(existing.map((handle) => handle.toLowerCase()));
+  const newHandles = normalizedHandles.filter((handle) => !existingSet.has(handle));
+  if (newHandles.length === 0) return;
+  const merged = [...existing, ...new Set(newHandles)];
   if (currentAccount) {
     cache[currentAccount] = merged;
   }
@@ -45,7 +84,7 @@ export async function saveFollowHandles(
   if (settings.debugMode) logger.info('Follow handles saved', { account: currentAccount, newCount: handles.length, totalCount: merged.length });
 }
 
-export async function removeFollowHandle(
+async function removeFollowHandle(
   handle: string,
   deps: FollowCollectorDeps,
 ): Promise<void> {
@@ -80,12 +119,19 @@ function extractHandlesFromDOM(): string[] {
 }
 
 export function collectFollowsFromDOM(deps: FollowCollectorDeps): void {
-  if (!window.location.pathname.includes('/following')) return;
+  if (!window.location.pathname.includes('/following')) {
+    disconnectFollowObserver();
+    return;
+  }
 
   // myHandle이 아직 없으면 재시도
   const myHandle = getMyHandle();
   if (!myHandle) {
-    setTimeout(() => collectFollowsFromDOMInner(deps), TIMINGS.FOLLOW_COLLECT_RETRY);
+    if (followRetryTimerId !== null) clearTimeout(followRetryTimerId);
+    followRetryTimerId = setTimeout(() => {
+      followRetryTimerId = null;
+      collectFollowsFromDOMInner(deps);
+    }, TIMINGS.FOLLOW_COLLECT_RETRY);
     return;
   }
 
@@ -101,44 +147,26 @@ function collectFollowsFromDOMInner(deps: FollowCollectorDeps): void {
   disconnectFollowObserver();
 
   followObserver = new MutationObserver(() => {
-    const handles = extractHandlesFromDOM();
-    if (handles.length > 0) {
-      void saveFollowHandles(handles, deps);
-    }
+    if (followDebounceTimerId !== null) clearTimeout(followDebounceTimerId);
+    followDebounceTimerId = setTimeout(() => {
+      followDebounceTimerId = null;
+      collectNewFollowHandles(deps);
+    }, TIMINGS.FOLLOW_OBSERVER_DEBOUNCE);
   });
 
   followObserver.observe(document.body, { childList: true, subtree: true });
 
   // Initial collection
-  setTimeout(() => {
-    const handles = extractHandlesFromDOM();
-    if (handles.length > 0) {
-      void saveFollowHandles(handles, deps);
-    }
+  followExtractTimerId = setTimeout(() => {
+    followExtractTimerId = null;
+    collectNewFollowHandles(deps);
   }, TIMINGS.FOLLOW_EXTRACT_DELAY);
 }
 
-function showSyncBanner(deps: FollowCollectorDeps): void {
-  if (document.getElementById(SYNC_BANNER_ID)) return;
-  const lang = deps.getCurrentSettings().language;
-
-  const banner = document.createElement('div');
-  banner.id = SYNC_BANNER_ID;
-  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10000;background:#1d9bf0;color:white;text-align:center;padding:10px 16px;font-size:14px;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;';
-  banner.textContent = t('followSyncBanner', lang);
-
-  const dismiss = document.createElement('button');
-  dismiss.textContent = '\u2715';
-  dismiss.style.cssText = 'background:none;border:none;color:white;font-size:18px;cursor:pointer;padding:0 4px;margin-left:8px;opacity:0.7;';
-  dismiss.addEventListener('click', () => banner.remove());
-  banner.appendChild(dismiss);
-
-  document.body.appendChild(banner);
-
-  // 페이지 이탈 시 자동 제거
-  setTimeout(() => {
-    document.getElementById(SYNC_BANNER_ID)?.remove();
-  }, TIMINGS.SYNC_BANNER_DISMISS);
+function collectNewFollowHandles(deps: FollowCollectorDeps): void {
+  const knownHandles = deps.getFollowSet?.() ?? new Set<string>();
+  const handles = extractHandlesFromDOM().filter((handle) => !knownHandles.has(handle));
+  if (handles.length > 0) void saveFollowHandles(handles, deps);
 }
 
 export function disconnectFollowObserver(): void {
@@ -146,6 +174,12 @@ export function disconnectFollowObserver(): void {
     followObserver.disconnect();
     followObserver = null;
   }
+  if (followRetryTimerId !== null) clearTimeout(followRetryTimerId);
+  if (followExtractTimerId !== null) clearTimeout(followExtractTimerId);
+  if (followDebounceTimerId !== null) clearTimeout(followDebounceTimerId);
+  followRetryTimerId = null;
+  followExtractTimerId = null;
+  followDebounceTimerId = null;
   document.getElementById(SYNC_BANNER_ID)?.remove();
 }
 

@@ -56,7 +56,7 @@ h2 {
   gap: 8px;
 }
 
-input[type="text"] {
+textarea {
   flex: 1;
   background: #273340;
   border: 1px solid #38444d;
@@ -67,14 +67,24 @@ input[type="text"] {
   font-family: inherit;
   outline: none;
   transition: border-color 0.15s;
+  resize: vertical;
 }
 
-input[type="text"]:focus {
+textarea:focus {
   border-color: #1d9bf0;
 }
 
-input[type="text"]::placeholder {
+textarea::placeholder {
   color: #536471;
+}
+
+.whitelist-list summary {
+  cursor: pointer;
+  list-style-position: outside;
+}
+
+.whitelist-list summary h2 {
+  display: inline-block;
 }
 
 .btn-primary {

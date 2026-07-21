@@ -109,6 +109,41 @@ describe('recordHide', () => {
       }),
     );
   });
+
+  it('같은 statusPath의 재활용 DOM 노드는 세션에서 한 번만 센다', async () => {
+    recordHide(makeElement(), 'spam', undefined, '/alice/status/123');
+    recordHide(makeElement(), 'spam', undefined, '/alice/status/123');
+
+    await flushStats();
+
+    expect(mockSaveDayStats).toHaveBeenCalledWith(
+      expect.objectContaining({ totalHidden: 1 }),
+    );
+  });
+
+  it('서로 다른 statusPath는 각각 센다', async () => {
+    recordHide(makeElement(), undefined, undefined, '/alice/status/201');
+    recordHide(makeElement(), undefined, undefined, '/alice/status/202');
+
+    await flushStats();
+
+    expect(mockSaveDayStats).toHaveBeenCalledWith(
+      expect.objectContaining({ totalHidden: 2 }),
+    );
+  });
+
+  it('statusPath 세션 Set은 5000개를 넘으면 가장 오래된 항목을 제거한다', async () => {
+    for (let i = 0; i < 5001; i++) {
+      recordHide(makeElement(), undefined, undefined, `/user/status/cap-${i}`);
+    }
+    recordHide(makeElement(), undefined, undefined, '/user/status/cap-0');
+
+    await flushStats();
+
+    expect(mockSaveDayStats).toHaveBeenCalledWith(
+      expect.objectContaining({ totalHidden: 5002 }),
+    );
+  });
 });
 
 describe('flushStats', () => {

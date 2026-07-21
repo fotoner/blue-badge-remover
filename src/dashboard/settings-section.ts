@@ -14,6 +14,8 @@ export function renderSettingsToDOM(settings: Settings): void {
   setChecked('keywordFilterEnabled', settings.keywordFilterEnabled);
   setChecked('keywordCollectorEnabled', settings.keywordCollectorEnabled);
   setChecked('defaultFilterEnabled', settings.defaultFilterEnabled);
+  setChecked('milestoneBannerEnabled', settings.milestoneBannerEnabled);
+  setChecked('aggressorFilterEnabled', settings.aggressorFilterEnabled);
 
   const langSelect = document.getElementById('language') as HTMLSelectElement;
   langSelect.value = settings.language;

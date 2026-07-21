@@ -13,8 +13,14 @@ const VERIFIED_BADGE_SELECTOR = '[data-testid="icon-verified"]';
  */
 export function detectBadgeSvg(tweetElement: Element): boolean {
   const badge = tweetElement.querySelector(VERIFIED_BADGE_SELECTOR);
-  if (!badge) return false;
+  return badge !== null && isBlueBadgeElement(badge);
+}
 
+/**
+ * [data-testid="icon-verified"] 요소를 직접 받아 파딱 여부 판정.
+ * 호출자가 이미 뱃지를 스코프/탐색해 둔 경우 사용 (예: 작성자 영역 한정 판정).
+ */
+export function isBlueBadgeElement(badge: Element): boolean {
   const svg = badge.closest('svg') ?? badge;
 
   // 금딱/회딱: linearGradient 있으면 즉시 false

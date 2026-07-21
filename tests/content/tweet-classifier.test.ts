@@ -14,6 +14,8 @@ const defaultSettings: Settings = {
   keywordFilterEnabled: false,
   keywordCollectorEnabled: false,
   defaultFilterEnabled: true,
+  milestoneBannerEnabled: false,
+  aggressorFilterEnabled: false,
 };
 
 function makeInput(overrides: Partial<ClassifyInput> = {}): ClassifyInput {
@@ -24,8 +26,13 @@ function makeInput(overrides: Partial<ClassifyInput> = {}): ClassifyInput {
     inFollow: false,
     isRetweet: false,
     isWhitelisted: false,
+    retweeterHandle: null,
+    retweeterInFollow: false,
+    retweeterIsWhitelisted: false,
+    retweeterIsCurrentUser: false,
     settings: defaultSettings,
     activeFilterRules: [],
+    protectedKeywords: [],
     profile: { handle: 'fadak_user', displayName: '파딱유저', bio: '' },
     tweetText: '일반 트윗',
     pageType: 'timeline',
@@ -34,6 +41,15 @@ function makeInput(overrides: Partial<ClassifyInput> = {}): ClassifyInput {
 }
 
 describe('classifyTweet', () => {
+  it('확장 프로그램이 꺼져 있으면 파딱 리트윗도 표시한다', () => {
+    const result = classifyTweet(makeInput({
+      isRetweet: true,
+      settings: { ...defaultSettings, enabled: false },
+    }));
+    expect(result.action).toBe('show');
+    expect(result.reason).toBe('disabled');
+  });
+
   it('비파딱은 skip', () => {
     const result = classifyTweet(makeInput({ isFadak: false }));
     expect(result.action).toBe('skip');
@@ -49,6 +65,14 @@ describe('classifyTweet', () => {
     const result = classifyTweet(makeInput({ isWhitelisted: true }));
     expect(result.action).toBe('show');
     expect(result.reason).toBe('whitelist');
+  });
+
+  it('보호 키워드가 프로필에 매칭되면 전체 파딱 숨김보다 우선한다', () => {
+    const result = classifyTweet(makeInput({
+      protectedKeywords: ['파딱유저'],
+    }));
+    expect(result.action).toBe('show');
+    expect(result.reason).toBe('protected-keyword');
   });
 
   it('파딱 + 팔로우 안 함 = hide', () => {
@@ -80,6 +104,42 @@ describe('classifyTweet', () => {
     expect(result.category).toBe('코인');
   });
 
+  it('신규 고확산 필터만 켜도 조건에 맞는 계정을 숨긴다', () => {
+    const result = classifyTweet(makeInput({
+      settings: { ...defaultSettings, aggressorFilterEnabled: true },
+      profile: {
+        handle: 'new_user', displayName: 'New', bio: '',
+        createdAt: new Date().toISOString(), followersCount: 2_000, followingCount: 100,
+      },
+    }));
+    expect(result.action).toBe('hide');
+    expect(result.reason).toBe('aggressor-profile');
+  });
+
+  it('신규 고확산 필터만 켰을 때 조건에 맞지 않는 계정은 표시한다', () => {
+    const result = classifyTweet(makeInput({
+      settings: { ...defaultSettings, aggressorFilterEnabled: true },
+      profile: {
+        handle: 'established_user', displayName: 'Established', bio: '',
+        createdAt: '2020-01-01T00:00:00.000Z', followersCount: 2_000, followingCount: 100,
+      },
+    }));
+    expect(result.action).toBe('show');
+    expect(result.reason).toBe('aggressor-not-matched');
+  });
+
+  it('두 선별 필터를 켜면 키워드 불일치여도 신규 고확산 조건으로 숨긴다', () => {
+    const result = classifyTweet(makeInput({
+      settings: { ...defaultSettings, keywordFilterEnabled: true, aggressorFilterEnabled: true },
+      profile: {
+        handle: 'new_user', displayName: 'New', bio: '',
+        createdAt: new Date().toISOString(), followersCount: 2_000, followingCount: 100,
+      },
+    }));
+    expect(result.action).toBe('hide');
+    expect(result.reason).toBe('aggressor-profile');
+  });
+
   it('리트윗 + 파딱 = hide', () => {
     const result = classifyTweet(makeInput({ isRetweet: true }));
     expect(result.action).toBe('hide');
@@ -93,6 +153,72 @@ describe('classifyTweet', () => {
     }));
     expect(result.action).toBe('show');
   });
+
+  // --- A6: 리트위터 팔로우/화이트리스트 예외 ---
+
+  it('리트윗 + 리트위터 팔로우 = show (retweeter-follow)', () => {
+    const result = classifyTweet(makeInput({
+      isRetweet: true,
+      retweeterHandle: 'rt_user',
+      retweeterInFollow: true,
+    }));
+    expect(result.action).toBe('show');
+    expect(result.reason).toBe('retweeter-follow');
+  });
+
+  it('리트윗 + 리트위터 화이트리스트 = show (retweeter-whitelist)', () => {
+    const result = classifyTweet(makeInput({
+      isRetweet: true,
+      retweeterHandle: 'rt_user',
+      retweeterIsWhitelisted: true,
+    }));
+    expect(result.action).toBe('show');
+    expect(result.reason).toBe('retweeter-whitelist');
+  });
+
+  it('리트윗 + 리트위터 비예외 = hide (regression)', () => {
+    const result = classifyTweet(makeInput({
+      isRetweet: true,
+      retweeterHandle: 'rt_user',
+    }));
+    expect(result.action).toBe('hide');
+    expect(result.reason).toBe('retweet');
+  });
+
+  it('리트위터 팔로우는 키워드 필터 ON + 매칭 룰이 있어도 show', () => {
+    const result = classifyTweet(makeInput({
+      isRetweet: true,
+      retweeterHandle: 'rt_user',
+      retweeterInFollow: true,
+      settings: { ...defaultSettings, keywordFilterEnabled: true },
+      activeFilterRules: [{ type: 'keyword', value: '비트코인' }],
+      profile: { handle: 'fadak_user', displayName: '파딱유저', bio: '비트코인 전문가' },
+      tweetText: '',
+    }));
+    expect(result.action).toBe('show');
+    expect(result.reason).toBe('retweeter-follow');
+  });
+
+  it('isRetweet=false이면 retweeterInFollow=true여도 일반 경로로 hide', () => {
+    const result = classifyTweet(makeInput({
+      isRetweet: false,
+      retweeterInFollow: true,
+    }));
+    expect(result.action).toBe('hide');
+    expect(result.reason).toBe('fadak');
+  });
+
+  // --- Defect2: 리트위터가 현재 사용자 본인인 경우도 예외 ---
+
+  it('리트윗 + 리트위터가 현재 사용자 본인 = show (retweeter-self)', () => {
+    const result = classifyTweet(makeInput({
+      isRetweet: true,
+      retweeterHandle: 'me_user',
+      retweeterIsCurrentUser: true,
+    }));
+    expect(result.action).toBe('show');
+    expect(result.reason).toBe('retweeter-self');
+  });
 });
 
 describe('classifyQuote', () => {
@@ -104,6 +230,8 @@ describe('classifyQuote', () => {
       quotedIsWhitelisted: false,
       parentHandle: 'parent_user',
       parentInFollow: false,
+      parentIsWhitelisted: false,
+      retweeterExempt: false,
       settings: defaultSettings,
       ...overrides,
     };
@@ -147,5 +275,72 @@ describe('classifyQuote', () => {
       settings: { ...defaultSettings, quoteMode: 'off' },
     }));
     expect(result.action).toBe('show');
+  });
+
+  // --- A2: 예외 부모(팔로우/화이트리스트)의 hide-entire 다운그레이드 ---
+
+  it('self-quote + 부모 화이트리스트만 = show (self-quote-whitelisted)', () => {
+    const result = classifyQuote(makeQuoteInput({
+      quotedHandle: 'same_user',
+      parentHandle: 'same_user',
+      parentInFollow: false,
+      parentIsWhitelisted: true,
+    }));
+    expect(result.action).toBe('show');
+    expect(result.reason).toBe('self-quote-whitelisted');
+  });
+
+  it('인용 파딱 + quoteMode=entire + 부모 팔로우 = hide-quote로 다운그레이드', () => {
+    const result = classifyQuote(makeQuoteInput({
+      parentInFollow: true,
+      settings: { ...defaultSettings, quoteMode: 'entire' },
+    }));
+    expect(result.action).toBe('hide-quote');
+    expect(result.reason).toBe('quote-fadak-parent-exempt');
+  });
+
+  it('인용 파딱 + quoteMode=entire + 부모 화이트리스트 = hide-quote로 다운그레이드', () => {
+    const result = classifyQuote(makeQuoteInput({
+      parentIsWhitelisted: true,
+      settings: { ...defaultSettings, quoteMode: 'entire' },
+    }));
+    expect(result.action).toBe('hide-quote');
+    expect(result.reason).toBe('quote-fadak-parent-exempt');
+  });
+
+  it('인용 파딱 + quoteMode=entire + 부모 비예외 = hide-entire (regression)', () => {
+    const result = classifyQuote(makeQuoteInput({
+      settings: { ...defaultSettings, quoteMode: 'entire' },
+    }));
+    expect(result.action).toBe('hide-entire');
+  });
+
+  it('인용 파딱 + quoteMode=quote-only + 부모 팔로우 = hide-quote (다운그레이드 영향 없음)', () => {
+    const result = classifyQuote(makeQuoteInput({ parentInFollow: true }));
+    expect(result.action).toBe('hide-quote');
+  });
+
+  // --- Defect1: 리트위터 예외(retweeterExempt)도 hide-entire를 다운그레이드해야 함 ---
+
+  it('인용 파딱 + quoteMode=entire + 부모 비예외 + 리트위터 예외 = hide-quote로 다운그레이드', () => {
+    const result = classifyQuote(makeQuoteInput({
+      parentInFollow: false,
+      parentIsWhitelisted: false,
+      retweeterExempt: true,
+      settings: { ...defaultSettings, quoteMode: 'entire' },
+    }));
+    expect(result.action).toBe('hide-quote');
+    expect(result.reason).toBe('quote-fadak-retweeter-exempt');
+  });
+
+  it('인용 파딱 + quoteMode=entire + 부모/리트위터 모두 비예외 = hide-entire (regression)', () => {
+    const result = classifyQuote(makeQuoteInput({
+      parentInFollow: false,
+      parentIsWhitelisted: false,
+      retweeterExempt: false,
+      settings: { ...defaultSettings, quoteMode: 'entire' },
+    }));
+    expect(result.action).toBe('hide-entire');
+    expect(result.reason).toBe('quote-fadak');
   });
 });

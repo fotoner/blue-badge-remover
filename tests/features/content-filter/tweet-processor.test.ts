@@ -30,6 +30,16 @@ describe('shouldHideTweet', () => {
     expect(shouldHideTweet(ctx)).toBe(false);
   });
 
+  it('should not hide when whitelist entry is lowercase but ctx.handle has mixed case', () => {
+    const ctx = { ...baseContext, whitelist: new Set(['@foo']), handle: 'Foo' };
+    expect(shouldHideTweet(ctx)).toBe(false);
+  });
+
+  it('should not hide when ctx.handle already has "@" but differs in case from the whitelist entry', () => {
+    const ctx = { ...baseContext, whitelist: new Set(['@foo']), handle: '@FOO' };
+    expect(shouldHideTweet(ctx)).toBe(false);
+  });
+
   it('should not hide non-fadak user', () => {
     const ctx = { ...baseContext, isFadak: false };
     expect(shouldHideTweet(ctx)).toBe(false);

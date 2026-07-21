@@ -4,6 +4,8 @@
 export function extractTweetAuthor(tweetEl: HTMLElement): { handle: string } | null {
   const allLinks = tweetEl.querySelectorAll('a[role="link"][href^="/"]');
   for (const link of allLinks) {
+    // socialContext(재게시/고정 등) 내부 링크는 로케일과 무관하게 제외; 텍스트 정규식은 testid 없는 DOM 변형 폴백
+    if (link.closest('[data-testid="socialContext"]')) continue;
     const text = link.textContent ?? '';
     if (/재게시함|Retweeted|reposted/i.test(text)) continue;
     const href = link.getAttribute('href');
@@ -39,6 +41,21 @@ export function extractRetweeterName(tweetEl: HTMLElement): string | null {
   return text.replace(/\s*(Retweeted|reposted|님이\s*재게시함|님이\s*리트윗함|님이\s*리포스트함|님이\s*리트윗.*|님이\s*리포스트.*).*/i, '').trim() || null;
 }
 
+/**
+ * socialContext 앵커의 href pathname으로 리트위터 핸들 추출 — 로케일 독립
+ * ('재게시함'/'Retweeted' 등 텍스트에 의존하지 않음). 커뮤니티/토픽 링크('/i/...')는 제외.
+ */
+export function extractRetweeterHandle(tweetEl: HTMLElement): string | null {
+  const socialContext = tweetEl.querySelector('[data-testid="socialContext"]');
+  if (!socialContext) return null;
+  const link = socialContext.querySelector('a[href^="/"]');
+  const href = link?.getAttribute('href');
+  if (!href) return null;
+  const handle = href.slice(1).split(/[/?#]/)[0];
+  if (!handle || handle === 'i') return null;
+  return handle;
+}
+
 export function findQuoteBlock(tweetEl: HTMLElement): HTMLElement | null {
   const ownerDoc = tweetEl.ownerDocument;
   const walker = ownerDoc.createTreeWalker(tweetEl, NodeFilter.SHOW_ELEMENT);
@@ -57,6 +74,32 @@ export function findQuoteBlock(tweetEl: HTMLElement): HTMLElement | null {
     }
   }
   return enFallback;
+}
+
+/**
+ * 작성자 영역의 인증 뱃지 요소 탐색 — 인용 카드 내부 User-Name은 제외 (#35 오귀속 방지).
+ * boolean 대신 Element를 반환하므로 호출자가 isBlueBadgeElement로 파딱 여부를 판정할 수 있다.
+ * User-Name이 하나도 없는 예외적 DOM에서만 요소 전체 폴백 탐색.
+ */
+export function findAuthorBadge(tweetEl: HTMLElement): Element | null {
+  const userNames = tweetEl.querySelectorAll('[data-testid="User-Name"]');
+  const quoteBlock = findQuoteBlock(tweetEl);
+  if (userNames.length === 0) {
+    // User-Name이 전혀 없는 예외적 DOM — 인용 카드 내부 뱃지는 여전히 제외해야 오귀속 방지
+    const candidates = tweetEl.querySelectorAll('[data-testid="icon-verified"]');
+    for (const candidate of candidates) {
+      if (quoteBlock?.contains(candidate)) continue;
+      return candidate;
+    }
+    return null;
+  }
+  for (const userName of userNames) {
+    if (quoteBlock?.contains(userName)) continue;
+    // 첫 번째 비인용 User-Name이 작성자 영역 — 뱃지가 없으면 그대로 null (추가 탐색 안 함)
+    return userName.querySelector('[data-testid="icon-verified"]');
+  }
+  // User-Name이 전부 인용 카드 안 → 외부 작성자는 뱃지 없음 (전체 폴백 금지)
+  return null;
 }
 
 export interface QuoteAuthorInfo {
@@ -95,6 +138,8 @@ export function extractTweetText(tweetEl: HTMLElement): string {
 export function extractDisplayName(tweetEl: HTMLElement, handle: string): string | null {
   const links = tweetEl.querySelectorAll('a[role="link"]');
   for (const link of links) {
+    // socialContext 내부 링크는 로케일과 무관하게 표시 이름 후보에서 제외
+    if (link.closest('[data-testid="socialContext"]')) continue;
     const href = link.getAttribute('href') ?? '';
     if (href === `/${handle}` && !link.textContent?.startsWith('@')) {
       const name = link.textContent?.trim();
@@ -108,14 +153,9 @@ export function extractDisplayName(tweetEl: HTMLElement, handle: string): string
 
 /**
  * Returns true only if the tweet's own author area ([data-testid="User-Name"]) contains
- * a verified badge. Used by the keyword collector to avoid collecting non-파딱 accounts
- * that happen to quote a 파딱 (whose badge would otherwise appear inside the same article).
+ * a verified badge. Delegates to findAuthorBadge — quote-card User-Names are excluded,
+ * so a non-파딱 account quoting a 파딱 is never treated as badged.
  */
-export function hasBadgeInAuthorArea(tweetEl: HTMLElement): boolean {
-  const userNameEl = tweetEl.querySelector('[data-testid="User-Name"]');
-  return !!(userNameEl ?? tweetEl).querySelector('[data-testid="icon-verified"]');
-}
-
 export function formatUserLabel(handle: string, displayName: string | null): string {
   return displayName ? `${displayName}(@${handle})` : `@${handle}`;
 }

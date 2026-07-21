@@ -1,1 +1,1 @@
-export { getSettings, saveSettings, getWhitelist, addToWhitelist, removeFromWhitelist } from './storage';
+export { getSettings, saveSettings, getWhitelist, addToWhitelist, addManyToWhitelist, removeFromWhitelist } from './storage';
