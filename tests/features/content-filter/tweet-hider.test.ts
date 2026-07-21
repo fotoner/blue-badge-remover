@@ -1,6 +1,6 @@
 // tests/features/content-filter/tweet-hider.test.ts
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { hideTweet, hideQuoteBlock, showTweet, showQuoteBlock } from '@features/content-filter/tweet-hider';
+import { hideTweet, hideQuoteBlock, showExpandedTweet, showTweet, showQuoteBlock } from '@features/content-filter/tweet-hider';
 
 describe('hideTweet', () => {
   let tweetEl: HTMLElement;
@@ -136,6 +136,18 @@ describe('hideTweet', () => {
     expect(tweetEl.hasAttribute('data-bbr-original')).toBe(false);
   });
 
+  it('화이트리스트 저장이 실패하면 버튼을 남겨 다시 시도할 수 있게 한다', async () => {
+    const onWhitelist = vi.fn().mockRejectedValue(new Error('storage unavailable'));
+    hideTweet(tweetEl, 'collapse', { reason: 'fadak', handle: '@fadakuser', onWhitelist });
+    tweetEl.querySelector<HTMLElement>('[data-bbr-collapsed]')?.click();
+
+    tweetEl.querySelector<HTMLButtonElement>('.bbr-whitelist-button')?.click();
+    await Promise.resolve();
+
+    expect(onWhitelist).toHaveBeenCalledOnce();
+    expect(tweetEl.querySelector('.bbr-whitelist-button')).not.toBeNull();
+  });
+
   it('펼친 트윗의 다시 접기 버튼이 같은 트윗을 접힌 상태로 되돌린다', () => {
     const onExpandedChange = vi.fn();
     hideTweet(tweetEl, 'collapse', { reason: 'fadak', handle: '@fadakuser' }, onExpandedChange);
@@ -148,6 +160,20 @@ describe('hideTweet', () => {
     expect(tweetEl.querySelector('[data-bbr-expanded-actions]')).toBeNull();
     expect(tweetEl.querySelector('[data-bbr-collapsed]')).not.toBeNull();
     expect(onExpandedChange).toHaveBeenLastCalledWith(tweetEl, false);
+  });
+
+  it('재처리된 펼친 트윗에 액션을 한 번만 다시 붙인다', () => {
+    const onWhitelist = vi.fn();
+    const onExpandedChange = vi.fn();
+    const context = { reason: 'fadak', handle: '@fadakuser', onWhitelist };
+
+    showExpandedTweet(tweetEl, context, onExpandedChange);
+    showExpandedTweet(tweetEl, context, onExpandedChange);
+
+    expect(tweetEl.getAttribute('data-bbr-expanded')).toBe('1');
+    expect(tweetEl.querySelectorAll('[data-bbr-expanded-actions]')).toHaveLength(1);
+    expect(tweetEl.querySelector('.bbr-whitelist-button')).not.toBeNull();
+    expect(tweetEl.querySelector('.bbr-collapse-button')).not.toBeNull();
   });
 
   it('should show retweet context in collapse mode', () => {

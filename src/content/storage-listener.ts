@@ -40,6 +40,7 @@ export function listenForSettingsChanges(
     const protectedKeywordsChange = changes[STORAGE_KEYS.PROTECTED_KEYWORDS];
     if (protectedKeywordsChange) {
       setProtectedKeywords((protectedKeywordsChange.newValue as string[] | undefined) ?? []);
+      onSettingsChanged(getSettings());
       restoreHiddenTweets();
       reprocessExistingTweets();
     }

@@ -47,9 +47,10 @@ let saveQueue: Promise<void> = Promise.resolve();
 export function saveFollowHandles(
   handles: string[],
   deps: FollowCollectorDeps,
+  expectedAccount?: string,
 ): Promise<void> {
   if (!handles.length) return Promise.resolve();
-  const run = saveQueue.then(() => doSaveFollowHandles(handles, deps));
+  const run = saveQueue.then(() => doSaveFollowHandles(handles, deps, expectedAccount));
   // 이 작업이 실패해도 큐 자체는 오염되지 않도록 별도로 캐치 — 다음 호출은 계속 진행되어야 한다.
   saveQueue = run.catch(() => {});
   return run;
@@ -58,9 +59,11 @@ export function saveFollowHandles(
 async function doSaveFollowHandles(
   handles: string[],
   deps: FollowCollectorDeps,
+  expectedAccount?: string,
 ): Promise<void> {
   const stored = await browser.storage.local.get([STORAGE_KEYS.FOLLOW_CACHE, STORAGE_KEYS.CURRENT_USER_ID]);
   const currentAccount = (stored[STORAGE_KEYS.CURRENT_USER_ID] as string | null) ?? '';
+  if (expectedAccount && currentAccount !== expectedAccount) return;
   const cache = (stored[STORAGE_KEYS.FOLLOW_CACHE] as Record<string, string[]> | undefined) ?? {};
   const existing = currentAccount ? (cache[currentAccount] ?? []) : [];
   const normalizedHandles = handles.map((handle) => handle.toLowerCase());

@@ -20,6 +20,7 @@ vi.mock('@features/badge-detection/svg-fallback', () => ({
 }));
 
 const mockHideTweet = vi.fn();
+const mockShowExpandedTweet = vi.fn();
 const mockShowTweet = vi.fn();
 const mockHideQuoteBlock = vi.fn();
 const mockShowQuoteBlock = vi.fn();
@@ -28,6 +29,7 @@ vi.mock('@features/content-filter', () => ({
   shouldHideRetweet: vi.fn().mockReturnValue(true),
   getQuoteAction: vi.fn().mockReturnValue('none' as const),
   hideTweet: (...args: unknown[]) => mockHideTweet(...args),
+  showExpandedTweet: (...args: unknown[]) => mockShowExpandedTweet(...args),
   hideQuoteBlock: (...args: unknown[]) => mockHideQuoteBlock(...args),
   showTweet: (...args: unknown[]) => mockShowTweet(...args),
   showQuoteBlock: (...args: unknown[]) => mockShowQuoteBlock(...args),
@@ -227,6 +229,24 @@ describe('processTweet', () => {
 
     onExpandedChange?.(tweet, false);
     expect(getExpandedSet().has('/testuser/status/123')).toBe(false);
+  });
+
+  it('펼쳐 둔 status가 새 article로 렌더링되면 액션이 포함된 펼침 상태를 복원한다', () => {
+    getExpandedSet().add('/testuser/status/123');
+    const tweet = createTweetEl('testuser', { badge: true });
+    const statusLink = doc.createElement('a');
+    statusLink.setAttribute('href', '/testuser/status/123');
+    statusLink.appendChild(doc.createElement('time'));
+    tweet.appendChild(statusLink);
+
+    processTweet(tweet);
+
+    expect(mockShowExpandedTweet).toHaveBeenCalledWith(
+      tweet,
+      expect.objectContaining({ reason: 'fadak', handle: '@testuser' }),
+      expect.any(Function),
+    );
+    expect(mockHideTweet).not.toHaveBeenCalled();
   });
 
   it('비파딱 트윗은 숨기지 않는다', () => {

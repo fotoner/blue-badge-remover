@@ -2,7 +2,7 @@
 // MAIN world(fetch-interceptor)에서 postMessage로 전달되는 데이터 수신 처리.
 import { MESSAGE_TYPES } from '@shared/constants';
 import { logger } from '@shared/utils/logger';
-import { profileCache, collectorBuffer, getSettings, getFollowSet, getProtectedKeywords } from './state';
+import { profileCache, collectorBuffer, getSettings, getFollowSet, getProtectedKeywords, getCurrentUserHandle } from './state';
 import { extractRetweeterHandle, extractTweetAuthor } from './tweet-processing';
 import { processTweet } from './tweet-orchestrator';
 import { saveFollowHandles, getMyHandle, type FollowCollectorDeps } from './follow-collector';
@@ -18,6 +18,14 @@ interface ProfilePayload {
   followersCount?: unknown;
   followingCount?: unknown;
 }
+
+type FollowSource = 'inline' | 'api-timeline';
+
+const X_HANDLE_PATTERN = /^[A-Za-z0-9_]{1,15}$/;
+const MAX_PROFILE_BATCH = 1000;
+const MAX_DISPLAY_NAME_LENGTH = 100;
+const MAX_BIO_LENGTH = 2000;
+const MAX_DATE_LENGTH = 64;
 
 // 팔로우 변경 시 숨겨진 트윗 복원 + 재처리를 디바운스하는 공유 헬퍼 (Defect 3 수정).
 // storage-listener.ts의 handleFollowListChange도 이 함수를 호출한다 — 동일 tick 내
@@ -38,7 +46,7 @@ export function scheduleFollowReprocess(handles: Iterable<string>): void {
   }, 0);
 }
 
-function reprocessTweetsByHandles(handles: Set<string>): void {
+export function reprocessTweetsByHandles(handles: Set<string>): void {
   const settings = getSettings();
   const feed = document.querySelector('main') ?? document.body;
   feed.querySelectorAll<HTMLElement>('article[data-testid="tweet"]').forEach((tweet) => {
@@ -55,7 +63,6 @@ function reprocessTweetsByHandles(handles: Set<string>): void {
 }
 
 // X 핸들 최대 길이는 15자 — 여유를 두어 32자로 캡.
-const MAX_FOLLOW_HANDLE_LENGTH = 32;
 // 메시지당 처리할 최대 핸들 수 (Defect 4 수정 — MAIN world 페이로드는 신뢰하지 않음).
 const MAX_FOLLOW_HANDLES_PER_MESSAGE = 1000;
 
@@ -66,7 +73,7 @@ function sanitizeFollowHandles(raw: unknown[]): string[] {
   for (const h of raw) {
     if (typeof h !== 'string') continue;
     const trimmed = h.trim();
-    if (trimmed.length === 0 || trimmed.length > MAX_FOLLOW_HANDLE_LENGTH) continue;
+    if (!X_HANDLE_PATTERN.test(trimmed)) continue;
     valid.push(trimmed);
   }
   return valid.slice(0, MAX_FOLLOW_HANDLES_PER_MESSAGE);
@@ -75,11 +82,28 @@ function sanitizeFollowHandles(raw: unknown[]): string[] {
 function isProfileDataPayload(data: unknown): data is { profiles: ProfilePayload[] } {
   if (!data || typeof data !== 'object') return false;
   const d = data as Record<string, unknown>;
-  if (!Array.isArray(d['profiles'])) return false;
-  return d['profiles'].every((p: unknown) =>
-    p !== null && typeof p === 'object' &&
-    typeof (p as Record<string, unknown>)['handle'] === 'string',
-  );
+  if (!Array.isArray(d['profiles']) || d['profiles'].length > MAX_PROFILE_BATCH) return false;
+  return d['profiles'].every(isProfilePayload);
+}
+
+function optionalBoundedString(value: unknown, maxLength: number): boolean {
+  return value === undefined || (typeof value === 'string' && value.length <= maxLength);
+}
+
+function optionalCount(value: unknown): boolean {
+  return value === undefined || (typeof value === 'number' && Number.isFinite(value) && value >= 0);
+}
+
+function isProfilePayload(value: unknown): value is ProfilePayload {
+  if (!value || typeof value !== 'object') return false;
+  const profile = value as Record<string, unknown>;
+  return typeof profile['handle'] === 'string'
+    && X_HANDLE_PATTERN.test(profile['handle'])
+    && optionalBoundedString(profile['displayName'], MAX_DISPLAY_NAME_LENGTH)
+    && optionalBoundedString(profile['bio'], MAX_BIO_LENGTH)
+    && optionalBoundedString(profile['createdAt'], MAX_DATE_LENGTH)
+    && optionalCount(profile['followersCount'])
+    && optionalCount(profile['followingCount']);
 }
 
 function toProfileInfo(payload: ProfilePayload): ProfileInfo {
@@ -94,10 +118,14 @@ function toProfileInfo(payload: ProfilePayload): ProfileInfo {
   return profile;
 }
 
-function isFollowDataPayload(data: unknown): data is { handles: unknown[]; source?: string } {
+function isFollowDataPayload(data: unknown): data is { handles: unknown[]; account: string; source?: FollowSource } {
   if (!data || typeof data !== 'object') return false;
   const d = data as Record<string, unknown>;
-  return Array.isArray(d['handles']);
+  const source = d['source'];
+  return Array.isArray(d['handles'])
+    && typeof d['account'] === 'string'
+    && X_HANDLE_PATTERN.test(d['account'])
+    && (source === undefined || source === 'inline' || source === 'api-timeline');
 }
 
 export function listenForMessages(followCollectorDeps: FollowCollectorDeps): void {
@@ -108,6 +136,7 @@ export function listenForMessages(followCollectorDeps: FollowCollectorDeps): voi
       handleProfileData(event.data);
     }
     if (event.data?.type === MESSAGE_TYPES.FOLLOW_DATA && isFollowDataPayload(event.data)) {
+      if (event.data.account.toLowerCase() !== getCurrentUserHandle()?.toLowerCase()) return;
       handleFollowData(event.data, followCollectorDeps);
     }
   });
@@ -154,13 +183,13 @@ function handleProfileData(data: { profiles: ProfilePayload[] }): void {
   }
 }
 
-function handleFollowData(data: { handles: unknown[]; source?: string }, followCollectorDeps: FollowCollectorDeps): void {
+function handleFollowData(data: { handles: unknown[]; account: string; source?: FollowSource }, followCollectorDeps: FollowCollectorDeps): void {
   // 경계 검증 (Defect 4): MAIN world 페이로드는 신뢰하지 않는다 — 배열 여부부터 재확인하고,
   // 유효하지 않은 항목은 조용히 걸러내며, 메시지당 처리량을 캡한다.
   if (!Array.isArray(data.handles)) return;
   const handles = sanitizeFollowHandles(data.handles);
 
-  if (data.source) {
+  if (data.source === 'inline' || data.source === 'api-timeline') {
     // inline(fiber) + api-timeline 공통 경로 — 즉시 followSet 업데이트 + storage 저장.
     // Storm guard: 전부 이미 아는 핸들이면 storage 쓰기/재처리 없이 조기 반환.
     if (!handles.length) return;
@@ -177,7 +206,7 @@ function handleFollowData(data: { handles: unknown[]; source?: string }, followC
     for (const h of newHandles) {
       followSet.add(h);
     }
-    void saveFollowHandles(newHandles, followCollectorDeps);
+    void saveFollowHandles(newHandles, followCollectorDeps, data.account);
     const pathHandle = window.location.pathname.split('/')[1]?.toLowerCase();
     if (pathHandle && followSet.has(pathHandle)) {
       removeFadakBanner();
@@ -190,7 +219,7 @@ function handleFollowData(data: { handles: unknown[]; source?: string }, followC
     if (myHandle && pathUser && pathUser !== myHandle) return;
     const normalizedHandles = [...new Set(handles.map((handle) => handle.toLowerCase()))];
     if (normalizedHandles.length) {
-      void saveFollowHandles(normalizedHandles, followCollectorDeps).then(() => {
+      void saveFollowHandles(normalizedHandles, followCollectorDeps, data.account).then(() => {
         scheduleFollowReprocess(normalizedHandles);
       });
     }

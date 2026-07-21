@@ -70,7 +70,7 @@ vi.mock('../../src/content/page-utils', () => ({
 
 // --- Import modules after all mocks are registered ---
 
-import { profileCache, collectorBuffer, setSettings, getFollowSet, setFollowSet } from '../../src/content/state';
+import { profileCache, collectorBuffer, setSettings, getFollowSet, setFollowSet, setCurrentUserHandle } from '../../src/content/state';
 import { listenForMessages, scheduleFollowReprocess } from '../../src/content/message-handler';
 import { MESSAGE_TYPES } from '../../src/shared/constants';
 import { logger } from '../../src/shared/utils/logger';
@@ -81,10 +81,15 @@ import type { FollowCollectorDeps } from '../../src/content/follow-collector';
 const savedOrigin = window.location.origin;
 
 function dispatchMessage(data: unknown, options?: { source?: unknown; origin?: string }): void {
+  const payload = data && typeof data === 'object'
+    && (data as Record<string, unknown>)['type'] === MESSAGE_TYPES.FOLLOW_DATA
+    && !('account' in data)
+    ? { ...data, account: 'myaccount' }
+    : data;
   const event = new MessageEvent('message', {
     source: (options?.source ?? window) as Window,
     origin: options?.origin ?? savedOrigin,
-    data,
+    data: payload,
   });
   window.dispatchEvent(event);
 }
@@ -112,6 +117,7 @@ describe('message-handler', () => {
     vi.useFakeTimers();
     setSettings({ ...DEFAULT_SETTINGS });
     setFollowSet(new Set<string>());
+    setCurrentUserHandle('myaccount');
     document.body.innerHTML = '';
     collectorBuffer.clear();
     // Clear singleton cache (mock class exposes clear())
@@ -225,6 +231,24 @@ describe('message-handler', () => {
         createdAt: '2026-04-01T00:00:00Z', followersCount: 2000, followingCount: 100,
       });
     });
+
+    it('X 핸들 형식이 아니거나 과도하게 긴 bio가 포함된 payload는 무시한다', () => {
+      dispatchMessage({
+        type: MESSAGE_TYPES.PROFILE_DATA,
+        profiles: [{ handle: 'not valid!', displayName: 'Bad', bio: 'x'.repeat(2001) }],
+      });
+
+      expect(profileCache.has('not valid!')).toBe(false);
+    });
+
+    it('유한하지 않은 팔로워 수가 포함된 payload는 무시한다', () => {
+      dispatchMessage({
+        type: MESSAGE_TYPES.PROFILE_DATA,
+        profiles: [{ handle: 'valid_user', displayName: 'Valid', bio: '', followersCount: Number.NaN }],
+      });
+
+      expect(profileCache.has('valid_user')).toBe(false);
+    });
   });
 
   // ── BBR_FOLLOW_DATA (type guard + handler) ──────────────────────────
@@ -263,6 +287,27 @@ describe('message-handler', () => {
     });
 
     describe('inline source (with source field)', () => {
+      it('현재 계정과 다른 계정에서 시작된 follow 응답은 무시한다', () => {
+        dispatchMessage({
+          type: MESSAGE_TYPES.FOLLOW_DATA,
+          account: 'otheraccount',
+          source: 'api-timeline',
+          handles: ['someone'],
+        });
+
+        expect(mockSaveFollowHandles).not.toHaveBeenCalled();
+      });
+
+      it('알 수 없는 source는 sourced 경로로 처리하지 않는다', () => {
+        dispatchMessage({
+          type: MESSAGE_TYPES.FOLLOW_DATA,
+          source: 'forged-source',
+          handles: ['someone'],
+        });
+
+        expect(mockSaveFollowHandles).not.toHaveBeenCalled();
+      });
+
       it('followSet에 핸들을 소문자로 추가한다', () => {
         dispatchMessage({
           type: MESSAGE_TYPES.FOLLOW_DATA,
@@ -282,7 +327,7 @@ describe('message-handler', () => {
           handles: ['testuser'],
         });
 
-        expect(mockSaveFollowHandles).toHaveBeenCalledWith(['testuser'], deps);
+        expect(mockSaveFollowHandles).toHaveBeenCalledWith(['testuser'], deps, 'myaccount');
       });
 
       it('빈 handles 배열이면 followSet을 변경하지 않는다', () => {
@@ -363,7 +408,7 @@ describe('message-handler', () => {
         });
 
         expect(getFollowSet().has('newfadak')).toBe(true);
-        expect(mockSaveFollowHandles).toHaveBeenCalledWith(['newfadak'], deps);
+        expect(mockSaveFollowHandles).toHaveBeenCalledWith(['newfadak'], deps, 'myaccount');
       });
 
       it('api-timeline은 myHandle/경로 가드를 타지 않는다 — 리스트 페이지에서도 저장', () => {
@@ -380,7 +425,7 @@ describe('message-handler', () => {
           handles: ['ListFadak'],
         });
 
-        expect(mockSaveFollowHandles).toHaveBeenCalledWith(['listfadak'], deps);
+        expect(mockSaveFollowHandles).toHaveBeenCalledWith(['listfadak'], deps, 'myaccount');
       });
 
       it('타이머 후 전체 피드 복원·재처리를 호출하지 않는다', () => {
@@ -430,7 +475,7 @@ describe('message-handler', () => {
           handles: ['Old', 'Fresh'],
         });
 
-        expect(mockSaveFollowHandles).toHaveBeenCalledWith(['fresh'], deps);
+        expect(mockSaveFollowHandles).toHaveBeenCalledWith(['fresh'], deps, 'myaccount');
         expect(getFollowSet().has('fresh')).toBe(true);
       });
 
@@ -441,7 +486,7 @@ describe('message-handler', () => {
           handles: ['Dup', 'dup'],
         });
 
-        expect(mockSaveFollowHandles).toHaveBeenCalledWith(['dup'], deps);
+        expect(mockSaveFollowHandles).toHaveBeenCalledWith(['dup'], deps, 'myaccount');
       });
 
       it('debugMode on이면 [BBR FOLLOW] 로그에 source/incoming/new 카운트를 출력한다', () => {
@@ -471,7 +516,7 @@ describe('message-handler', () => {
           handles: ['user1'],
         });
 
-        expect(mockSaveFollowHandles).toHaveBeenCalledWith(['user1'], deps);
+        expect(mockSaveFollowHandles).toHaveBeenCalledWith(['user1'], deps, 'myaccount');
       });
 
       it('myHandle과 pathUser가 같으면 saveFollowHandles를 호출한다', () => {
@@ -487,7 +532,7 @@ describe('message-handler', () => {
           handles: ['followee'],
         });
 
-        expect(mockSaveFollowHandles).toHaveBeenCalledWith(['followee'], deps);
+        expect(mockSaveFollowHandles).toHaveBeenCalledWith(['followee'], deps, 'myaccount');
       });
 
       it('myHandle과 pathUser가 다르면 무시한다', () => {
@@ -560,26 +605,26 @@ describe('message-handler', () => {
         expect(mockSaveFollowHandles).not.toHaveBeenCalled();
       });
 
-      it('문자열이 아니거나, 빈 문자열이거나, 32자를 초과하는 항목은 걸러내고 유효한 항목만 처리한다', () => {
-        const tooLong = 'a'.repeat(33);
+      it('문자열이 아니거나, X 핸들 형식이 아니거나, 15자를 초과하는 항목은 걸러낸다', () => {
+        const tooLong = 'a'.repeat(16);
         dispatchMessage({
           type: MESSAGE_TYPES.FOLLOW_DATA,
           source: 'inline',
-          handles: ['Valid1', 123, null, '', '   ', tooLong, 'Valid2'],
+          handles: ['Valid1', 123, null, '', '   ', tooLong, 'bad-handle', 'Valid2'],
         });
 
-        expect(mockSaveFollowHandles).toHaveBeenCalledWith(['valid1', 'valid2'], deps);
+        expect(mockSaveFollowHandles).toHaveBeenCalledWith(['valid1', 'valid2'], deps, 'myaccount');
       });
 
-      it('길이가 정확히 32자인 핸들은 유효하게 처리한다', () => {
-        const exactly32 = 'b'.repeat(32);
+      it('길이가 정확히 15자인 핸들은 유효하게 처리한다', () => {
+        const exactly15 = 'b'.repeat(15);
         dispatchMessage({
           type: MESSAGE_TYPES.FOLLOW_DATA,
           source: 'inline',
-          handles: [exactly32],
+          handles: [exactly15],
         });
 
-        expect(mockSaveFollowHandles).toHaveBeenCalledWith([exactly32.toLowerCase()], deps);
+        expect(mockSaveFollowHandles).toHaveBeenCalledWith([exactly15], deps, 'myaccount');
       });
 
       it('메시지당 최대 1000개까지만 처리한다 (1500개 중 앞 1000개)', () => {

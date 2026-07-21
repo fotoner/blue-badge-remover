@@ -1,10 +1,29 @@
 import { TIMINGS } from '@shared/constants';
+import type { ProfileInfo, Settings } from '@shared/types';
 
 const HOVER_CARD_SELECTOR = '[data-testid="HoverCard"]';
 
 interface HoverCardData {
   handle: string;
   bio: string;
+}
+
+export function shouldObserveHoverCards(settings: Settings, protectedKeywords: readonly string[]): boolean {
+  return settings.keywordFilterEnabled || settings.keywordCollectorEnabled || protectedKeywords.length > 0;
+}
+
+export function mergeHoverCardBio(
+  profile: ProfileInfo | undefined,
+  handle: string,
+  bio: string,
+): ProfileInfo {
+  if (profile?.bio) return profile;
+  return {
+    ...profile,
+    handle: profile?.handle ?? handle,
+    displayName: profile?.displayName ?? handle,
+    bio,
+  };
 }
 
 function extractHoverCardData(card: HTMLElement): HoverCardData | null {

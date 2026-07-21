@@ -99,6 +99,11 @@ export class FiberFollowObserver {
 
   private collectArticles(node: Node): void {
     if (!(node instanceof HTMLElement)) return;
+    const ancestor = node.closest<HTMLElement>(TWEET_SELECTOR);
+    if (ancestor) {
+      this.scannedArticles.delete(ancestor);
+      this.pendingArticles.add(ancestor);
+    }
     if (node.matches(TWEET_SELECTOR)) this.pendingArticles.add(node);
     node.querySelectorAll<HTMLElement>(TWEET_SELECTOR).forEach((article) => {
       this.pendingArticles.add(article);
@@ -117,8 +122,9 @@ export class FiberFollowObserver {
     const handles = new Set<string>();
     for (const article of this.pendingArticles) {
       if (this.scannedArticles.has(article)) continue;
-      this.scannedArticles.add(article);
       const data = extractArticleDataFromFiber(article);
+      if (!data) continue;
+      this.scannedArticles.add(article);
       const handle = data?.following ? data.handle.toLowerCase() : null;
       if (handle && !this.reportedHandles.has(handle)) handles.add(handle);
     }

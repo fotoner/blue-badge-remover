@@ -98,6 +98,26 @@ describe('FiberFollowObserver', () => {
     expect(onHandles).toHaveBeenCalledTimes(1);
   });
 
+  it('처음 스캔할 때 fiber가 없으면 내부 mutation 뒤 다시 시도한다', async () => {
+    observer.markContentReady();
+    const article = document.createElement('article');
+    article.dataset.testid = 'tweet';
+    document.body.appendChild(article);
+    await flushMutations();
+    rafCallbacks.shift()?.(0);
+    expect(onHandles).not.toHaveBeenCalled();
+
+    Object.defineProperty(article, '__reactFiber$late', {
+      configurable: true,
+      value: { memoizedProps: { user: { screen_name: 'LateUser', following: true } } },
+    });
+    article.appendChild(document.createElement('span'));
+    await flushMutations();
+    rafCallbacks.shift()?.(0);
+
+    expect(onHandles).toHaveBeenCalledWith(['lateuser']);
+  });
+
   it('stop 후 들어온 article은 처리하지 않는다', async () => {
     observer.markContentReady();
     observer.stop();

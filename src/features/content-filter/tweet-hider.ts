@@ -79,12 +79,26 @@ function createWhitelistButton(onWhitelist: () => void | Promise<void>): HTMLBut
   button.type = 'button';
   button.className = 'bbr-expanded-action bbr-whitelist-button';
   button.textContent = t('addToWhitelist', currentLanguage);
+  let saving = false;
   button.addEventListener('click', (event) => {
     event.stopPropagation();
     event.preventDefault();
-    void onWhitelist();
-    button.remove();
-  }, { once: true });
+    if (saving) return;
+    saving = true;
+    button.disabled = true;
+    let result: void | Promise<void>;
+    try {
+      result = onWhitelist();
+    } catch {
+      saving = false;
+      button.disabled = false;
+      return;
+    }
+    void Promise.resolve(result)
+      .then(() => { button.remove(); })
+      .catch(() => { button.disabled = false; })
+      .finally(() => { saving = false; });
+  });
   return button;
 }
 
@@ -117,7 +131,7 @@ function createExpandedActions(
   return actions;
 }
 
-function expandTweet(
+export function showExpandedTweet(
   element: HTMLElement,
   context: HideContext | undefined,
   onExpandedChange: ExpandedChangeHandler | undefined,
@@ -192,7 +206,7 @@ export function hideTweet(
   placeholder.addEventListener('click', (e) => {
     e.stopPropagation();
     e.preventDefault();
-    expandTweet(element, context, onExpandedChange);
+    showExpandedTweet(element, context, onExpandedChange);
   }, { once: true });
   element.appendChild(placeholder);
 }

@@ -286,4 +286,13 @@ describe('saveFollowHandles concurrency (Defect 2)', () => {
 
     expect(browser.storage.local.set).not.toHaveBeenCalled();
   });
+
+  it('메시지 수신 뒤 계정이 바뀌었으면 이전 계정의 저장 작업을 버린다', async () => {
+    const deps = makeDeps();
+
+    await saveFollowHandles(['alice'], deps, 'other-account');
+
+    expect(browser.storage.local.set).not.toHaveBeenCalled();
+    expect(deps.setFollowSet).not.toHaveBeenCalled();
+  });
 });

@@ -3,6 +3,7 @@ import type { Mock } from 'vitest';
 import { DEFAULT_SETTINGS } from '@shared/constants';
 
 const mockStorage: Record<string, unknown> = {};
+const { mockSendMessage } = vi.hoisted(() => ({ mockSendMessage: vi.fn() }));
 
 vi.mock('wxt/browser', () => ({
   browser: {
@@ -19,15 +20,21 @@ vi.mock('wxt/browser', () => ({
         }),
       },
     },
+    runtime: {
+      sendMessage: mockSendMessage,
+    },
   },
 }));
 
 // Dynamic import after mock is set up
+const { handleWhitelistRequest } = await import('@features/settings/whitelist-storage');
+mockSendMessage.mockImplementation((request: unknown) => handleWhitelistRequest(request));
 const { getSettings, getWhitelist, addToWhitelist, addManyToWhitelist, removeFromWhitelist } = await import('@features/settings/storage');
 const { browser } = await import('wxt/browser');
 
 beforeEach(() => {
   Object.keys(mockStorage).forEach((k) => delete mockStorage[k]);
+  mockSendMessage.mockClear();
 });
 
 describe('getSettings', () => {
@@ -161,5 +168,25 @@ describe('whitelist', () => {
     const after = (browser.storage.local.set as Mock).mock.calls.length;
     expect(list).toEqual([]);
     expect(after - before).toBe(0);
+  });
+
+  it('동시에 추가한 두 계정을 모두 보존한다', async () => {
+    await Promise.all([
+      addToWhitelist('@alice'),
+      addToWhitelist('@bob'),
+    ]);
+
+    expect(mockStorage['whitelist']).toEqual(['@alice', '@bob']);
+  });
+
+  it('추가와 삭제가 겹쳐도 새로 추가한 계정을 잃지 않는다', async () => {
+    mockStorage['whitelist'] = ['@alice'];
+
+    await Promise.all([
+      addToWhitelist('@bob'),
+      removeFromWhitelist('@alice'),
+    ]);
+
+    expect(mockStorage['whitelist']).toEqual(['@bob']);
   });
 });

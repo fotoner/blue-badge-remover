@@ -5,6 +5,8 @@
 // asserts that these values match the shared constants.
 import { findUserObjects, findFollowedHandles, extractFollowingFromUsers, dedupeFollowHandles, extractProfileEntries, type ProfileEntry } from './data-extractors';
 import { FiberFollowObserver } from './fiber-follow-observer';
+import { FollowBridge, type FollowSource } from './follow-bridge';
+import { splitProfileBatches } from './profile-batches';
 const MESSAGE_TYPES = {
   FOLLOW_DATA: 'BBR_FOLLOW_DATA',
   PROFILE_DATA: 'BBR_PROFILE_DATA',
@@ -21,13 +23,24 @@ let bbrDebugMode = false;
 // Cache profiles from API responses so they can be replayed after content script is ready
 const MAX_CACHED_PROFILES = 10000;
 const cachedProfiles = new Map<string, ProfileEntry>();
-const fiberFollowObserver = new FiberFollowObserver((handles) => {
-  window.postMessage({
+const followBridge = new FollowBridge((handles, source, account) => {
+  const payload: { type: string; handles: string[]; account: string; source?: FollowSource } = {
     type: MESSAGE_TYPES.FOLLOW_DATA,
     handles,
-    source: 'inline',
-  }, window.location.origin);
+    account,
+  };
+  if (source) payload.source = source;
+  window.postMessage(payload, window.location.origin);
 });
+const fiberFollowObserver = new FiberFollowObserver((handles) => {
+  followBridge.send(handles, 'inline');
+});
+
+function postProfiles(profiles: ProfileEntry[]): void {
+  for (const batch of splitProfileBatches(profiles)) {
+    window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles: batch }, window.location.origin);
+  }
+}
 
 window.addEventListener('message', (event) => {
   if (event.source !== window) return;
@@ -37,9 +50,10 @@ window.addEventListener('message', (event) => {
   }
   // Content script signals it's ready — replay cached profiles so none are missed
   if (data?.type === MESSAGE_TYPES.CONTENT_READY && cachedProfiles.size > 0) {
-    window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles: Array.from(cachedProfiles.values()) }, window.location.origin);
+    postProfiles(Array.from(cachedProfiles.values()));
   }
-  if (data?.type === MESSAGE_TYPES.CONTENT_READY) {
+  if (data?.type === MESSAGE_TYPES.CONTENT_READY && typeof data['account'] === 'string') {
+    followBridge.markReady(data['account']);
     fiberFollowObserver.markContentReady();
   }
 });
@@ -51,6 +65,7 @@ window.fetch = async function patchedFetch(
   init?: RequestInit,
 ): Promise<Response> {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+  const accountAtRequest = followBridge.getAccount();
 
   const response = await originalFetch.call(window, input, init);
 
@@ -61,13 +76,13 @@ window.fetch = async function patchedFetch(
       const cloned = response.clone();
       const data = await cloned.json();
       const endpoint = url.split('/').slice(-2).join('/');
-      extractUserData(data, endpoint);
+      extractUserData(data, endpoint, accountAtRequest);
       // extractViewerUserId 제거: viewer ID 메시지를 수신하는 리스너 없음.
       // 계정 감지는 content script의 detectAndHandleAccountSwitch()에서 DOM 기반으로 처리.
 
       const urlLower = url.toLowerCase();
       if (urlLower.includes('follow')) {
-        extractFollowData(data);
+        extractFollowData(data, accountAtRequest);
       }
     } catch {
       // Parse failure — fallback mode will handle
@@ -99,17 +114,18 @@ XMLHttpRequest.prototype.open = function patchedXhrOpen(
 XMLHttpRequest.prototype.send = function patchedXhrSend(body?: Document | XMLHttpRequestBodyInit | null) {
   const xhr = this as XMLHttpRequest & { _bbrUrl?: string };
   const url = xhr._bbrUrl ?? '';
+  const accountAtRequest = followBridge.getAccount();
   const isGraphQL = X_GRAPHQL_ENDPOINTS.some((ep) => url.includes(ep));
   if (isGraphQL) {
     xhr.addEventListener('load', function () {
       try {
         const data = JSON.parse(xhr.responseText) as unknown;
         const endpoint = url.split('/').slice(-2).join('/');
-        extractUserData(data, endpoint);
+        extractUserData(data, endpoint, accountAtRequest);
         // extractViewerUserId 제거: viewer ID 메시지를 수신하는 리스너 없음.
       // 계정 감지는 content script의 detectAndHandleAccountSwitch()에서 DOM 기반으로 처리.
         if (url.toLowerCase().includes('follow')) {
-          extractFollowData(data);
+          extractFollowData(data, accountAtRequest);
         }
       } catch {
         // Parse failure — fallback mode will handle
@@ -119,13 +135,13 @@ XMLHttpRequest.prototype.send = function patchedXhrSend(body?: Document | XMLHtt
   return origXhrSend.call(this, body);
 };
 
-function extractUserData(data: unknown, endpointHint?: string): void {
+function extractUserData(data: unknown, endpointHint?: string, account?: string | null): void {
   const users: Array<Record<string, unknown>> = [];
   findUserObjects(data, users);
   if (users.length === 0) return;
 
   postProfileData(users, endpointHint);
-  postTimelineFollowData(users, endpointHint);
+  postTimelineFollowData(users, endpointHint, account);
 }
 
 function postProfileData(users: Array<Record<string, unknown>>, endpointHint?: string): void {
@@ -142,7 +158,7 @@ function postProfileData(users: Array<Record<string, unknown>>, endpointHint?: s
         cachedProfiles.set(p.userId, p);
       }
     }
-    window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles }, window.location.origin);
+    postProfiles(profiles);
 
     if (bbrDebugMode) {
       const withBio = profiles.filter((p) => p.bio);
@@ -159,7 +175,11 @@ function postProfileData(users: Array<Record<string, unknown>>, endpointHint?: s
 // ListLatestTweetsTimeline 등 모든 GraphQL 타임라인이 extractBadgeData를 거치므로 자동 커버.
 // 영구 메모 없음(Defect 1 수정) — 동일 핸들이 여러 응답에 걸쳐 반복 포스트될 수 있으며,
 // 이는 의도된 self-heal: content 측 followSet diff(message-handler.ts)가 흡수한다.
-function postTimelineFollowData(users: Array<Record<string, unknown>>, endpointHint?: string): void {
+function postTimelineFollowData(
+  users: Array<Record<string, unknown>>,
+  endpointHint?: string,
+  account?: string | null,
+): void {
   const matches = extractFollowingFromUsers(users);
   const handles = dedupeFollowHandles(matches);
   if (bbrDebugMode) {
@@ -172,25 +192,18 @@ function postTimelineFollowData(users: Array<Record<string, unknown>>, endpointH
   }
   if (handles.length === 0) return;
   fiberFollowObserver.markReported(handles);
-  window.postMessage({
-    type: MESSAGE_TYPES.FOLLOW_DATA,
-    handles,
-    source: 'api-timeline',
-  }, window.location.origin);
+  followBridge.send(handles, 'api-timeline', account);
 }
 
 // extractViewerUserId / findViewerId 제거됨 — 수신 리스너 없는 죽은 코드
 
-function extractFollowData(data: unknown): void {
+function extractFollowData(data: unknown, account?: string | null): void {
   const handles: string[] = [];
   findFollowedHandles(data, handles);
   const uniqueHandles = [...new Set(handles.map((handle) => handle.toLowerCase()))];
   if (uniqueHandles.length > 0) {
     fiberFollowObserver.markReported(uniqueHandles);
-    window.postMessage({
-      type: MESSAGE_TYPES.FOLLOW_DATA,
-      handles: uniqueHandles,
-    }, window.location.origin);
+    followBridge.send(uniqueHandles, undefined, account);
   }
 }
 

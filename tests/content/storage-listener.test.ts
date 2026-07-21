@@ -132,6 +132,7 @@ describe('storage-listener', () => {
       expect(getProtectedKeywords()).toEqual(['game']);
       expect(mockRestoreHiddenTweets).toHaveBeenCalledOnce();
       expect(mockReprocessExistingTweets).toHaveBeenCalledOnce();
+      expect(onSettingsChanged).toHaveBeenCalledWith(DEFAULT_SETTINGS);
     });
   });
 

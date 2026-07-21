@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { HoverCardObserver } from '../../src/content/hover-card-observer';
+import { DEFAULT_SETTINGS } from '../../src/shared/constants';
+import { HoverCardObserver, mergeHoverCardBio, shouldObserveHoverCards } from '../../src/content/hover-card-observer';
 
 function makeHoverCard(handle: string, bio: string): HTMLElement {
   const card = document.createElement('div');
@@ -57,5 +58,35 @@ describe('HoverCardObserver', () => {
     await flushMutations();
 
     expect(onBio).not.toHaveBeenCalled();
+  });
+});
+
+describe('hover card profile helpers', () => {
+  it('보호 키워드만 등록돼 있어도 hover card를 관찰한다', () => {
+    expect(shouldObserveHoverCards(DEFAULT_SETTINGS, ['game'])).toBe(true);
+  });
+
+  it('캐시가 없는 계정의 bio도 새 프로필로 저장할 수 있게 병합한다', () => {
+    expect(mergeHoverCardBio(undefined, 'alice', 'game creator')).toEqual({
+      handle: 'alice',
+      displayName: 'alice',
+      bio: 'game creator',
+    });
+  });
+
+  it('기존 프로필 통계는 유지하면서 bio만 채운다', () => {
+    const profile = mergeHoverCardBio({
+      handle: 'Alice',
+      displayName: 'Alice Kim',
+      bio: '',
+      followersCount: 2000,
+    }, 'alice', 'game creator');
+
+    expect(profile).toMatchObject({
+      handle: 'Alice',
+      displayName: 'Alice Kim',
+      bio: 'game creator',
+      followersCount: 2000,
+    });
   });
 });
