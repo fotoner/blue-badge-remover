@@ -1,6 +1,6 @@
 {
   "name": "blue-badge-remover",
-  "version": "1.4.1",
+  "version": "1.6.0",
   "description": "X(트위터)에서 수익성 목적의 파란 뱃지 계정을 숨기는 크롬 익스텐션. 팔로우 중인 계정과 수동 화이트리스트는 예외 처리.",
   "type": "module",
   "scripts": {
@@ -16,14 +16,18 @@
     "postinstall": "wxt prepare",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "lint": "eslint ."
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.59.1",
     "@types/chrome": "^0.1.38",
     "@types/jsdom": "^28.0.1",
+    "eslint": "^10.7.0",
     "jsdom": "^29.0.1",
     "typescript": "^6.0.2",
+    "typescript-eslint": "^8.65.0",
     "vite": "^8.0.3",
     "vitest": "^4.1.2",
     "wxt": "^0.20.20"

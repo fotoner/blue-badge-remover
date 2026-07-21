@@ -48,6 +48,8 @@ import {
   getWhitelistSet,
   setWhitelistSet,
   isHandleWhitelisted,
+  getProtectedKeywords,
+  setProtectedKeywords,
 } from '../../src/content/state';
 import { listenForSettingsChanges } from '../../src/content/storage-listener';
 
@@ -58,6 +60,7 @@ type ChangesListener = (changes: Record<string, StorageChange>) => void;
 
 let changesListener: ChangesListener;
 const setDebugFlag = vi.fn();
+const onSettingsChanged = vi.fn();
 
 function dispatchChanges(changes: Record<string, StorageChange>): void {
   changesListener(changes);
@@ -67,8 +70,18 @@ function dispatchChanges(changes: Record<string, StorageChange>): void {
 
 describe('storage-listener', () => {
   beforeAll(() => {
-    listenForSettingsChanges(setDebugFlag);
+    listenForSettingsChanges(setDebugFlag, onSettingsChanged);
     changesListener = mockAddListener.mock.calls[0]![0] as ChangesListener;
+  });
+
+  it('설정 변경을 observer lifecycle 콜백에 전달한다', () => {
+    const settings = { ...DEFAULT_SETTINGS, keywordFilterEnabled: true };
+
+    dispatchChanges({
+      [STORAGE_KEYS.SETTINGS]: { newValue: settings },
+    });
+
+    expect(onSettingsChanged).toHaveBeenCalledWith(settings);
   });
 
   beforeEach(() => {
@@ -78,6 +91,7 @@ describe('storage-listener', () => {
     setSettings({ ...DEFAULT_SETTINGS });
     setFollowSet(new Set<string>());
     setWhitelistSet(new Set<string>());
+    setProtectedKeywords([]);
   });
 
   describe('whitelist change', () => {
@@ -106,6 +120,18 @@ describe('storage-listener', () => {
       });
 
       expect(getWhitelistSet()).toEqual(new Set(['@existing']));
+    });
+  });
+
+  describe('protected keyword change', () => {
+    it('상태를 갱신하고 기존 트윗을 재처리한다', () => {
+      dispatchChanges({
+        [STORAGE_KEYS.PROTECTED_KEYWORDS]: { newValue: ['game'] },
+      });
+
+      expect(getProtectedKeywords()).toEqual(['game']);
+      expect(mockRestoreHiddenTweets).toHaveBeenCalledOnce();
+      expect(mockReprocessExistingTweets).toHaveBeenCalledOnce();
     });
   });
 

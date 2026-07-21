@@ -3,10 +3,9 @@
 // where extension module imports (chrome.runtime, @shared paths) are unavailable.
 // To keep them in sync, tests/injected/fetch-interceptor-constants.test.ts
 // asserts that these values match the shared constants.
-import { findUserObjects, findFollowedHandles, extractFollowingFromUsers, dedupeFollowHandles } from './data-extractors';
+import { findUserObjects, findFollowedHandles, extractFollowingFromUsers, dedupeFollowHandles, extractProfileEntries, type ProfileEntry } from './data-extractors';
+import { FiberFollowObserver } from './fiber-follow-observer';
 const MESSAGE_TYPES = {
-  BADGE_DATA: 'BBR_BADGE_DATA',
-  USER_ID: 'BBR_USER_ID',
   FOLLOW_DATA: 'BBR_FOLLOW_DATA',
   PROFILE_DATA: 'BBR_PROFILE_DATA',
   CONTENT_READY: 'BBR_CONTENT_READY',
@@ -22,6 +21,13 @@ let bbrDebugMode = false;
 // Cache profiles from API responses so they can be replayed after content script is ready
 const MAX_CACHED_PROFILES = 10000;
 const cachedProfiles = new Map<string, ProfileEntry>();
+const fiberFollowObserver = new FiberFollowObserver((handles) => {
+  window.postMessage({
+    type: MESSAGE_TYPES.FOLLOW_DATA,
+    handles,
+    source: 'inline',
+  }, window.location.origin);
+});
 
 window.addEventListener('message', (event) => {
   if (event.source !== window) return;
@@ -32,6 +38,9 @@ window.addEventListener('message', (event) => {
   // Content script signals it's ready — replay cached profiles so none are missed
   if (data?.type === MESSAGE_TYPES.CONTENT_READY && cachedProfiles.size > 0) {
     window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles: Array.from(cachedProfiles.values()) }, window.location.origin);
+  }
+  if (data?.type === MESSAGE_TYPES.CONTENT_READY) {
+    fiberFollowObserver.markContentReady();
   }
 });
 
@@ -52,7 +61,7 @@ window.fetch = async function patchedFetch(
       const cloned = response.clone();
       const data = await cloned.json();
       const endpoint = url.split('/').slice(-2).join('/');
-      extractBadgeData(data, endpoint);
+      extractUserData(data, endpoint);
       // extractViewerUserId 제거: viewer ID 메시지를 수신하는 리스너 없음.
       // 계정 감지는 content script의 detectAndHandleAccountSwitch()에서 DOM 기반으로 처리.
 
@@ -82,7 +91,7 @@ XMLHttpRequest.prototype.open = function patchedXhrOpen(
   (this as XMLHttpRequest & { _bbrUrl: string })._bbrUrl =
     typeof url === 'string' ? url : url.toString();
   if (async === undefined) {
-    return (origXhrOpen as Function).call(this, method, url);
+    return Reflect.apply(origXhrOpen, this, [method, url]) as void;
   }
   return origXhrOpen.call(this, method, url, async!, username, password);
 };
@@ -96,7 +105,7 @@ XMLHttpRequest.prototype.send = function patchedXhrSend(body?: Document | XMLHtt
       try {
         const data = JSON.parse(xhr.responseText) as unknown;
         const endpoint = url.split('/').slice(-2).join('/');
-        extractBadgeData(data, endpoint);
+        extractUserData(data, endpoint);
         // extractViewerUserId 제거: viewer ID 메시지를 수신하는 리스너 없음.
       // 계정 감지는 content script의 detectAndHandleAccountSwitch()에서 DOM 기반으로 처리.
         if (url.toLowerCase().includes('follow')) {
@@ -110,15 +119,10 @@ XMLHttpRequest.prototype.send = function patchedXhrSend(body?: Document | XMLHtt
   return origXhrSend.call(this, body);
 };
 
-function extractBadgeData(data: unknown, endpointHint?: string): void {
+function extractUserData(data: unknown, endpointHint?: string): void {
   const users: Array<Record<string, unknown>> = [];
   findUserObjects(data, users);
   if (users.length === 0) return;
-
-  window.postMessage({
-    type: MESSAGE_TYPES.BADGE_DATA,
-    users,
-  }, window.location.origin);
 
   postProfileData(users, endpointHint);
   postTimelineFollowData(users, endpointHint);
@@ -126,26 +130,7 @@ function extractBadgeData(data: unknown, endpointHint?: string): void {
 
 function postProfileData(users: Array<Record<string, unknown>>, endpointHint?: string): void {
   // Derive profiles from already-collected users — avoids a second full traversal
-  const profiles: ProfileEntry[] = [];
-  for (const user of users) {
-    const restId = user['rest_id'];
-    if (typeof restId !== 'string') continue;
-    const legacy = user['legacy'] as Record<string, unknown> | null;
-    if (!legacy) continue;
-    const core = user['core'] as Record<string, unknown> | null;
-    const handle =
-      typeof legacy['screen_name'] === 'string' ? legacy['screen_name'] :
-      typeof core?.['screen_name'] === 'string' ? core['screen_name'] as string : '';
-    const displayName =
-      typeof legacy['name'] === 'string' ? legacy['name'] :
-      typeof core?.['name'] === 'string' ? core['name'] as string : '';
-    profiles.push({
-      userId: restId,
-      handle,
-      displayName,
-      bio: typeof legacy['description'] === 'string' ? legacy['description'] : '',
-    });
-  }
+  const profiles = extractProfileEntries(users);
 
   if (profiles.length > 0) {
     for (const p of profiles) {
@@ -186,6 +171,7 @@ function postTimelineFollowData(users: Array<Record<string, unknown>>, endpointH
     );
   }
   if (handles.length === 0) return;
+  fiberFollowObserver.markReported(handles);
   window.postMessage({
     type: MESSAGE_TYPES.FOLLOW_DATA,
     handles,
@@ -198,112 +184,24 @@ function postTimelineFollowData(users: Array<Record<string, unknown>>, endpointH
 function extractFollowData(data: unknown): void {
   const handles: string[] = [];
   findFollowedHandles(data, handles);
-  if (handles.length > 0) {
+  const uniqueHandles = [...new Set(handles.map((handle) => handle.toLowerCase()))];
+  if (uniqueHandles.length > 0) {
+    fiberFollowObserver.markReported(uniqueHandles);
     window.postMessage({
       type: MESSAGE_TYPES.FOLLOW_DATA,
-      handles,
+      handles: uniqueHandles,
     }, window.location.origin);
   }
 }
 
 // findUserObjects and findFollowedHandles extracted to ./data-extractors.ts
 
-interface ProfileEntry {
-  userId: string;
-  handle: string;
-  displayName: string;
-  bio: string;
+function startFiberFollowObserver(): void {
+  if (document.body) fiberFollowObserver.start(document.body);
 }
 
-
-interface ArticleData {
-  handle: string;
-  following: boolean;
-  isBluePremium: boolean;
+if (document.body) {
+  startFiberFollowObserver();
+} else {
+  document.addEventListener('DOMContentLoaded', startFiberFollowObserver, { once: true });
 }
-
-function extractArticleDataFromFiber(article: HTMLElement): ArticleData | null {
-  const fiberKey = Object.keys(article).find(
-    (k) => k.startsWith('__reactFiber') || k.startsWith('__reactInternalInstance'),
-  );
-  if (!fiberKey) return null;
-
-  const seenProps = new WeakSet<object>();
-  function scanProps(obj: unknown, depth: number): ArticleData | null {
-    if (!obj || typeof obj !== 'object' || depth > 50 || seenProps.has(obj as object)) return null;
-    seenProps.add(obj as object);
-    const r = obj as Record<string, unknown>;
-    if (typeof r['screen_name'] === 'string' && typeof r['following'] === 'boolean') {
-      const isBlueVerified = r['is_blue_verified'] === true;
-      const verifiedType = typeof r['verified_type'] === 'string' ? r['verified_type'] : '';
-      const isLegacy = r['legacy'] && typeof r['legacy'] === 'object' && (r['legacy'] as Record<string, unknown>)['verified'] === true;
-      const isBluePremium = isBlueVerified && verifiedType !== 'Business' && !isLegacy;
-      return { handle: r['screen_name'], following: r['following'], isBluePremium };
-    }
-    if (Array.isArray(obj)) {
-      for (const item of obj) { const f = scanProps(item, depth + 1); if (f) return f; }
-      return null;
-    }
-    for (const key of Object.keys(r)) {
-      let v: unknown; try { v = r[key]; } catch { continue; }
-      if (v && typeof v === 'object') { const f = scanProps(v, depth + 1); if (f) return f; }
-    }
-    return null;
-  }
-
-  const seenFiber = new WeakSet<object>();
-  function walkFiber(node: unknown, depth: number): ArticleData | null {
-    if (!node || typeof node !== 'object' || depth > 80 || seenFiber.has(node as object)) return null;
-    seenFiber.add(node as object);
-    const fiber = node as Record<string, unknown>;
-    try {
-      const props = fiber['memoizedProps'];
-      if (props && typeof props === 'object') {
-        const r = scanProps(props, 0);
-        if (r) return r;
-      }
-      return walkFiber(fiber['child'], depth + 1) ?? walkFiber(fiber['sibling'], depth + 1);
-    } catch { return null; }
-  }
-
-  const data = walkFiber((article as unknown as Record<string, unknown>)[fiberKey], 0);
-  if (bbrDebugMode && data) {
-    console.log('[BBR-DOM]', data.handle, `following=${data.following}`);
-  }
-  return data;
-}
-
-(function observeTweetArticles() {
-  function processArticle(article: HTMLElement) {
-    const data = extractArticleDataFromFiber(article);
-    if (!data?.following) return;
-    // 팔로우 중인 모든 인증 계정을 팔로우 리스트에 추가 (금딱/회딱 포함)
-    // 팔로우 리스트는 필터링 예외 처리용이므로, 뱃지 유형과 무관하게 추가해야 함
-    window.postMessage({
-      type: MESSAGE_TYPES.FOLLOW_DATA,
-      handles: [data.handle.toLowerCase()],
-      source: 'inline',
-    }, window.location.origin);
-  }
-
-  const observer = new MutationObserver((mutations) => {
-    for (const m of mutations) {
-      for (const node of m.addedNodes) {
-        if (!(node instanceof HTMLElement)) continue;
-        if (node.matches('article[data-testid="tweet"]')) {
-          processArticle(node);
-        } else {
-          node.querySelectorAll<HTMLElement>('article[data-testid="tweet"]').forEach(processArticle);
-        }
-      }
-    }
-  });
-
-  const startObserver = () => observer.observe(document.body, { childList: true, subtree: true });
-  if (document.body) {
-    startObserver();
-  } else {
-    document.addEventListener('DOMContentLoaded', startObserver);
-  }
-})();
-

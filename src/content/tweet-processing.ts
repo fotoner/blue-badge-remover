@@ -156,10 +156,6 @@ export function extractDisplayName(tweetEl: HTMLElement, handle: string): string
  * a verified badge. Delegates to findAuthorBadge — quote-card User-Names are excluded,
  * so a non-파딱 account quoting a 파딱 is never treated as badged.
  */
-export function hasBadgeInAuthorArea(tweetEl: HTMLElement): boolean {
-  return findAuthorBadge(tweetEl) !== null;
-}
-
 export function formatUserLabel(handle: string, displayName: string | null): string {
   return displayName ? `${displayName}(@${handle})` : `@${handle}`;
 }

@@ -1,5 +1,5 @@
 import { browser } from 'wxt/browser';
-import { getSettings, getWhitelist, addToWhitelist, removeFromWhitelist } from '@features/settings';
+import { getSettings, getWhitelist, addManyToWhitelist, removeFromWhitelist } from '@features/settings';
 import { t } from '@shared/i18n';
 import type { Language } from '@shared/i18n';
 
@@ -7,6 +7,11 @@ export function normalizeHandle(input: string): string | null {
   const handle = input.trim().replace(/^@/, '');
   if (!handle || !/^[A-Za-z0-9_]{1,15}$/.test(handle)) return null;
   return `@${handle.toLowerCase()}`;
+}
+
+export function parseWhitelistInput(input: string): string[] {
+  const handles = input.split(/[\s,]+/).map(normalizeHandle).filter((handle): handle is string => handle !== null);
+  return [...new Set(handles)];
 }
 
 export function renderWhitelistItems(
@@ -50,7 +55,7 @@ async function init(): Promise<void> {
   const lang = settings.language;
 
   const subtitleEl = document.getElementById('page-subtitle')!;
-  const inputEl = document.getElementById('whitelist-input') as HTMLInputElement;
+  const inputEl = document.getElementById('whitelist-input') as HTMLTextAreaElement;
   const addBtn = document.getElementById('whitelist-add') as HTMLButtonElement;
   const container = document.getElementById('whitelist-container')!;
   const emptyEl = document.getElementById('whitelist-empty')!;
@@ -70,15 +75,15 @@ async function init(): Promise<void> {
   };
 
   addBtn.addEventListener('click', async () => {
-    const normalized = normalizeHandle(inputEl.value);
-    if (!normalized) return;
-    await addToWhitelist(normalized);
+    const handles = parseWhitelistInput(inputEl.value);
+    if (!handles.length) return;
+    await addManyToWhitelist(handles);
     inputEl.value = '';
     await refresh();
   });
 
   inputEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') addBtn.click();
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addBtn.click();
   });
 
   await refresh();

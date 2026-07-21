@@ -4,6 +4,7 @@ import {
   findFollowedHandles,
   extractFollowingFromUsers,
   dedupeFollowHandles,
+  extractProfileEntries,
   type FollowingUserMatch,
 } from '../../src/injected/data-extractors';
 
@@ -93,6 +94,30 @@ describe('findUserObjects', () => {
     expect(result).toHaveLength(1);
     expect(result[0]!['following']).toBe(true);
     expect(result[0]!['relationship_perspectives']).toEqual({ following: true });
+  });
+});
+
+describe('extractProfileEntries', () => {
+  it('C4 판정에 필요한 생성일과 팔로워 통계를 추출한다', () => {
+    const profiles = extractProfileEntries([{
+      rest_id: '42',
+      core: { screen_name: 'NewUser', name: 'New User' },
+      legacy: {
+        description: 'bio', created_at: 'Wed Apr 01 00:00:00 +0000 2026',
+        followers_count: 2_000, friends_count: 100,
+      },
+    }]);
+    expect(profiles).toEqual([{
+      userId: '42', handle: 'NewUser', displayName: 'New User', bio: 'bio',
+      createdAt: 'Wed Apr 01 00:00:00 +0000 2026', followersCount: 2_000, followingCount: 100,
+    }]);
+  });
+
+  it('필수 식별자가 없는 사용자와 잘못된 통계 타입을 안전하게 처리한다', () => {
+    expect(extractProfileEntries([{ legacy: { screen_name: 'missing-id' } }])).toEqual([]);
+    expect(extractProfileEntries([{
+      rest_id: '1', legacy: { screen_name: 'x', followers_count: 'many' },
+    }])[0]?.followersCount).toBeUndefined();
   });
 });
 

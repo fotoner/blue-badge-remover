@@ -9,6 +9,31 @@ const STYLE_INJECTED_ATTR = 'data-bbr-styles';
 
 let currentLanguage: Language = DEFAULT_LANGUAGE;
 
+const PLACEHOLDER_STYLES = `
+  .bbr-placeholder {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 0; margin: 0; background: none; border: none;
+    border-radius: 0; color: #536471; font-size: 13px; cursor: pointer;
+    transition: color 0.15s; user-select: none; -webkit-user-select: none;
+    min-height: 48px;
+  }
+  .bbr-placeholder:hover { color: #1d9bf0; }
+  .bbr-whitelist-button {
+    margin-left: auto; padding: 4px 10px; border: 1px solid currentColor;
+    border-radius: 12px; color: inherit; background: transparent; cursor: pointer;
+  }
+  .bbr-placeholder-icon { flex-shrink: 0; width: 16px; height: 16px; opacity: 0.6; }
+  .bbr-placeholder:hover .bbr-placeholder-icon { opacity: 1; }
+  .bbr-quote-placeholder {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%; height: 100%; padding: 10px 12px; background: none;
+    border: none; border-radius: 0; color: #536471; font-size: 12px;
+    cursor: pointer; transition: color 0.15s; user-select: none;
+    -webkit-user-select: none; min-height: 40px;
+  }
+  .bbr-quote-placeholder:hover { color: #1d9bf0; }
+`;
+
 export function setTweetHiderLanguage(lang: Language): void {
   currentLanguage = lang;
 }
@@ -20,6 +45,8 @@ export interface HideContext {
   quotedBy?: string;
   category?: string;
   matchedRule?: string;
+  preserveHeight?: boolean;
+  onWhitelist?: () => void | Promise<void>;
 }
 
 export interface HideQuoteContext {
@@ -31,72 +58,41 @@ function injectStyles(): void {
   if (document.querySelector(`[${STYLE_INJECTED_ATTR}]`)) return;
   const style = document.createElement('style');
   style.setAttribute(STYLE_INJECTED_ATTR, 'true');
-  style.textContent = `
-    .bbr-placeholder {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      width: 100%;
-      padding: 0;
-      margin: 0;
-      background: none;
-      border: none;
-      border-radius: 0;
-      color: #536471;
-      font-size: 13px;
-      cursor: pointer;
-      transition: color 0.15s;
-      user-select: none;
-      -webkit-user-select: none;
-      min-height: 48px;
-    }
-    .bbr-placeholder:hover {
-      color: #1d9bf0;
-    }
-    .bbr-placeholder-icon {
-      flex-shrink: 0;
-      width: 16px;
-      height: 16px;
-      opacity: 0.6;
-    }
-    .bbr-placeholder:hover .bbr-placeholder-icon {
-      opacity: 1;
-    }
-    .bbr-quote-placeholder {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      width: 100%;
-      height: 100%;
-      padding: 10px 12px;
-      background: none;
-      border: none;
-      border-radius: 0;
-      color: #536471;
-      font-size: 12px;
-      cursor: pointer;
-      transition: color 0.15s;
-      user-select: none;
-      -webkit-user-select: none;
-      min-height: 40px;
-    }
-    .bbr-quote-placeholder:hover {
-      color: #1d9bf0;
-    }
-  `;
+  style.textContent = PLACEHOLDER_STYLES;
   document.head.appendChild(style);
 }
 
 const SHIELD_ICON = `<svg class="bbr-placeholder-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1L2 3.5v4c0 3.5 2.6 6.4 6 7.5 3.4-1.1 6-4 6-7.5v-4L8 1zm0 2.2l4 1.7v2.6c0 2.6-1.9 4.8-4 5.7-2.1-.9-4-3.1-4-5.7V4.9l4-1.7z"/></svg>`;
 
+function createWhitelistButton(onWhitelist: () => void | Promise<void>): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'bbr-whitelist-button';
+  button.textContent = t('addToWhitelist', currentLanguage);
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    event.preventDefault();
+    void onWhitelist();
+    button.remove();
+  }, { once: true });
+  return button;
+}
+
 export function hideTweet(element: HTMLElement, mode: 'remove' | 'collapse', context?: HideContext, onExpand?: (el: HTMLElement) => void): void {
   if (element.hasAttribute(ORIGINAL_CONTENT_KEY)) return;
   if (element.hasAttribute(EXPANDED_ATTR)) return;
+  const preservedHeight = context?.preserveHeight
+    ? Math.ceil(element.getBoundingClientRect().height)
+    : 0;
 
   if (mode === 'remove') {
-    element.style.display = 'none';
+    if (preservedHeight > 0) {
+      element.style.visibility = 'hidden';
+      element.style.pointerEvents = 'none';
+      element.style.minHeight = `${preservedHeight}px`;
+    } else {
+      element.style.display = 'none';
+    }
     element.setAttribute(ORIGINAL_CONTENT_KEY, 'hidden');
     element.setAttribute(HIDE_REASON_ATTR, context?.reason ?? 'unknown');
     return;
@@ -117,10 +113,15 @@ export function hideTweet(element: HTMLElement, mode: 'remove' | 'collapse', con
   placeholder.setAttribute(COLLAPSED_ATTR, 'true');
   placeholder.className = 'bbr-placeholder';
   placeholder.innerHTML = SHIELD_ICON;
+  if (preservedHeight > 0) placeholder.style.minHeight = `${preservedHeight}px`;
 
   const textSpan = document.createElement('span');
   textSpan.textContent = label;
   placeholder.appendChild(textSpan);
+
+  if (context?.onWhitelist) {
+    placeholder.appendChild(createWhitelistButton(context.onWhitelist));
+  }
 
   placeholder.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -165,6 +166,9 @@ const EXPANDED_ATTR = 'data-bbr-expanded';
 
 export function showTweet(element: HTMLElement): void {
   element.style.display = '';
+  element.style.visibility = '';
+  element.style.pointerEvents = '';
+  element.style.minHeight = '';
   element.removeAttribute(ORIGINAL_CONTENT_KEY);
   element.removeAttribute(HIDE_REASON_ATTR);
   element.setAttribute(EXPANDED_ATTR, '1');

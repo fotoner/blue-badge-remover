@@ -7,22 +7,23 @@ import { MESSAGE_TYPES, STORAGE_KEYS, TIMINGS } from '@shared/constants';
 import { logger } from '@shared/utils/logger';
 import { showFadakProfileBanner, showFadakDetailBanner, removeFadakBanner } from './fadak-banner';
 import { listenForNavigation, setOnNavigate } from './navigation';
-import { collectFollowsFromDOM, saveFollowHandles, disconnectFollowObserver, listenForFollowButtonClicks, getMyHandle } from './follow-collector';
+import { collectFollowsFromDOM, disconnectFollowObserver, listenForFollowButtonClicks, getMyHandle } from './follow-collector';
 import { isProfilePage, getProfileLinkHref } from './page-utils';
 import { observeSettingsShortcut } from './settings-shortcut';
-import { setSettings, setFollowSet, setWhitelistSet, setCurrentUserHandle, getSettings, getFollowSet, isHandleFollowed, isHandleWhitelisted, profileCache, collectorBuffer } from './state';
+import { setSettings, setFollowSet, setWhitelistSet, setProtectedKeywords, setCurrentUserHandle, getSettings, getFollowSet, isHandleFollowed, isHandleWhitelisted, profileCache, collectorBuffer } from './state';
 import { flushCollector } from './collector-buffer';
 import { loadFilterRules } from './filter-pipeline';
 import { processTweet, restoreHiddenTweets, reprocessExistingTweets, applyCurrentUserFallback } from './tweet-orchestrator';
 import { listenForMessages } from './message-handler';
 import { listenForSettingsChanges } from './storage-listener';
-import { startStatsFlush, stopStatsFlush, flushStats, setOnFlush } from '@features/stats';
+import { startStatsFlush, flushStats, setOnFlush } from '@features/stats';
 import { checkMilestone } from './milestone-banner';
+import { HoverCardObserver } from './hover-card-observer';
 
 let feedObserver: FeedObserver;
 let accountSwitchTimerId: ReturnType<typeof setInterval> | null = null;
 let collectorFlushTimerId: ReturnType<typeof setInterval> | null = null;
-let hoverCardObserver: MutationObserver | null = null;
+const hoverCardObserver = new HoverCardObserver(handleHoverCardBio);
 
 function setDebugFlag(enabled: boolean): void {
   window.postMessage({ type: 'BBR_SET_DEBUG', enabled }, window.location.origin);
@@ -106,44 +107,7 @@ function handleNavigate(): void {
   });
 }
 
-function observeHoverCards(): void {
-  if (hoverCardObserver) hoverCardObserver.disconnect();
-  hoverCardObserver = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      for (const node of mutation.addedNodes) {
-        if (!(node instanceof HTMLElement)) continue;
-        const card = node.matches('[data-testid="HoverCard"]')
-          ? node
-          : node.querySelector('[data-testid="HoverCard"]');
-        if (!card) continue;
-        waitForHoverCardBio(card as HTMLElement);
-      }
-    }
-  });
-  hoverCardObserver.observe(document.body, { childList: true, subtree: true });
-}
-
-function waitForHoverCardBio(card: HTMLElement): void {
-  if (tryExtractBioFromHoverCard(card)) return;
-  const inner = new MutationObserver(() => {
-    if (tryExtractBioFromHoverCard(card)) inner.disconnect();
-  });
-  inner.observe(card, { childList: true, subtree: true });
-  setTimeout(() => inner.disconnect(), TIMINGS.HOVER_CARD_TIMEOUT);
-}
-
-function tryExtractBioFromHoverCard(card: HTMLElement): boolean {
-  const bioEl = card.querySelector('[data-testid="UserDescription"]');
-  if (!bioEl) return false;
-  const bio = bioEl.textContent?.trim() ?? '';
-  if (!bio) return false;
-  const handleLink = card.querySelector('a[role="link"][href^="/"]');
-  if (!handleLink) return false;
-  const href = handleLink.getAttribute('href') ?? '';
-  const handle = href.slice(1).split('/')[0];
-  if (!handle || handle === 'i' || href.includes('/status/')) return false;
-
-  const key = handle.toLowerCase();
+function handleHoverCardBio(key: string, bio: string): void {
   const cached = profileCache.get(key);
   if (cached && !cached.bio) profileCache.set(key, { ...cached, bio });
 
@@ -152,10 +116,14 @@ function tryExtractBioFromHoverCard(card: HTMLElement): boolean {
     const buffered = collectorBuffer.get(key);
     if (buffered && !buffered.bio) {
       buffered.bio = bio;
-      if (settings.debugMode) console.log('[BBR HOVER BIO]', key, '->', bio.slice(0, 40));
+      if (settings.debugMode) logger.debug('Hover card bio received', { handle: key, bioPreview: bio.slice(0, 40) });
     }
   }
-  return true;
+}
+
+function syncHoverCardObserver(settings: ReturnType<typeof getSettings>): void {
+  const enabled = settings.keywordFilterEnabled || settings.keywordCollectorEnabled;
+  hoverCardObserver.sync(enabled, document.body);
 }
 
 async function init(): Promise<void> {
@@ -163,18 +131,19 @@ async function init(): Promise<void> {
   setSettings(settings);
   await loadFilterRules();
 
-  const stored = await browser.storage.local.get([STORAGE_KEYS.FOLLOW_LIST, STORAGE_KEYS.WHITELIST, STORAGE_KEYS.FOLLOW_CACHE, STORAGE_KEYS.CURRENT_USER_ID]);
+  const stored = await browser.storage.local.get([STORAGE_KEYS.FOLLOW_LIST, STORAGE_KEYS.WHITELIST, STORAGE_KEYS.FOLLOW_CACHE, STORAGE_KEYS.CURRENT_USER_ID, STORAGE_KEYS.PROTECTED_KEYWORDS]);
   const currentAccount = (stored[STORAGE_KEYS.CURRENT_USER_ID] as string | null) ?? '';
   setCurrentUserHandle(currentAccount || null);
   const cache = (stored[STORAGE_KEYS.FOLLOW_CACHE] as Record<string, string[]> | undefined) ?? {};
   const cachedFollows = currentAccount ? (cache[currentAccount] ?? []) : ((stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? []);
   setFollowSet(new Set(cachedFollows));
   setWhitelistSet(new Set(((stored[STORAGE_KEYS.WHITELIST] as string[] | undefined) ?? []).map((h) => h.toLowerCase())));
+  setProtectedKeywords((stored[STORAGE_KEYS.PROTECTED_KEYWORDS] as string[] | undefined) ?? []);
 
   setTweetHiderLanguage(settings.language);
   setDebugFlag(settings.debugMode);
   listenForMessages(followCollectorDeps);
-  listenForSettingsChanges(setDebugFlag);
+  listenForSettingsChanges(setDebugFlag, syncHoverCardObserver);
   if (collectorFlushTimerId !== null) clearInterval(collectorFlushTimerId);
   collectorFlushTimerId = setInterval(() => { if (getSettings().keywordCollectorEnabled) void flushCollector(); }, TIMINGS.COLLECTOR_FLUSH_INTERVAL);
   setOnFlush((totalHidden) => void checkMilestone(totalHidden));
@@ -188,7 +157,7 @@ async function init(): Promise<void> {
   feedObserver = new FeedObserver(processTweet);
   startObserving();
   reprocessExistingTweets();
-  observeHoverCards();
+  syncHoverCardObserver(settings);
 
   setOnNavigate(handleNavigate);
   listenForNavigation();
@@ -206,11 +175,11 @@ async function init(): Promise<void> {
 
   if (settings.debugMode) {
     const allStorage = await browser.storage.local.get(null);
-    console.log('[BBR STORAGE]', JSON.stringify({
+    logger.debug('Storage state', {
       followCount: ((allStorage['followList'] as string[]) ?? []).length,
       whitelistCount: ((allStorage['whitelist'] as string[]) ?? []).length,
       lastSyncAt: allStorage['lastSyncAt'],
-    }));
+    });
     logger.info('Blue Badge Remover initialized');
   }
 }

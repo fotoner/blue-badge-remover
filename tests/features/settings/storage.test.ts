@@ -23,7 +23,7 @@ vi.mock('wxt/browser', () => ({
 }));
 
 // Dynamic import after mock is set up
-const { getSettings, saveSettings, getWhitelist, addToWhitelist, removeFromWhitelist } = await import('@features/settings/storage');
+const { getSettings, getWhitelist, addToWhitelist, addManyToWhitelist, removeFromWhitelist } = await import('@features/settings/storage');
 const { browser } = await import('wxt/browser');
 
 beforeEach(() => {
@@ -84,6 +84,15 @@ describe('whitelist', () => {
   it('should add handle to whitelist', async () => {
     await addToWhitelist('@testuser');
     expect(mockStorage['whitelist']).toContain('@testuser');
+  });
+
+  it('should add multiple normalized handles with one storage write', async () => {
+    mockStorage['whitelist'] = ['@existing'];
+    const before = (browser.storage.local.set as Mock).mock.calls.length;
+    await addManyToWhitelist(['@Alice', 'bob', '@alice']);
+    const after = (browser.storage.local.set as Mock).mock.calls.length;
+    expect(mockStorage['whitelist']).toEqual(['@existing', '@alice', '@bob']);
+    expect(after - before).toBe(1);
   });
 
   it('should not add duplicate handle', async () => {

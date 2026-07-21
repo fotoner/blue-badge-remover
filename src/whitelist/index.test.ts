@@ -1,6 +1,6 @@
 // src/whitelist/index.test.ts
 import { describe, it, expect, beforeEach } from 'vitest';
-import { normalizeHandle, renderWhitelistItems } from './index';
+import { normalizeHandle, parseWhitelistInput, renderWhitelistItems } from './index';
 
 describe('normalizeHandle', () => {
   it('유효한 핸들에서 @ prefix를 붙여 반환한다', () => {
@@ -45,6 +45,16 @@ describe('normalizeHandle', () => {
 
   it('앞뒤 공백과 대소문자를 함께 정규화한다', () => {
     expect(normalizeHandle('  MixedCase  ')).toBe('@mixedcase');
+  });
+});
+
+describe('parseWhitelistInput', () => {
+  it('줄바꿈으로 구분된 핸들을 정규화하고 중복을 제거한다', () => {
+    expect(parseWhitelistInput('@Alice\nbob\n@alice')).toEqual(['@alice', '@bob']);
+  });
+
+  it('쉼표와 공백 구분도 허용하고 잘못된 핸들은 제외한다', () => {
+    expect(parseWhitelistInput('alice, bad.handle  bob')).toEqual(['@alice', '@bob']);
   });
 });
 

@@ -8,7 +8,6 @@ import {
   extractQuoteAuthor,
   extractTweetText,
   extractDisplayName,
-  hasBadgeInAuthorArea,
   findAuthorBadge,
   formatUserLabel,
 } from '../../src/content/tweet-processing';
@@ -363,57 +362,6 @@ describe('extractDisplayName', () => {
       </article>
     `);
     expect(extractDisplayName(el, 'someone')).toBe('표시이름');
-  });
-});
-
-// --- hasBadgeInAuthorArea ---
-
-describe('hasBadgeInAuthorArea', () => {
-  it('User-Name 영역에 뱃지 있으면 true', () => {
-    const el = html(`
-      <article>
-        <div data-testid="User-Name">
-          <span>유저</span>
-          <svg data-testid="icon-verified"></svg>
-        </div>
-      </article>
-    `);
-    expect(hasBadgeInAuthorArea(el)).toBe(true);
-  });
-
-  it('뱃지 없으면 false', () => {
-    const el = html(`
-      <article>
-        <div data-testid="User-Name"><span>유저</span></div>
-      </article>
-    `);
-    expect(hasBadgeInAuthorArea(el)).toBe(false);
-  });
-
-  it('User-Name 없어도 article 전체에서 탐색', () => {
-    const el = html(`
-      <article>
-        <svg data-testid="icon-verified"></svg>
-      </article>
-    `);
-    expect(hasBadgeInAuthorArea(el)).toBe(true);
-  });
-
-  it('인용 카드 안에만 뱃지 있으면 false', () => {
-    const el = html(`
-      <article>
-        <div data-testid="User-Name"><span>작성자</span></div>
-        <div>
-          <span>인용</span>
-          <div>
-            <div data-testid="User-Name">
-              <svg data-testid="icon-verified"><g><path d="M1 1Z"></path></g></svg>
-            </div>
-          </div>
-        </div>
-      </article>
-    `);
-    expect(hasBadgeInAuthorArea(el)).toBe(false);
   });
 });
 

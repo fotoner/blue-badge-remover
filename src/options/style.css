@@ -273,6 +273,10 @@ input[type="checkbox"]:checked::after {
   color: var(--text-muted);
 }
 
+.filter-textarea.compact {
+  min-height: 92px;
+}
+
 /* Buttons */
 .btn-row {
   display: flex;

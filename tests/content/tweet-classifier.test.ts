@@ -15,6 +15,7 @@ const defaultSettings: Settings = {
   keywordCollectorEnabled: false,
   defaultFilterEnabled: true,
   milestoneBannerEnabled: false,
+  aggressorFilterEnabled: false,
 };
 
 function makeInput(overrides: Partial<ClassifyInput> = {}): ClassifyInput {
@@ -31,6 +32,7 @@ function makeInput(overrides: Partial<ClassifyInput> = {}): ClassifyInput {
     retweeterIsCurrentUser: false,
     settings: defaultSettings,
     activeFilterRules: [],
+    protectedKeywords: [],
     profile: { handle: 'fadak_user', displayName: '파딱유저', bio: '' },
     tweetText: '일반 트윗',
     pageType: 'timeline',
@@ -54,6 +56,14 @@ describe('classifyTweet', () => {
     const result = classifyTweet(makeInput({ isWhitelisted: true }));
     expect(result.action).toBe('show');
     expect(result.reason).toBe('whitelist');
+  });
+
+  it('보호 키워드가 프로필에 매칭되면 전체 파딱 숨김보다 우선한다', () => {
+    const result = classifyTweet(makeInput({
+      protectedKeywords: ['파딱유저'],
+    }));
+    expect(result.action).toBe('show');
+    expect(result.reason).toBe('protected-keyword');
   });
 
   it('파딱 + 팔로우 안 함 = hide', () => {
@@ -83,6 +93,18 @@ describe('classifyTweet', () => {
     expect(result.matchedRule).toBe('비트코인');
     expect(result.packId).toBe('crypto-pack');
     expect(result.category).toBe('코인');
+  });
+
+  it('선별 모드에서 어그로 휴리스틱 계정은 키워드 불일치여도 숨긴다', () => {
+    const result = classifyTweet(makeInput({
+      settings: { ...defaultSettings, keywordFilterEnabled: true, aggressorFilterEnabled: true },
+      profile: {
+        handle: 'new_user', displayName: 'New', bio: '',
+        createdAt: new Date().toISOString(), followersCount: 2_000, followingCount: 100,
+      },
+    }));
+    expect(result.action).toBe('hide');
+    expect(result.reason).toBe('aggressor-profile');
   });
 
   it('리트윗 + 파딱 = hide', () => {

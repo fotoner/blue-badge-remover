@@ -4,18 +4,21 @@ import { browser } from 'wxt/browser';
 import { setTweetHiderLanguage } from '@features/content-filter';
 import { STORAGE_KEYS } from '@shared/constants';
 import type { Settings } from '@shared/types';
-import { getSettings, setSettings, setFollowSet, setWhitelistSet } from './state';
+import { getFollowSet, getSettings, setSettings, setFollowSet, setWhitelistSet, setProtectedKeywords } from './state';
 import { restoreHiddenTweets, reprocessExistingTweets } from './tweet-orchestrator';
 import { flushCollector } from './collector-buffer';
 import { loadFilterRules } from './filter-pipeline';
 import { removeFadakBanner } from './fadak-banner';
 import { scheduleFollowReprocess } from './message-handler';
 
-export function listenForSettingsChanges(setDebugFlag: (enabled: boolean) => void): void {
+export function listenForSettingsChanges(
+  setDebugFlag: (enabled: boolean) => void,
+  onSettingsChanged: (settings: Settings) => void = () => {},
+): void {
   browser.storage.onChanged.addListener((changes) => {
     const settingsChange = changes[STORAGE_KEYS.SETTINGS];
     if (settingsChange) {
-      handleSettingsChange(settingsChange.newValue as Settings, setDebugFlag);
+      handleSettingsChange(settingsChange.newValue as Settings, setDebugFlag, onSettingsChanged);
     }
     const followChange = changes[STORAGE_KEYS.FOLLOW_LIST];
     if (followChange?.newValue) {
@@ -34,14 +37,25 @@ export function listenForSettingsChanges(setDebugFlag: (enabled: boolean) => voi
     if (changes[STORAGE_KEYS.FILTER_PACKS]) {
       void loadFilterRules().then(() => { restoreHiddenTweets(); reprocessExistingTweets(); });
     }
+    const protectedKeywordsChange = changes[STORAGE_KEYS.PROTECTED_KEYWORDS];
+    if (protectedKeywordsChange) {
+      setProtectedKeywords((protectedKeywordsChange.newValue as string[] | undefined) ?? []);
+      restoreHiddenTweets();
+      reprocessExistingTweets();
+    }
   });
 }
 
-function handleSettingsChange(newSettings: Settings, setDebugFlag: (enabled: boolean) => void): void {
+function handleSettingsChange(
+  newSettings: Settings,
+  setDebugFlag: (enabled: boolean) => void,
+  onSettingsChanged: (settings: Settings) => void,
+): void {
   const prev = getSettings();
   setSettings(newSettings);
   setTweetHiderLanguage(newSettings.language);
   setDebugFlag(newSettings.debugMode);
+  onSettingsChanged(newSettings);
 
   if (prev.keywordCollectorEnabled && !newSettings.keywordCollectorEnabled) {
     void flushCollector();
@@ -50,6 +64,7 @@ function handleSettingsChange(newSettings: Settings, setDebugFlag: (enabled: boo
   const needsReprocess =
     prev.enabled !== newSettings.enabled ||
     prev.keywordFilterEnabled !== newSettings.keywordFilterEnabled ||
+    prev.aggressorFilterEnabled !== newSettings.aggressorFilterEnabled ||
     prev.retweetFilter !== newSettings.retweetFilter ||
     prev.hideMode !== newSettings.hideMode ||
     prev.quoteMode !== newSettings.quoteMode ||
@@ -70,6 +85,7 @@ function handleSettingsChange(newSettings: Settings, setDebugFlag: (enabled: boo
 }
 
 function handleFollowListChange(newFollowList: string[], oldFollowList: string[] | undefined): void {
+  const knownBeforeStorageEvent = getFollowSet();
   setFollowSet(new Set(newFollowList));
   const pathHandle = window.location.pathname.split('/')[1]?.toLowerCase();
   if (pathHandle && newFollowList.map((h) => h.toLowerCase()).includes(pathHandle)) {
@@ -81,9 +97,12 @@ function handleFollowListChange(newFollowList: string[], oldFollowList: string[]
   // added(새로 추가된 핸들)가 있을 때만 공유 디바운스로 restore+reprocess를 예약한다 —
   // 삭제만 있는 변경(언팔로우)은 재처리가 필요 없다.
   const oldSet = new Set((oldFollowList ?? []).map((h) => h.toLowerCase()));
-  const added = newFollowList.filter((h) => !oldSet.has(h.toLowerCase()));
+  const added = newFollowList.filter((h) => {
+    const normalized = h.toLowerCase();
+    return !oldSet.has(normalized) && !knownBeforeStorageEvent.has(normalized);
+  });
   if (added.length > 0) {
-    scheduleFollowReprocess();
+    scheduleFollowReprocess(added);
   }
 }
 

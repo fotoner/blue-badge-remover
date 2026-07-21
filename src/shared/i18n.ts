@@ -59,6 +59,8 @@ type TranslationKeys =
   | 'whitelistEmpty'
   | 'keywordFilterBeta'
   | 'keywordFilterBetaDesc'
+  | 'aggressorFilter'
+  | 'aggressorFilterDesc'
   | 'advancedFilterSettings'
   | 'bookmarks'
   | 'lists'
@@ -138,6 +140,8 @@ const ko: Translations = {
   whitelistEmpty: '등록된 계정이 없습니다',
   keywordFilterBeta: '키워드 필터',
   keywordFilterBetaDesc: '모든 파딱이 아닌, 특정 키워드에 해당하는 바이오(프로필)나 이름, 본문을 가지고 있는 글만 가립니다. 가끔 유용한 정보 파딱 등의 글을 보고 싶은 분들에게 추천입니다.',
+  aggressorFilter: '신규 고확산 계정 함께 숨기기',
+  aggressorFilterDesc: '선별 모드에서 생성 6개월 이내·팔로워 1천 이상·팔로잉/팔로워 비율 10% 이하 계정을 추가로 숨깁니다.',
   advancedFilterSettings: '고급 필터 설정',
   bookmarks: '북마크',
   lists: '리스트',
@@ -216,6 +220,8 @@ const en: Translations = {
   whitelistEmpty: 'No accounts added',
   keywordFilterBeta: 'Keyword Filter',
   keywordFilterBetaDesc: 'It does not hide all Paid badge posts, but only those containing specific keywords in the bio, name or the main text. This is recommended for users who occasionally want to see useful information from Paid badge holders.',
+  aggressorFilter: 'Also hide new high-reach accounts',
+  aggressorFilterDesc: 'In selective mode, also hide accounts created within 6 months with at least 1,000 followers and a following-to-followers ratio of 10% or less.',
   advancedFilterSettings: 'Advanced Filter Settings',
   bookmarks: 'Bookmarks',
   lists: 'Lists',
@@ -294,6 +300,8 @@ const ja: Translations = {
   whitelistEmpty: '登録なし',
   keywordFilterBeta: 'キーワードフィルター',
   keywordFilterBetaDesc: 'すべての課金バッジの投稿を非表示にするのではなく、プロフィールや名前、本文に特定のキーワードが含まれている投稿のみを非表示にします。時々、課金バッジユーザーによる有益な情報を確認したい方に適しています。',
+  aggressorFilter: '新規の高拡散アカウントも非表示',
+  aggressorFilterDesc: '選別モードで、作成6か月以内・フォロワー1,000人以上・フォロー数/フォロワー数が10%以下のアカウントも非表示にします。',
   advancedFilterSettings: '高度なフィルター設定',
   bookmarks: 'ブックマーク',
   lists: 'リスト',
@@ -326,8 +334,4 @@ export function t(key: TranslationKeys, lang: Language = DEFAULT_LANGUAGE, param
     (result, [paramKey, value]) => result.replace(`{${paramKey}}`, value),
     message,
   );
-}
-
-export function getTranslations(lang: Language): Translations {
-  return translations[lang] ?? translations[DEFAULT_LANGUAGE];
 }

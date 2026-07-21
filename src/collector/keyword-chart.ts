@@ -7,8 +7,7 @@ let hideFiltered = false;
 let hideEnglish = false;
 let selectedKeyword: string | null = null;
 let topLimit = 30;
-
-export function getSelectedKeyword(): string | null { return selectedKeyword; }
+type KeywordMatch = { handle: string; displayName: string; text: string; isBio: boolean };
 
 function isEnglishToken(token: string): boolean {
   return /^[a-zA-Z][a-zA-Z0-9]*$/.test(token);
@@ -67,9 +66,9 @@ function buildKeywordRow(token: string, count: number, rank: number, max: number
   return row;
 }
 
-function renderKeywordDetail(keyword: string, list: CollectedFadak[], section: HTMLElement): void {
+function collectKeywordMatches(keyword: string, list: CollectedFadak[]): KeywordMatch[] {
   const lowerToken = keyword.toLowerCase();
-  const matches: Array<{ handle: string; displayName: string; text: string; isBio: boolean }> = [];
+  const matches: KeywordMatch[] = [];
   for (const fadak of list) {
     if (fadak.bio?.toLowerCase().includes(lowerToken)) {
       matches.push({ handle: fadak.handle, displayName: fadak.displayName, text: fadak.bio, isBio: true });
@@ -80,6 +79,11 @@ function renderKeywordDetail(keyword: string, list: CollectedFadak[], section: H
       }
     }
   }
+  return matches;
+}
+
+function renderKeywordDetail(keyword: string, list: CollectedFadak[], section: HTMLElement): void {
+  const matches = collectKeywordMatches(keyword, list);
 
   const detail = document.createElement('div');
   detail.className = 'kw-detail';
@@ -125,17 +129,17 @@ function renderKeywordDetail(keyword: string, list: CollectedFadak[], section: H
   section.appendChild(detail);
 }
 
-export function renderKeywords(list: CollectedFadak[], rules: FilterRule[], section?: HTMLElement): void {
-  const el = section ?? document.getElementById('keywords')!;
+function collectKeywordTexts(list: CollectedFadak[]): string[] {
   const allTexts: string[] = [];
   for (const fadak of list) {
     if (fadak.bio) allTexts.push(fadak.bio);
-    for (const t of fadak.tweetTexts) allTexts.push(t);
+    for (const text of fadak.tweetTexts) allTexts.push(text);
   }
+  return allTexts;
+}
 
-  if (allTexts.length === 0) { el.style.display = 'none'; return; }
-
-  let counts = countTokens(allTexts);
+function getVisibleTokenCounts(texts: string[], rules: FilterRule[]): Map<string, number> {
+  const counts = countTokens(texts);
   if (hideFiltered) {
     for (const token of counts.keys()) {
       if (isTokenFiltered(token, rules)) counts.delete(token);
@@ -146,74 +150,111 @@ export function renderKeywords(list: CollectedFadak[], rules: FilterRule[], sect
       if (isEnglishToken(token)) counts.delete(token);
     }
   }
-  const top = topN(counts, topLimit);
-  const max = top[0]?.count ?? 1;
+  return counts;
+}
 
-  el.style.display = 'block';
-  el.innerHTML = '';
+function createToggleButton(
+  label: string,
+  active: boolean,
+  onClick: () => void,
+): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `kw-toggle${active ? ' active' : ''}`;
+  button.textContent = label;
+  button.addEventListener('click', onClick);
+  return button;
+}
 
+function createHeadingRow(
+  list: CollectedFadak[],
+  rules: FilterRule[],
+  section: HTMLElement,
+): HTMLElement {
   const headingRow = document.createElement('div');
   headingRow.className = 'keywords-heading-row';
   const heading = document.createElement('h2');
   heading.className = 'keywords-heading';
   heading.textContent = `자주 사용되는 키워드 Top ${topLimit}`;
-
-  const toggleBtn = document.createElement('button');
-  toggleBtn.type = 'button';
-  toggleBtn.className = 'kw-toggle' + (hideFiltered ? ' active' : '');
-  toggleBtn.textContent = '필터 미포함만';
-  toggleBtn.addEventListener('click', () => { hideFiltered = !hideFiltered; renderKeywords(list, rules, el); });
-
-  const toggleEnglishBtn = document.createElement('button');
-  toggleEnglishBtn.type = 'button';
-  toggleEnglishBtn.className = 'kw-toggle' + (hideEnglish ? ' active' : '');
-  toggleEnglishBtn.textContent = '영어 키워드 제외';
-  toggleEnglishBtn.addEventListener('click', () => { hideEnglish = !hideEnglish; renderKeywords(list, rules, el); });
-
   const toggleGroup = document.createElement('div');
   toggleGroup.className = 'kw-toggle-group';
-  toggleGroup.append(toggleBtn, toggleEnglishBtn);
-
-  const limitGroup = document.createElement('div');
-  limitGroup.className = 'kw-toggle-group';
-  for (const n of [30, 50, 100, 200]) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'kw-toggle' + (topLimit === n ? ' active' : '');
-    btn.textContent = String(n);
-    btn.addEventListener('click', () => { topLimit = n; selectedKeyword = null; renderKeywords(list, rules, el); });
-    limitGroup.appendChild(btn);
-  }
-
+  toggleGroup.append(
+    createToggleButton('필터 미포함만', hideFiltered, () => {
+      hideFiltered = !hideFiltered;
+      renderKeywords(list, rules, section);
+    }),
+    createToggleButton('영어 키워드 제외', hideEnglish, () => {
+      hideEnglish = !hideEnglish;
+      renderKeywords(list, rules, section);
+    }),
+  );
   const headingControls = document.createElement('div');
   headingControls.className = 'kw-heading-controls';
-  headingControls.append(limitGroup, toggleGroup);
+  headingControls.append(createLimitGroup(list, rules, section), toggleGroup);
   headingRow.append(heading, headingControls);
-  el.appendChild(headingRow);
+  return headingRow;
+}
 
-  if (top.length === 0) {
-    const empty = document.createElement('p');
-    empty.className = 'kw-empty';
-    empty.textContent = '필터 미포함 키워드가 없습니다.';
-    el.appendChild(empty);
-    return;
+function createLimitGroup(
+  list: CollectedFadak[],
+  rules: FilterRule[],
+  section: HTMLElement,
+): HTMLElement {
+  const group = document.createElement('div');
+  group.className = 'kw-toggle-group';
+  for (const limit of [30, 50, 100, 200]) {
+    group.appendChild(createToggleButton(String(limit), topLimit === limit, () => {
+      topLimit = limit;
+      selectedKeyword = null;
+      renderKeywords(list, rules, section);
+    }));
   }
+  return group;
+}
 
+function renderKeywordChart(
+  top: Array<{ token: string; count: number }>,
+  list: CollectedFadak[],
+  rules: FilterRule[],
+  section: HTMLElement,
+): void {
   const chart = document.createElement('div');
   chart.className = 'keywords-chart';
+  const max = top[0]?.count ?? 1;
   top.forEach(({ token, count }, i) => {
     const row = buildKeywordRow(token, count, i + 1, max);
     if (token === selectedKeyword) row.classList.add('selected');
     row.addEventListener('click', () => {
       selectedKeyword = selectedKeyword === token ? null : token;
-      renderKeywords(list, rules, el);
+      renderKeywords(list, rules, section);
     });
     chart.appendChild(row);
   });
-  el.appendChild(chart);
+  section.appendChild(chart);
+}
+
+export function renderKeywords(list: CollectedFadak[], rules: FilterRule[], section?: HTMLElement): void {
+  const element = section ?? document.getElementById('keywords')!;
+  const texts = collectKeywordTexts(list);
+  if (texts.length === 0) {
+    element.style.display = 'none';
+    return;
+  }
+  const top = topN(getVisibleTokenCounts(texts, rules), topLimit);
+  element.style.display = 'block';
+  element.innerHTML = '';
+  element.appendChild(createHeadingRow(list, rules, element));
+  if (top.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'kw-empty';
+    empty.textContent = '필터 미포함 키워드가 없습니다.';
+    element.appendChild(empty);
+    return;
+  }
+  renderKeywordChart(top, list, rules, element);
 
   if (selectedKeyword !== null && top.some(({ token }) => token === selectedKeyword)) {
-    renderKeywordDetail(selectedKeyword, list, el);
+    renderKeywordDetail(selectedKeyword, list, element);
   } else {
     selectedKeyword = null;
   }

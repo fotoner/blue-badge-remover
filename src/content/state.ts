@@ -1,10 +1,8 @@
 // src/content/state.ts
 // Content script의 모든 공유 상태. 단일 진실 소스.
-import { BadgeCache } from '@features/badge-detection';
 import { ProfileCache } from '@features/keyword-filter';
 import type { CollectedFadak, FilterRule, Settings } from '@shared/types';
 
-export const badgeCache = new BadgeCache();
 export const profileCache = new ProfileCache();
 export const collectorBuffer = new Map<string, CollectedFadak>();
 
@@ -13,6 +11,7 @@ let _settings: Settings;
 let _followSet = new Set<string>();
 let _whitelistSet = new Set<string>();
 let _activeFilterRules: FilterRule[] = [];
+let _protectedKeywords: string[] = [];
 let _currentUserHandle: string | null = null;
 
 export function getSettings(): Settings { return _settings; }
@@ -26,6 +25,9 @@ export function setWhitelistSet(s: Set<string>): void { _whitelistSet = s; }
 
 export function getActiveFilterRules(): FilterRule[] { return _activeFilterRules; }
 export function setActiveFilterRules(r: FilterRule[]): void { _activeFilterRules = r; }
+
+export function getProtectedKeywords(): string[] { return _protectedKeywords; }
+export function setProtectedKeywords(keywords: string[]): void { _protectedKeywords = keywords; }
 
 export function getCurrentUserHandle(): string | null { return _currentUserHandle; }
 export function setCurrentUserHandle(h: string | null): void { _currentUserHandle = h; }

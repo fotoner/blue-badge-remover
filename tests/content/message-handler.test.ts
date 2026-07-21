@@ -1,23 +1,10 @@
 import { describe, it, expect, beforeAll, beforeEach, vi, afterEach } from 'vitest';
-import type { BadgeInfo } from '../../src/shared/types';
 import { DEFAULT_SETTINGS } from '../../src/shared/constants';
 
 // --- Mock external modules BEFORE importing anything that depends on them ---
 
 vi.mock('wxt/browser', () => ({
   browser: { storage: { local: { get: vi.fn(), set: vi.fn() } } },
-}));
-
-const mockParseBadgeInfo = vi.fn<(userData: unknown) => BadgeInfo | null>();
-vi.mock('@features/badge-detection', () => ({
-  parseBadgeInfo: (userData: unknown) => mockParseBadgeInfo(userData),
-  BadgeCache: class {
-    cache = new Map<string, boolean>();
-    get(k: string) { return this.cache.get(k); }
-    set(k: string, v: boolean) { this.cache.set(k, v); }
-    has(k: string) { return this.cache.has(k); }
-    clear() { this.cache.clear(); }
-  },
 }));
 
 vi.mock('@features/keyword-filter', () => ({
@@ -49,8 +36,10 @@ vi.mock('@shared/utils/logger', () => ({
 }));
 
 const mockExtractTweetAuthor = vi.fn();
+const mockExtractRetweeterHandle = vi.fn();
 vi.mock('../../src/content/tweet-processing', () => ({
   extractTweetAuthor: (...args: unknown[]) => mockExtractTweetAuthor(...args),
+  extractRetweeterHandle: (...args: unknown[]) => mockExtractRetweeterHandle(...args),
 }));
 
 const mockProcessTweet = vi.fn();
@@ -81,9 +70,10 @@ vi.mock('../../src/content/page-utils', () => ({
 
 // --- Import modules after all mocks are registered ---
 
-import { badgeCache, profileCache, collectorBuffer, setSettings, getFollowSet, setFollowSet } from '../../src/content/state';
+import { profileCache, collectorBuffer, setSettings, getFollowSet, setFollowSet } from '../../src/content/state';
 import { listenForMessages, scheduleFollowReprocess } from '../../src/content/message-handler';
 import { MESSAGE_TYPES } from '../../src/shared/constants';
+import { logger } from '../../src/shared/utils/logger';
 import type { FollowCollectorDeps } from '../../src/content/follow-collector';
 
 // --- Test helpers ---
@@ -122,9 +112,9 @@ describe('message-handler', () => {
     vi.useFakeTimers();
     setSettings({ ...DEFAULT_SETTINGS });
     setFollowSet(new Set<string>());
+    document.body.innerHTML = '';
     collectorBuffer.clear();
-    // Clear singleton caches (mock classes expose clear())
-    (badgeCache as unknown as { cache: Map<string, unknown> }).cache.clear();
+    // Clear singleton cache (mock class exposes clear())
     (profileCache as unknown as { cache: Map<string, unknown> }).cache.clear();
     mockSaveFollowHandles.mockResolvedValue(undefined);
     mockGetMyHandle.mockReturnValue(null);
@@ -144,59 +134,24 @@ describe('message-handler', () => {
 
   describe('origin and source validation', () => {
     it('다른 origin의 메시지는 무시한다', () => {
-      mockParseBadgeInfo.mockReturnValue({
-        userId: 'rest123', handle: 'testuser',
-        isBluePremium: true, isLegacyVerified: false, isBusiness: false,
-      });
-
       dispatchMessage(
-        { type: MESSAGE_TYPES.BADGE_DATA, users: [{}] },
+        { type: MESSAGE_TYPES.PROFILE_DATA, profiles: [{ userId: '1', handle: 'evil', displayName: '', bio: '' }] },
         { origin: 'https://evil.com' },
       );
 
-      expect(mockParseBadgeInfo).not.toHaveBeenCalled();
+      expect(profileCache.has('evil')).toBe(false);
     });
 
     it('source가 window가 아닌 메시지는 무시한다', () => {
-      mockParseBadgeInfo.mockReturnValue({
-        userId: 'rest123', handle: 'testuser',
-        isBluePremium: true, isLegacyVerified: false, isBusiness: false,
-      });
-
       // source: null means it's not from this window
       const event = new MessageEvent('message', {
-        data: { type: MESSAGE_TYPES.BADGE_DATA, users: [{}] },
+        data: { type: MESSAGE_TYPES.PROFILE_DATA, profiles: [{ userId: '1', handle: 'evil', displayName: '', bio: '' }] },
         origin: savedOrigin,
       });
       // MessageEvent without source defaults to null
       window.dispatchEvent(event);
 
-      expect(mockParseBadgeInfo).not.toHaveBeenCalled();
-    });
-  });
-
-  // ── BBR_BADGE_DATA ───────────────────────────────────────────────────
-
-  describe('BBR_BADGE_DATA', () => {
-    it('handleBadgeData는 no-op (SVG 기반 감지로 전환)', () => {
-      mockParseBadgeInfo.mockReturnValue({
-        userId: 'rest123', handle: 'TestUser',
-        isBluePremium: true, isLegacyVerified: false, isBusiness: false,
-      });
-
-      dispatchMessage({
-        type: MESSAGE_TYPES.BADGE_DATA,
-        users: [{ rest_id: 'rest123' }],
-      });
-
-      // SVG 기반 감지로 전환 — parseBadgeInfo 호출 안 함
-      expect(mockParseBadgeInfo).not.toHaveBeenCalled();
-      // badgeCache에 저장하지 않음
-      expect(badgeCache.get('rest123')).toBeUndefined();
-      expect(badgeCache.get('testuser')).toBeUndefined();
-      // reprocess/restore 호출하지 않음
-      expect(mockReprocessExistingTweets).not.toHaveBeenCalled();
-      expect(mockRestoreHiddenTweets).not.toHaveBeenCalled();
+      expect(profileCache.has('evil')).toBe(false);
     });
   });
 
@@ -255,6 +210,20 @@ describe('message-handler', () => {
 
       expect(profileCache.get('user1')).toEqual({ handle: 'User1', displayName: 'D1', bio: 'bio1' });
       expect(profileCache.get('user2')).toEqual({ handle: 'User2', displayName: 'D2', bio: 'bio2' });
+    });
+
+    it('선별 필터용 계정 생성일과 팔로워 통계를 캐시에 보존한다', () => {
+      dispatchMessage({
+        type: MESSAGE_TYPES.PROFILE_DATA,
+        profiles: [{
+          userId: 'p1', handle: 'NewUser', displayName: 'New', bio: '',
+          createdAt: '2026-04-01T00:00:00Z', followersCount: 2000, followingCount: 100,
+        }],
+      });
+
+      expect(profileCache.get('newuser')).toMatchObject({
+        createdAt: '2026-04-01T00:00:00Z', followersCount: 2000, followingCount: 100,
+      });
     });
   });
 
@@ -327,21 +296,41 @@ describe('message-handler', () => {
         expect(getFollowSet().size).toBe(0);
       });
 
-      it('타이머 후 restoreHiddenTweets + reprocessExistingTweets를 호출한다', () => {
+      it('신규 핸들의 작성자·리포스터 트윗만 다시 판정한다', () => {
+        const main = document.createElement('main');
+        const authorTweet = document.createElement('article');
+        authorTweet.dataset.testid = 'tweet';
+        authorTweet.dataset.author = 'someone';
+        const retweet = document.createElement('article');
+        retweet.dataset.testid = 'tweet';
+        retweet.dataset.author = 'other';
+        retweet.dataset.retweeter = 'someone';
+        const unrelated = document.createElement('article');
+        unrelated.dataset.testid = 'tweet';
+        unrelated.dataset.author = 'unrelated';
+        main.append(authorTweet, retweet, unrelated);
+        document.body.appendChild(main);
+        mockExtractTweetAuthor.mockImplementation((element: HTMLElement) => ({
+          handle: element.dataset.author,
+        }));
+        mockExtractRetweeterHandle.mockImplementation(
+          (element: HTMLElement) => element.dataset.retweeter ?? null,
+        );
+
         dispatchMessage({
           type: MESSAGE_TYPES.FOLLOW_DATA,
           source: 'inline',
           handles: ['someone'],
         });
 
-        // 아직 setTimeout 콜백 실행 전
-        expect(mockRestoreHiddenTweets).not.toHaveBeenCalled();
-        expect(mockReprocessExistingTweets).not.toHaveBeenCalled();
-
         vi.runAllTimers();
 
-        expect(mockRestoreHiddenTweets).toHaveBeenCalledOnce();
-        expect(mockReprocessExistingTweets).toHaveBeenCalledOnce();
+        expect(mockProcessTweet).toHaveBeenCalledTimes(2);
+        expect(mockProcessTweet).toHaveBeenCalledWith(authorTweet);
+        expect(mockProcessTweet).toHaveBeenCalledWith(retweet);
+        expect(mockProcessTweet).not.toHaveBeenCalledWith(unrelated);
+        expect(mockRestoreHiddenTweets).not.toHaveBeenCalled();
+        expect(mockReprocessExistingTweets).not.toHaveBeenCalled();
       });
 
       it('현재 경로의 유저가 followSet에 있으면 fadak 배너를 제거한다', () => {
@@ -394,7 +383,7 @@ describe('message-handler', () => {
         expect(mockSaveFollowHandles).toHaveBeenCalledWith(['listfadak'], deps);
       });
 
-      it('타이머 후 restoreHiddenTweets + reprocessExistingTweets를 1회 호출한다', () => {
+      it('타이머 후 전체 피드 복원·재처리를 호출하지 않는다', () => {
         dispatchMessage({
           type: MESSAGE_TYPES.FOLLOW_DATA,
           source: 'api-timeline',
@@ -406,8 +395,8 @@ describe('message-handler', () => {
 
         vi.runAllTimers();
 
-        expect(mockRestoreHiddenTweets).toHaveBeenCalledOnce();
-        expect(mockReprocessExistingTweets).toHaveBeenCalledOnce();
+        expect(mockRestoreHiddenTweets).not.toHaveBeenCalled();
+        expect(mockReprocessExistingTweets).not.toHaveBeenCalled();
       });
     });
 
@@ -458,7 +447,6 @@ describe('message-handler', () => {
       it('debugMode on이면 [BBR FOLLOW] 로그에 source/incoming/new 카운트를 출력한다', () => {
         setSettings({ ...DEFAULT_SETTINGS, debugMode: true });
         setFollowSet(new Set(['known']));
-        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
         dispatchMessage({
           type: MESSAGE_TYPES.FOLLOW_DATA,
@@ -466,8 +454,11 @@ describe('message-handler', () => {
           handles: ['Known', 'Fresh'],
         });
 
-        expect(logSpy).toHaveBeenCalledWith('[BBR FOLLOW]', 'api-timeline', 'incoming=2 new=1');
-        logSpy.mockRestore();
+        expect(logger.debug).toHaveBeenCalledWith('Follow data received', {
+          source: 'api-timeline',
+          incoming: 2,
+          newCount: 1,
+        });
       });
     });
 
@@ -515,7 +506,7 @@ describe('message-handler', () => {
         expect(mockSaveFollowHandles).not.toHaveBeenCalled();
       });
 
-      it('saveFollowHandles 완료 후 restoreHiddenTweets + reprocessExistingTweets를 호출한다', async () => {
+      it('saveFollowHandles 완료 후 전체 피드 복원·재처리를 호출하지 않는다', async () => {
         mockGetMyHandle.mockReturnValue(null);
         mockSaveFollowHandles.mockResolvedValue(undefined);
 
@@ -529,13 +520,18 @@ describe('message-handler', () => {
         await Promise.resolve();
         await Promise.resolve();
 
-        expect(mockRestoreHiddenTweets).toHaveBeenCalledOnce();
-        expect(mockReprocessExistingTweets).toHaveBeenCalledOnce();
+        expect(mockRestoreHiddenTweets).not.toHaveBeenCalled();
+        expect(mockReprocessExistingTweets).not.toHaveBeenCalled();
       });
     });
 
     describe('scheduleFollowReprocess 공유 디바운스 (Defect 3)', () => {
-      it('message-handler의 트리거와 storage 변경으로 인한 트리거가 겹쳐도 restore/reprocess는 1회만 실행된다', () => {
+      it('message-handler와 storage 트리거가 겹쳐도 같은 핸들은 한 번만 targeted 재처리한다', () => {
+        const tweet = document.createElement('article');
+        tweet.dataset.testid = 'tweet';
+        document.body.appendChild(tweet);
+        mockExtractTweetAuthor.mockReturnValue({ handle: 'someone' });
+        mockExtractRetweeterHandle.mockReturnValue(null);
         // FOLLOW_DATA 처리(내부에서 scheduleFollowReprocess 호출)와,
         // storage-listener.ts의 handleFollowListChange가 동일 tick에 호출할 scheduleFollowReprocess를
         // 시뮬레이션한다 — 두 트리거가 동일한 공유 타이머를 사용하므로 1회로 합쳐져야 한다.
@@ -544,15 +540,12 @@ describe('message-handler', () => {
           source: 'inline',
           handles: ['someone'],
         });
-        scheduleFollowReprocess();
-
-        expect(mockRestoreHiddenTweets).not.toHaveBeenCalled();
-        expect(mockReprocessExistingTweets).not.toHaveBeenCalled();
+        scheduleFollowReprocess(['someone']);
 
         vi.runAllTimers();
 
-        expect(mockRestoreHiddenTweets).toHaveBeenCalledOnce();
-        expect(mockReprocessExistingTweets).toHaveBeenCalledOnce();
+        expect(mockProcessTweet).toHaveBeenCalledOnce();
+        expect(mockProcessTweet).toHaveBeenCalledWith(tweet);
       });
     });
 

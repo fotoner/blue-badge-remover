@@ -16,6 +16,7 @@ export interface Settings {
   keywordCollectorEnabled: boolean;
   defaultFilterEnabled: boolean;
   milestoneBannerEnabled: boolean;
+  aggressorFilterEnabled: boolean;
 }
 
 export interface CollectedFadak {
@@ -35,20 +36,16 @@ export interface StorageSchema {
   currentUserId: string | null;
   lastSyncAt: string | null;
   customFilterList: string;
-}
-
-export interface BadgeInfo {
-  userId: string;
-  handle: string | null;
-  isBluePremium: boolean;
-  isLegacyVerified: boolean;
-  isBusiness: boolean;
+  protectedKeywords: string[];
 }
 
 export interface ProfileInfo {
   handle: string;
   displayName: string;
   bio: string;
+  createdAt?: string;
+  followersCount?: number;
+  followingCount?: number;
 }
 
 export type FilterRule =

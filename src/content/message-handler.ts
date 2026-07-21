@@ -1,25 +1,57 @@
 // src/content/message-handler.ts
 // MAIN world(fetch-interceptor)에서 postMessage로 전달되는 데이터 수신 처리.
 import { MESSAGE_TYPES } from '@shared/constants';
-import { profileCache, collectorBuffer, getSettings, getFollowSet, setFollowSet } from './state';
-import { extractTweetAuthor } from './tweet-processing';
-import { processTweet, restoreHiddenTweets, reprocessExistingTweets } from './tweet-orchestrator';
+import { logger } from '@shared/utils/logger';
+import { profileCache, collectorBuffer, getSettings, getFollowSet, getProtectedKeywords } from './state';
+import { extractRetweeterHandle, extractTweetAuthor } from './tweet-processing';
+import { processTweet } from './tweet-orchestrator';
 import { saveFollowHandles, getMyHandle, type FollowCollectorDeps } from './follow-collector';
 import { removeFadakBanner } from './fadak-banner';
+import type { ProfileInfo } from '@shared/types';
+
+interface ProfilePayload {
+  userId?: unknown;
+  handle: string;
+  displayName?: unknown;
+  bio?: unknown;
+  createdAt?: unknown;
+  followersCount?: unknown;
+  followingCount?: unknown;
+}
 
 // 팔로우 변경 시 숨겨진 트윗 복원 + 재처리를 디바운스하는 공유 헬퍼 (Defect 3 수정).
 // storage-listener.ts의 handleFollowListChange도 이 함수를 호출한다 — 동일 tick 내
 // 중복 트리거(예: 이 모듈의 즉시 처리 + 뒤이은 storage.onChanged 이벤트)가 타이머
 // 하나로 합쳐져 restore/reprocess가 1회만 실행된다.
 let followReprocessTimer: ReturnType<typeof setTimeout> | null = null;
+const pendingFollowHandles = new Set<string>();
 
-export function scheduleFollowReprocess(): void {
+export function scheduleFollowReprocess(handles: Iterable<string>): void {
+  for (const handle of handles) pendingFollowHandles.add(handle.toLowerCase());
+  if (pendingFollowHandles.size === 0) return;
   if (followReprocessTimer !== null) clearTimeout(followReprocessTimer);
   followReprocessTimer = setTimeout(() => {
     followReprocessTimer = null;
-    restoreHiddenTweets();
-    reprocessExistingTweets();
+    const targets = new Set(pendingFollowHandles);
+    pendingFollowHandles.clear();
+    reprocessTweetsByHandles(targets);
   }, 0);
+}
+
+function reprocessTweetsByHandles(handles: Set<string>): void {
+  const settings = getSettings();
+  const feed = document.querySelector('main') ?? document.body;
+  feed.querySelectorAll<HTMLElement>('article[data-testid="tweet"]').forEach((tweet) => {
+    const author = extractTweetAuthor(tweet)?.handle.toLowerCase();
+    const retweeter = extractRetweeterHandle(tweet)?.toLowerCase();
+    if (!author || (!handles.has(author) && (!retweeter || !handles.has(retweeter)))) return;
+    tweet.querySelector('[data-bbr-debug]')?.remove();
+    try {
+      processTweet(tweet);
+    } catch (error) {
+      if (settings.debugMode) logger.error('Tweet reprocess failed', { error: String(error) });
+    }
+  });
 }
 
 // X 핸들 최대 길이는 15자 — 여유를 두어 32자로 캡.
@@ -40,7 +72,7 @@ function sanitizeFollowHandles(raw: unknown[]): string[] {
   return valid.slice(0, MAX_FOLLOW_HANDLES_PER_MESSAGE);
 }
 
-function isProfileDataPayload(data: unknown): data is { profiles: Array<{ userId: string; handle: string; displayName: string; bio: string }> } {
+function isProfileDataPayload(data: unknown): data is { profiles: ProfilePayload[] } {
   if (!data || typeof data !== 'object') return false;
   const d = data as Record<string, unknown>;
   if (!Array.isArray(d['profiles'])) return false;
@@ -48,6 +80,18 @@ function isProfileDataPayload(data: unknown): data is { profiles: Array<{ userId
     p !== null && typeof p === 'object' &&
     typeof (p as Record<string, unknown>)['handle'] === 'string',
   );
+}
+
+function toProfileInfo(payload: ProfilePayload): ProfileInfo {
+  const profile: ProfileInfo = {
+    handle: payload.handle,
+    displayName: typeof payload.displayName === 'string' ? payload.displayName : '',
+    bio: typeof payload.bio === 'string' ? payload.bio : '',
+  };
+  if (typeof payload.createdAt === 'string') profile.createdAt = payload.createdAt;
+  if (typeof payload.followersCount === 'number') profile.followersCount = payload.followersCount;
+  if (typeof payload.followingCount === 'number') profile.followingCount = payload.followingCount;
+  return profile;
 }
 
 function isFollowDataPayload(data: unknown): data is { handles: unknown[]; source?: string } {
@@ -60,9 +104,6 @@ export function listenForMessages(followCollectorDeps: FollowCollectorDeps): voi
   window.addEventListener('message', (event) => {
     if (event.source !== window || event.origin !== window.location.origin) return;
 
-    if (event.data?.type === MESSAGE_TYPES.BADGE_DATA) {
-      handleBadgeData(event.data);
-    }
     if (event.data?.type === MESSAGE_TYPES.PROFILE_DATA && isProfileDataPayload(event.data)) {
       handleProfileData(event.data);
     }
@@ -72,33 +113,31 @@ export function listenForMessages(followCollectorDeps: FollowCollectorDeps): voi
   });
 }
 
-function handleBadgeData(_data: { users: unknown[] }): void {
-  // SVG 기반 감지로 전환 — API 배지 캐시 사용 안 함.
-  // 이중 팝(SVG 숨김→API 복원→재숨김)과 parseBadgeInfo 엣지 케이스 제거.
-}
-
-function handleProfileData(data: { profiles: Array<{ userId: string; handle: string; displayName: string; bio: string }> }): void {
+function handleProfileData(data: { profiles: ProfilePayload[] }): void {
   const settings = getSettings();
   for (const p of data.profiles) {
     const key = p.handle.toLowerCase();
-    profileCache.set(key, { handle: p.handle, displayName: p.displayName, bio: p.bio });
+    const profile = toProfileInfo(p);
+    profileCache.set(key, profile);
     if (settings.keywordCollectorEnabled) {
       const buffered = collectorBuffer.get(key);
       if (buffered) {
-        if (p.bio && !buffered.bio) {
-          if (settings.debugMode) console.log('[BBR BIO BACKFILL]', key, '->', p.bio.slice(0, 40));
-          buffered.bio = p.bio;
+        if (profile.bio && !buffered.bio) {
+          if (settings.debugMode) logger.debug('Profile bio backfilled', { handle: key, bioPreview: profile.bio.slice(0, 40) });
+          buffered.bio = profile.bio;
         }
-        if (p.displayName) buffered.displayName = p.displayName;
+        if (profile.displayName) buffered.displayName = profile.displayName;
       }
     }
   }
   if (settings.debugMode) {
-    const withBio = data.profiles.filter((p) => p.bio);
-    if (withBio.length > 0) console.log('[BBR PROFILE_DATA bios]', withBio.map((p) => `${p.handle}: ${p.bio.slice(0, 30)}`));
+    const withBio = data.profiles.map(toProfileInfo).filter((p) => p.bio);
+    if (withBio.length > 0) {
+      logger.debug('Profile bios received', { profiles: withBio.map((p) => `${p.handle}: ${p.bio.slice(0, 30)}`) });
+    }
   }
   // 키워드 필터 활성 시, 업데이트된 프로필의 트윗을 재처리
-  if (settings.keywordFilterEnabled) {
+  if (settings.keywordFilterEnabled || settings.aggressorFilterEnabled || getProtectedKeywords().length > 0) {
     const updatedHandles = new Set(data.profiles.map((p) => p.handle.toLowerCase()));
     const feed = document.querySelector('main') ?? document.body;
     feed.querySelectorAll('article[data-testid="tweet"]').forEach((tweet) => {
@@ -107,8 +146,8 @@ function handleProfileData(data: { profiles: Array<{ userId: string; handle: str
         tweet.querySelector('[data-bbr-debug]')?.remove();
         try {
           processTweet(tweet as HTMLElement);
-        } catch (e) {
-          if (settings?.debugMode) console.error('[BBR] processTweet error', e);
+        } catch (error) {
+          if (settings.debugMode) logger.error('Tweet reprocess failed', { error: String(error) });
         }
       }
     });
@@ -127,7 +166,13 @@ function handleFollowData(data: { handles: unknown[]; source?: string }, followC
     if (!handles.length) return;
     const followSet = getFollowSet();
     const newHandles = [...new Set(handles.map((h) => h.toLowerCase()))].filter((h) => !followSet.has(h));
-    if (getSettings().debugMode) console.log('[BBR FOLLOW]', data.source, `incoming=${handles.length} new=${newHandles.length}`);
+    if (getSettings().debugMode) {
+      logger.debug('Follow data received', {
+        source: data.source,
+        incoming: handles.length,
+        newCount: newHandles.length,
+      });
+    }
     if (newHandles.length === 0) return;
     for (const h of newHandles) {
       followSet.add(h);
@@ -137,16 +182,16 @@ function handleFollowData(data: { handles: unknown[]; source?: string }, followC
     if (pathHandle && followSet.has(pathHandle)) {
       removeFadakBanner();
     }
-    scheduleFollowReprocess();
+    scheduleFollowReprocess(newHandles);
   } else {
     // API 기반: 자기 팔로잉 페이지에서만 신뢰
     const myHandle = getMyHandle();
     const pathUser = window.location.pathname.split('/')[1]?.toLowerCase();
     if (myHandle && pathUser && pathUser !== myHandle) return;
-    if (handles.length) {
-      void saveFollowHandles(handles, followCollectorDeps).then(() => {
-        restoreHiddenTweets();
-        reprocessExistingTweets();
+    const normalizedHandles = [...new Set(handles.map((handle) => handle.toLowerCase()))];
+    if (normalizedHandles.length) {
+      void saveFollowHandles(normalizedHandles, followCollectorDeps).then(() => {
+        scheduleFollowReprocess(normalizedHandles);
       });
     }
   }

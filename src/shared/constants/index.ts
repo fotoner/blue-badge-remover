@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS: Settings = {
   keywordCollectorEnabled: false,
   defaultFilterEnabled: true,
   milestoneBannerEnabled: false,
+  aggressorFilterEnabled: false,
 };
 
 export const STORAGE_KEYS = {
@@ -31,6 +32,7 @@ export const STORAGE_KEYS = {
   COLLECTED_FADAKS: 'collectedFadaks',
   DISABLED_FILTER_CATEGORIES: 'disabledFilterCategories',
   FILTER_PACKS: 'filterPacks',
+  PROTECTED_KEYWORDS: 'protectedKeywords',
 } as const;
 
 export const X_GRAPHQL_ENDPOINTS = [
@@ -58,8 +60,8 @@ export const TIMINGS = {
   FOLLOW_COLLECT_RETRY: 3000,
   /** 팔로우 핸들 추출 초기 지연 */
   FOLLOW_EXTRACT_DELAY: 2000,
-  /** 팔로우 동기화 배너 자동 닫기 */
-  SYNC_BANNER_DISMISS: 60000,
+  /** 팔로우 DOM 변경 배치 대기 */
+  FOLLOW_OBSERVER_DEBOUNCE: 500,
   /** 언팔로우 감지 지연 */
   UNFOLLOW_DETECT_DELAY: 2000,
   /** reprocessExistingTweets 프레임당 처리 트윗 수 */
@@ -67,8 +69,6 @@ export const TIMINGS = {
 } as const;
 
 export const MESSAGE_TYPES = {
-  BADGE_DATA: 'BBR_BADGE_DATA',
-  USER_ID: 'BBR_USER_ID',
   FOLLOW_DATA: 'BBR_FOLLOW_DATA',
   PROFILE_DATA: 'BBR_PROFILE_DATA',
   CONTENT_READY: 'BBR_CONTENT_READY',

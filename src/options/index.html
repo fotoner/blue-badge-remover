@@ -57,6 +57,16 @@
     </section>
 
     <section class="section">
+      <h2 class="section-title" style="margin-bottom:14px">보호 키워드</h2>
+      <p class="guide-desc" style="margin-bottom:12px">핸들, 이름, 바이오에 아래 키워드가 있는 계정은 숨기지 않습니다</p>
+      <textarea id="protected-keywords" class="filter-textarea compact" placeholder="최애나 장르명을 한 줄에 하나씩 입력하세요"></textarea>
+      <div class="btn-row">
+        <button id="save-protected-keywords" class="btn-primary">저장</button>
+        <span id="protected-keywords-status" class="save-status"></span>
+      </div>
+    </section>
+
+    <section class="section">
       <h2 class="section-title" style="margin-bottom:14px">필터 팩</h2>
       <p class="guide-desc" style="margin-bottom:12px">커스텀 키워드를 팩으로 내보내거나, 다른 사람의 팩을 가져올 수 있습니다</p>
       <div id="filter-pack-list"></div>
@@ -65,6 +75,16 @@
         <button id="export-pack-btn" class="btn-secondary">팩으로 내보내기</button>
         <button id="import-pack-btn" class="btn-secondary">팩 가져���기</button>
         <input type="file" id="import-pack-file" accept=".json" style="display:none">
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title" style="margin-bottom:14px">목록 백업</h2>
+      <p class="guide-desc">화이트리스트, 커스텀 필터, 보호 키워드를 하나의 JSON 파일로 옮깁니다</p>
+      <div class="btn-row">
+        <button id="export-lists-btn" class="btn-secondary">목록 내보내기</button>
+        <button id="import-lists-btn" class="btn-secondary">목록 가져오기</button>
+        <input type="file" id="import-lists-file" accept=".json,application/json" style="display:none">
       </div>
     </section>
 

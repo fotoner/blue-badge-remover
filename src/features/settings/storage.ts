@@ -50,12 +50,14 @@ export async function getWhitelist(): Promise<string[]> {
 }
 
 export async function addToWhitelist(handle: string): Promise<void> {
-  const normalized = normalizeWhitelistEntry(handle);
+  await addManyToWhitelist([handle]);
+}
+
+export async function addManyToWhitelist(handles: string[]): Promise<void> {
   const list = await getWhitelist();
-  if (!list.includes(normalized)) {
-    list.push(normalized);
-    await browser.storage.local.set({ [STORAGE_KEYS.WHITELIST]: list });
-  }
+  const merged = dedupeNormalized([...list, ...handles]);
+  if (listsEqual(list, merged)) return;
+  await browser.storage.local.set({ [STORAGE_KEYS.WHITELIST]: merged });
 }
 
 export async function removeFromWhitelist(handle: string): Promise<void> {

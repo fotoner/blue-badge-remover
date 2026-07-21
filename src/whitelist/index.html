@@ -15,20 +15,20 @@
 
     <section class="section">
       <div class="add-row">
-        <input
-          type="text"
+        <textarea
           id="whitelist-input"
-          placeholder="@핸들 입력"
-        >
+          rows="4"
+          placeholder="@핸들을 한 줄에 하나씩 입력"
+        ></textarea>
         <button id="whitelist-add" class="btn-primary" type="button">추가</button>
       </div>
     </section>
 
-    <section class="section">
-      <h2 id="list-heading">등록된 계정</h2>
+    <details class="section whitelist-list" open>
+      <summary><h2 id="list-heading">등록된 계정</h2></summary>
       <div id="whitelist-container"></div>
       <p id="whitelist-empty" class="empty-hint" style="display:none">등록된 계정이 없습니다</p>
-    </section>
+    </details>
 
     <section class="section hint-section">
       <p class="hint">팔로우 중인 계정은 별도 동기화로 자동 처리됩니다.</p>

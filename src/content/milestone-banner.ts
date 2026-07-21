@@ -1,7 +1,7 @@
 // src/content/milestone-banner.ts
 // 마일스톤 축하 배너: 100/500/1K/5K/10K 도달 시 타임라인 상단에 표시.
 import { browser } from 'wxt/browser';
-import { t, type Language } from '@shared/i18n';
+import { t } from '@shared/i18n';
 import { TIMINGS } from '@shared/constants';
 import { getSettings } from './state';
 

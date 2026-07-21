@@ -9,6 +9,50 @@ function extractScreenName(userResult: Record<string, unknown>): string | null {
   return typeof screenName === 'string' && screenName.length > 0 ? screenName.toLowerCase() : null;
 }
 
+export interface ProfileEntry {
+  userId: string;
+  handle: string;
+  displayName: string;
+  bio: string;
+  createdAt?: string;
+  followersCount?: number;
+  followingCount?: number;
+}
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function optionalNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+export function extractProfileEntries(users: Array<Record<string, unknown>>): ProfileEntry[] {
+  const profiles: ProfileEntry[] = [];
+  for (const user of users) {
+    const userId = user['rest_id'];
+    if (typeof userId !== 'string') continue;
+    const legacy = user['legacy'] as Record<string, unknown> | null | undefined;
+    const core = user['core'] as Record<string, unknown> | null | undefined;
+    const handle = optionalString(legacy?.['screen_name']) ?? optionalString(core?.['screen_name']);
+    if (!handle) continue;
+    const profile: ProfileEntry = {
+      userId,
+      handle,
+      displayName: optionalString(legacy?.['name']) ?? optionalString(core?.['name']) ?? '',
+      bio: optionalString(legacy?.['description']) ?? '',
+    };
+    const createdAt = optionalString(legacy?.['created_at']);
+    const followersCount = optionalNumber(legacy?.['followers_count']);
+    const followingCount = optionalNumber(legacy?.['friends_count']);
+    if (createdAt !== undefined) profile.createdAt = createdAt;
+    if (followersCount !== undefined) profile.followersCount = followersCount;
+    if (followingCount !== undefined) profile.followingCount = followingCount;
+    profiles.push(profile);
+  }
+  return profiles;
+}
+
 export function findUserObjects(obj: unknown, result: Array<Record<string, unknown>>): void {
   if (obj === null || typeof obj !== 'object') return;
 

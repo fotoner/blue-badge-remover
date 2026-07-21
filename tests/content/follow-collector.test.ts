@@ -26,8 +26,17 @@ vi.mock('wxt/browser', () => ({
   },
 }));
 
-const { collectFollowsFromDOM, getMyHandle, saveFollowHandles } = await import('../../src/content/follow-collector');
+const {
+  collectFollowsFromDOM,
+  disconnectFollowObserver,
+  getMyHandle,
+  saveFollowHandles,
+} = await import('../../src/content/follow-collector');
 type FollowCollectorDeps = import('../../src/content/follow-collector').FollowCollectorDeps;
+
+afterEach(() => {
+  disconnectFollowObserver();
+});
 
 function setPath(path: string): void {
   Object.defineProperty(window, 'location', {
@@ -63,6 +72,8 @@ describe('collectFollowsFromDOM - guard: myHandle !== pathUser', () => {
   let deps: FollowCollectorDeps;
 
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
     document.body.innerHTML = '';
     deps = {
       getCurrentSettings: () => ({
@@ -77,9 +88,14 @@ describe('collectFollowsFromDOM - guard: myHandle !== pathUser', () => {
         keywordCollectorEnabled: false,
         defaultFilterEnabled: true,
         milestoneBannerEnabled: false,
+        aggressorFilterEnabled: false,
       }),
       setFollowSet: vi.fn(),
     };
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('should not collect when on another user following page', () => {
@@ -88,7 +104,6 @@ describe('collectFollowsFromDOM - guard: myHandle !== pathUser', () => {
     setPath('/otheruser/following');
 
     // collectFollowsFromDOM should return early without creating an observer
-    const observeSpy = vi.spyOn(document.body, 'addEventListener');
     collectFollowsFromDOM(deps);
 
     // No MutationObserver should be set up (we can't directly check this,
@@ -112,6 +127,56 @@ describe('collectFollowsFromDOM - guard: myHandle !== pathUser', () => {
     // We just verify it doesn't throw
     collectFollowsFromDOM(deps);
   });
+
+  it('DOM mutation을 500ms 디바운스해 한 번만 저장한다', async () => {
+    const followSet = new Set<string>();
+    deps.getFollowSet = () => followSet;
+    createProfileLink('myhandle');
+    setPath('/myhandle/following');
+    collectFollowsFromDOM(deps);
+
+    const button = document.createElement('button');
+    button.setAttribute('aria-label', 'Following @Alice');
+    document.body.append(button, document.createElement('div'));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    await vi.advanceTimersByTimeAsync(499);
+    expect(browser.storage.local.set).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(browser.storage.local.set).toHaveBeenCalledTimes(1);
+  });
+
+  it('이미 followSet에 있는 DOM 핸들은 저장하지 않는다', async () => {
+    deps.getFollowSet = () => new Set(['alice']);
+    createProfileLink('myhandle');
+    setPath('/myhandle/following');
+    collectFollowsFromDOM(deps);
+
+    const button = document.createElement('button');
+    button.setAttribute('aria-label', 'Following @Alice');
+    document.body.appendChild(button);
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(browser.storage.local.set).not.toHaveBeenCalled();
+  });
+
+  it('disconnect 시 예약된 DOM 수집 타이머도 취소한다', async () => {
+    deps.getFollowSet = () => new Set<string>();
+    createProfileLink('myhandle');
+    setPath('/myhandle/following');
+    collectFollowsFromDOM(deps);
+
+    const button = document.createElement('button');
+    button.setAttribute('aria-label', 'Following @Alice');
+    document.body.appendChild(button);
+    await Promise.resolve();
+    disconnectFollowObserver();
+    await vi.runAllTimersAsync();
+
+    expect(browser.storage.local.set).not.toHaveBeenCalled();
+  });
 });
 
 describe('saveFollowHandles concurrency (Defect 2)', () => {
@@ -126,6 +191,7 @@ describe('saveFollowHandles concurrency (Defect 2)', () => {
   }
 
   beforeEach(() => {
+    vi.clearAllMocks();
     for (const key of Object.keys(mockChromeStorage)) delete mockChromeStorage[key];
     // 실제 사용 시엔 계정 전환 감지 시점에 항상 설정됨 — read-modify-write 대상 필드(FOLLOW_CACHE)가
     // currentAccount에 의존하므로 테스트에서도 설정해 실제 race 조건을 재현한다.
@@ -184,5 +250,15 @@ describe('saveFollowHandles concurrency (Defect 2)', () => {
     const finalList = mockChromeStorage[STORAGE_KEYS.FOLLOW_LIST] as string[];
     expect(finalList).toEqual(expect.arrayContaining(['a', 'b', 'c']));
     expect(finalList).toHaveLength(3);
+  });
+
+  it('전달된 핸들이 전부 저장돼 있으면 storage를 다시 쓰지 않는다', async () => {
+    mockChromeStorage[STORAGE_KEYS.FOLLOW_CACHE] = { testuser: ['alice'] };
+    mockChromeStorage[STORAGE_KEYS.FOLLOW_LIST] = ['alice'];
+    const deps = makeDeps();
+
+    await saveFollowHandles(['alice'], deps);
+
+    expect(browser.storage.local.set).not.toHaveBeenCalled();
   });
 });

@@ -4,11 +4,14 @@ import { detectBadgeSvg, isBlueBadgeElement } from '@features/badge-detection/sv
 import { hideTweet, hideQuoteBlock, showTweet, showQuoteBlock } from '@features/content-filter';
 import { extractTweetAuthor, extractRetweeterName, extractRetweeterHandle, extractTweetStatusPath, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, formatUserLabel, addDebugLabel, findAuthorBadge } from './tweet-processing';
 import { isProfilePage, isDetailPage, getPageType } from './page-utils';
-import { profileCache, getSettings, getWhitelistSet, getActiveFilterRules, getCurrentUserHandle, setCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, getExpandedSet } from './state';
+import { profileCache, getSettings, getWhitelistSet, getActiveFilterRules, getProtectedKeywords, getCurrentUserHandle, setCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, getExpandedSet } from './state';
 import { bufferCollectedFadak } from './collector-buffer';
 import { classifyTweet, classifyQuote } from './tweet-classifier';
 import type { ClassifyResult, QuoteClassifyResult } from './tweet-classifier';
 import { recordHide } from '@features/stats';
+import { isScrollRestorationActive } from './navigation';
+import { logger } from '@shared/utils/logger';
+import { addToWhitelist } from '@features/settings';
 
 const QUOTE_ENTIRE_REASON = 'quote-entire';
 const HIDE_REASON_ATTR = 'data-bbr-reason';
@@ -32,107 +35,120 @@ function checkFadak(element: HTMLElement): boolean {
   return badge !== null && isBlueBadgeElement(badge);
 }
 
+interface RetweeterContext {
+  isRetweet: boolean;
+  handle: string | null;
+  inFollow: boolean;
+  isWhitelisted: boolean;
+  isCurrentUser: boolean;
+  exempt: boolean;
+}
+
+function shouldSkipTweet(
+  tweetEl: HTMLElement,
+  handle: string,
+  statusPath: string | null,
+  currentUserHandle: string | null,
+): boolean {
+  if (currentUserHandle && handle.toLowerCase() === currentUserHandle.toLowerCase()) {
+    if (tweetEl.hasAttribute('data-bbr-original')) showTweet(tweetEl);
+    return true;
+  }
+  if (statusPath && getExpandedSet().has(statusPath)) {
+    showTweet(tweetEl);
+    return true;
+  }
+  return Boolean(isDetailPage() && statusPath && window.location.pathname.includes(statusPath));
+}
+
+function getRetweeterContext(
+  tweetEl: HTMLElement,
+  currentUserHandle: string | null,
+): RetweeterContext {
+  const isRetweet = tweetEl.querySelector('[data-testid="socialContext"]') !== null;
+  const handle = isRetweet ? extractRetweeterHandle(tweetEl) : null;
+  const inFollow = handle !== null && isHandleFollowed(handle);
+  const isWhitelisted = handle !== null && isHandleWhitelisted(handle);
+  const isCurrentUser = handle !== null && currentUserHandle !== null
+    && handle.toLowerCase() === currentUserHandle.toLowerCase();
+  return {
+    isRetweet,
+    handle,
+    inFollow,
+    isWhitelisted,
+    isCurrentUser,
+    exempt: inFollow || isWhitelisted || isCurrentUser,
+  };
+}
+
+function applyTweetResult(
+  tweetEl: HTMLElement,
+  result: ClassifyResult,
+  handle: string,
+  isRetweet: boolean,
+  statusPath: string | null,
+  settings: ReturnType<typeof getSettings>,
+): void {
+  if (result.action === 'show' || result.action === 'skip') {
+    restoreIfAuthorHidden(tweetEl);
+    return;
+  }
+  if (result.action !== 'hide') return;
+  const retweeterName = isRetweet ? (extractRetweeterName(tweetEl) ?? '') : undefined;
+  hideTweet(tweetEl, settings.hideMode, {
+    reason: result.reason ?? 'fadak',
+    handle: `@${handle}`,
+    retweetedBy: retweeterName || undefined,
+    category: result.category,
+    matchedRule: result.matchedRule,
+    preserveHeight: isScrollRestorationActive(),
+    onWhitelist: () => addToWhitelist(`@${handle}`),
+  }, (element) => {
+    const expandedPath = extractTweetStatusPath(element);
+    if (expandedPath) getExpandedSet().add(expandedPath);
+  });
+  recordHide(tweetEl, result.category, result.packId, statusPath);
+}
+
 export function processTweet(tweetEl: HTMLElement): void {
   if (isProfilePage()) return;
   const author = extractTweetAuthor(tweetEl);
   if (!author) return;
-
   const { handle } = author;
   const currentUserHandle = getCurrentUserHandle();
-  const settings = getSettings();
-  const whitelistSet = getWhitelistSet();
-  const activeFilterRules = getActiveFilterRules();
-
-  if (currentUserHandle && handle.toLowerCase() === currentUserHandle.toLowerCase()) {
-    // A5: 핸들 감지 전에 숨겨진 자기 트윗 복원 (skip 경로와 동일한 의미론)
-    if (tweetEl.hasAttribute('data-bbr-original')) showTweet(tweetEl);
-    return;
-  }
-
-  // 사용자가 펼친 트윗은 재숨김 안 함 (가상 리스트 DOM 재생성 대응)
   const statusPath = extractTweetStatusPath(tweetEl);
-  if (statusPath && getExpandedSet().has(statusPath)) {
-    showTweet(tweetEl);
-    return;
-  }
-
-  // 상세 페이지 메인 트윗은 숨기지 않음 (배너로 대체)
-  if (isDetailPage() && statusPath) {
-    const currentPath = window.location.pathname;
-    if (currentPath.includes(statusPath)) return;
-  }
-
+  if (shouldSkipTweet(tweetEl, handle, statusPath, currentUserHandle)) return;
+  const settings = getSettings();
   const isFadak = checkFadak(tweetEl);
   const displayName = extractDisplayName(tweetEl, handle);
   const userLabel = formatUserLabel(handle, displayName);
-
-  const socialContext = tweetEl.querySelector('[data-testid="socialContext"]');
-  const isRetweet = socialContext !== null;
   const inFollow = isHandleFollowed(handle);
-
-  // A6: 리트위터 예외 판단용 — href 기반 추출(로케일 독립), 링크 없는 socialContext는 null(예외 불가)
-  const retweeterHandle = isRetweet ? extractRetweeterHandle(tweetEl) : null;
-  const retweeterInFollow = retweeterHandle !== null && isHandleFollowed(retweeterHandle);
-  const retweeterIsWhitelisted = retweeterHandle !== null && isHandleWhitelisted(retweeterHandle);
-  // Defect2: 본인 계정의 재게시도 예외 — 작성자 본인 체크(라인 46)와 동일한 정규화로 비교
-  const retweeterIsCurrentUser =
-    retweeterHandle !== null && currentUserHandle !== null && retweeterHandle.toLowerCase() === currentUserHandle.toLowerCase();
-  // Defect1: 인용 파이프라인(processQuoteBlock)에도 동일한 리트위터 예외를 전파
-  const retweeterExempt = retweeterInFollow || retweeterIsWhitelisted || retweeterIsCurrentUser;
-
+  const retweeter = getRetweeterContext(tweetEl, currentUserHandle);
   if (settings.debugMode) {
     const hasQuote = !!findQuoteBlock(tweetEl);
-    addDebugLabel(tweetEl, { handle: `@${handle}`, isFadak, isRetweet, hasQuote, inFollow, retweeter: isRetweet ? (extractRetweeterName(tweetEl) ?? '?') : undefined });
-    console.log('[BBR]', userLabel, { isFadak, isRetweet, inFollow, hasQuote });
+    addDebugLabel(tweetEl, { handle: `@${handle}`, isFadak, isRetweet: retweeter.isRetweet, hasQuote, inFollow, retweeter: retweeter.isRetweet ? (extractRetweeterName(tweetEl) ?? '?') : undefined });
+    logger.debug('Tweet classified', { userLabel, isFadak, isRetweet: retweeter.isRetweet, inFollow, hasQuote });
   }
-
   const cachedProfile = profileCache.get(handle.toLowerCase());
-  const bio = cachedProfile?.bio ?? '';
   const tweetText = extractTweetText(tweetEl);
-  const profile = cachedProfile ?? { handle, displayName: displayName ?? handle, bio };
-
-  // 키워드 수집기 버퍼링 (분류와 무관하게 실행)
-  // isFadak이 이미 작성자 영역 스코프 판정이므로 별도 hasBadgeInAuthorArea 체크 불필요
+  const profile = cachedProfile ?? { handle, displayName: displayName ?? handle, bio: '' };
   if (isFadak && settings.keywordCollectorEnabled) {
     bufferCollectedFadak(handle.toLowerCase(), handle, profile.displayName, profile.bio, tweetText);
   }
-
-  // classifier로 판정
   const result: ClassifyResult = classifyTweet({
     handle, displayName, isFadak, inFollow,
-    isRetweet,
-    isWhitelisted: whitelistSet.has(`@${handle.toLowerCase()}`),
-    retweeterHandle, retweeterInFollow, retweeterIsWhitelisted, retweeterIsCurrentUser,
-    settings, activeFilterRules, profile, tweetText,
+    isRetweet: retweeter.isRetweet,
+    isWhitelisted: getWhitelistSet().has(`@${handle.toLowerCase()}`),
+    retweeterHandle: retweeter.handle,
+    retweeterInFollow: retweeter.inFollow,
+    retweeterIsWhitelisted: retweeter.isWhitelisted,
+    retweeterIsCurrentUser: retweeter.isCurrentUser,
+    settings, activeFilterRules: getActiveFilterRules(), protectedKeywords: getProtectedKeywords(), profile, tweetText,
     pageType: getPageType(),
   });
-
-  // DOM 조작 + 통계 수집
-  if (result.action === 'show') {
-    restoreIfAuthorHidden(tweetEl);
-  } else if (result.action === 'hide') {
-    const retweeterName = isRetweet ? (extractRetweeterName(tweetEl) ?? '') : undefined;
-    const expandedSet = getExpandedSet();
-    hideTweet(tweetEl, settings.hideMode, {
-      reason: result.reason ?? 'fadak',
-      handle: `@${handle}`,
-      retweetedBy: retweeterName || undefined,
-      category: result.category,
-      matchedRule: result.matchedRule,
-    }, (el) => {
-      const sp = extractTweetStatusPath(el);
-      if (sp) expandedSet.add(sp);
-    });
-    recordHide(tweetEl, result.category, result.packId);
-  }
-  // action === 'skip' → 비파딱. SVG 부분 렌더링으로 오감지 후 숨겨졌을 수 있음 → 복원 (quote-entire 사유 제외)
-  if (result.action === 'skip') {
-    restoreIfAuthorHidden(tweetEl);
-  }
-
-  // 인용 트윗 처리 (전역 필터링 OFF면 스킵)
+  applyTweetResult(tweetEl, result, handle, retweeter.isRetweet, statusPath, settings);
   if (settings.enabled) {
-    processQuoteBlock(tweetEl, handle, inFollow, retweeterExempt, settings, userLabel);
+    processQuoteBlock(tweetEl, handle, inFollow, retweeter.exempt, settings, userLabel);
   }
 }
 
@@ -163,7 +179,13 @@ function processQuoteBlock(
   });
 
   if (result.action === 'hide-entire') {
-    hideTweet(tweetEl, settings.hideMode, { reason: QUOTE_ENTIRE_REASON, handle: `@${quotedHandle ?? ''}`, quotedBy: userLabel });
+    hideTweet(tweetEl, settings.hideMode, {
+      reason: QUOTE_ENTIRE_REASON,
+      handle: `@${quotedHandle ?? ''}`,
+      quotedBy: userLabel,
+      preserveHeight: isScrollRestorationActive(),
+      onWhitelist: quotedHandle ? () => addToWhitelist(`@${quotedHandle}`) : undefined,
+    });
     return;
   }
   // 판정이 hide-entire보다 약해졌으면(다운그레이드/해제) quote-entire로 숨겨진 트윗을 여기서만 복원
@@ -219,8 +241,8 @@ export function reprocessExistingTweets(): void {
       tweet.querySelector('[data-bbr-debug]')?.remove();
       try {
         processTweet(tweet as HTMLElement);
-      } catch (e) {
-        if (settings?.debugMode) console.error('[BBR] processTweet error', e);
+      } catch (error) {
+        if (settings.debugMode) logger.error('Tweet reprocess failed', { error: String(error) });
       }
     });
   });

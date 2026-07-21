@@ -57,6 +57,7 @@ function bindAllEvents(): void {
     settings.debugMode = checked('debugMode');
     settings.milestoneBannerEnabled = checked('milestoneBannerEnabled');
     settings.keywordFilterEnabled = checked('keywordFilterEnabled');
+    settings.aggressorFilterEnabled = checked('aggressorFilterEnabled');
     settings.keywordCollectorEnabled = checked('keywordCollectorEnabled');
     settings.language = (
       document.getElementById('language') as HTMLSelectElement

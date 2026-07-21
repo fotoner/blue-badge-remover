@@ -6,7 +6,7 @@ X(트위터)에서 수익성 목적의 파란 뱃지 계정을 숨기는 크롬 
 
 - **Language**: TypeScript
 - **Platform**: Chrome Extension (Manifest V3)
-- **Build**: Vite + CRXJS
+- **Build**: WXT
 - **Test**: Vitest
 - **UI**: 바닐라 HTML/CSS (Popup)
 - **API**: Chrome Extensions API, Chrome Storage API, X(Twitter) API
@@ -88,22 +88,28 @@ entrypoints/                    # WXT 진입점 (빌드 시스템이 관리)
 └── collector/                  # 키워드 수집기
 
 src/
-├── content/                    # Content Script 로직 (8개 모듈)
+├── content/                    # Content Script 오케스트레이션
 │   ├── index.ts                # 초기화 + 모듈 연결
 │   ├── state.ts                # 공유 상태 관리
 │   ├── message-handler.ts      # postMessage 수신
 │   ├── storage-listener.ts     # chrome.storage 변경 감지
+│   ├── navigation.ts           # SPA 네비게이션 + 복원 윈도우
 │   ├── tweet-orchestrator.ts   # processTweet + 숨김/표시
 │   ├── tweet-classifier.ts     # 순수 함수 판정 로직
+│   ├── tweet-processing.ts     # 트윗 DOM 데이터 추출
+│   ├── follow-collector.ts     # DOM 팔로우 수집
+│   ├── hover-card-observer.ts  # 호버 카드 바이오 수집
 │   ├── filter-pipeline.ts      # 필터 규칙 로드 (내장+커스텀+팩 병합)
 │   ├── milestone-banner.ts     # 마일스톤 축하 배너
-│   └── collector-buffer.ts     # 키워드 수집기 버퍼
+│   ├── collector-buffer.ts     # 키워드 수집기 버퍼
+│   └── fadak-banner.ts         # 프로필/상세 경고 배너
 ├── injected/                   # MAIN world 스크립트
-│   └── fetch-interceptor.ts    # X API 응답 파싱 + fiber 팔로우 감지
+│   ├── fetch-interceptor.ts    # X API fetch/XHR 인터셉트
+│   ├── data-extractors.ts      # API 응답 데이터 추출
+│   └── fiber-follow-observer.ts # React fiber 팔로우 감지
 ├── features/
-│   ├── badge-detection/        # D1: 뱃지 감지
+│   ├── badge-detection/        # D1: SVG 뱃지 감지
 │   ├── content-filter/         # D2: 콘텐츠 필터링
-│   ├── follow-list/            # D3: 팔로우 & 화이트리스트
 │   ├── keyword-filter/         # D5: 키워드 필터
 │   ├── keyword-collector/      # 키워드 수집기 스토리지
 │   ├── filter-pack/            # 필터 팩 관리 (로더 + 스토리지)

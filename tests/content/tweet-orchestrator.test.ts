@@ -12,13 +12,6 @@ const mockDetectBadgeSvg = vi.fn<(el: HTMLElement) => boolean>().mockReturnValue
 const mockIsBlueBadgeElement = vi.fn<(el: Element) => boolean>();
 vi.mock('@features/badge-detection', () => ({
   detectBadgeSvg: (...args: unknown[]) => mockDetectBadgeSvg(args[0] as HTMLElement),
-  BadgeCache: class {
-    private m = new Map<string, boolean>();
-    get(k: string) { return this.m.get(k); }
-    set(k: string, v: boolean) { this.m.set(k, v); }
-    has(k: string) { return this.m.has(k); }
-  },
-  parseBadgeInfo: vi.fn(),
 }));
 // tweet-orchestrator는 barrel(index.ts) 대신 svg-fallback에서 직접 import — 동일 mock 함수로 제어
 vi.mock('@features/badge-detection/svg-fallback', () => ({
@@ -44,6 +37,8 @@ vi.mock('@features/content-filter', () => ({
 
 vi.mock('@features/keyword-filter', () => ({
   matchesKeywordFilter: vi.fn().mockReturnValue({ matched: false }),
+  matchesProtectedKeyword: vi.fn().mockReturnValue(false),
+  isAggressorProfile: vi.fn().mockReturnValue(false),
   ProfileCache: class {
     get() { return undefined; }
     set() {}

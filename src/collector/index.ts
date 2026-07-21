@@ -7,7 +7,6 @@ import type { CollectedFadak, FilterRule } from '@shared/types';
 import { renderKeywords } from './keyword-chart';
 import { renderList, renderStats, bindExportEvents } from './account-list';
 
-let cachedList: CollectedFadak[] = [];
 let filterRules: FilterRule[] = [];
 
 async function loadFilterRules(): Promise<FilterRule[]> {
@@ -17,7 +16,6 @@ async function loadFilterRules(): Promise<FilterRule[]> {
 
 async function init(): Promise<void> {
   const [list, rules] = await Promise.all([getCollectedFadaks(), loadFilterRules()]);
-  cachedList = list;
   filterRules = rules;
   renderStats(list);
   renderKeywords(list, filterRules);
@@ -27,7 +25,6 @@ async function init(): Promise<void> {
   browser.storage.onChanged.addListener((changes) => {
     if (changes['collectedFadaks']) {
       const updated = (changes['collectedFadaks'].newValue as CollectedFadak[] | undefined) ?? [];
-      cachedList = updated;
       renderStats(updated);
       renderKeywords(updated, filterRules);
       renderList(updated);

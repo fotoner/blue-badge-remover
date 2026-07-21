@@ -1,7 +1,7 @@
 // src/content/tweet-classifier.ts
 // 순수 분류 함수: DOM 접근 없이 입력 데이터만으로 트윗 숨김 판정.
 import { shouldHideTweet, shouldHideRetweet, getQuoteAction, type PageType } from '@features/content-filter';
-import { matchesKeywordFilter } from '@features/keyword-filter';
+import { isAggressorProfile, matchesKeywordFilter, matchesProtectedKeyword } from '@features/keyword-filter';
 import type { FilterRule, Settings, ProfileInfo, KeywordMatchResult } from '@shared/types';
 
 const EMPTY_SET: ReadonlySet<string> = new Set<string>();
@@ -19,6 +19,7 @@ export interface ClassifyInput {
   retweeterIsCurrentUser: boolean;
   settings: Settings;
   activeFilterRules: FilterRule[];
+  protectedKeywords: string[];
   profile: ProfileInfo | null;
   tweetText: string;
   pageType: PageType;
@@ -57,6 +58,9 @@ export function classifyTweet(input: ClassifyInput): ClassifyResult {
 
   // 팔로우/화이트리스트 예외
   if (inFollow || isWhitelisted) return { action: 'show', reason: inFollow ? 'follow' : 'whitelist' };
+  if (profile && matchesProtectedKeyword(profile, input.protectedKeywords)) {
+    return { action: 'show', reason: 'protected-keyword' };
+  }
 
   // 리트위터 예외 (A6) — 예외 유저(팔로우/화이트리스트/본인)가 재게시한 파딱 트윗은 키워드/리트윗 숨김 경로보다 우선하여 표시
   if (isRetweet && (retweeterInFollow || retweeterIsWhitelisted || retweeterIsCurrentUser)) {
@@ -69,7 +73,8 @@ export function classifyTweet(input: ClassifyInput): ClassifyResult {
   // 키워드 필터 체크
   if (settings.keywordFilterEnabled && profile) {
     const result: KeywordMatchResult = matchesKeywordFilter(profile, activeFilterRules, tweetText);
-    if (!result.matched) return { action: 'show', reason: 'keyword-not-matched' };
+    const aggressorMatched = settings.aggressorFilterEnabled && isAggressorProfile(profile);
+    if (!result.matched && !aggressorMatched) return { action: 'show', reason: 'keyword-not-matched' };
     // 키워드 매칭됨 — 숨김 진행, 매칭 정보 포함
     if (isRetweet) {
       const shouldHide = shouldHideRetweet({ settings, isFadak: true, isRetweet: true });
@@ -82,7 +87,7 @@ export function classifyTweet(input: ClassifyInput): ClassifyResult {
       isFadak: true, handle: `@${handle}`, pageType,
     });
     return hide
-      ? { action: 'hide', reason: 'fadak', matchedRule: result.matchedRule, packId: result.packId, category: result.category }
+      ? { action: 'hide', reason: aggressorMatched && !result.matched ? 'aggressor-profile' : 'fadak', matchedRule: result.matchedRule, packId: result.packId, category: result.category }
       : { action: 'show', reason: 'page-filter-off' };
   }
 
