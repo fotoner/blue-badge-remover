@@ -102,6 +102,29 @@ describe('hideTweet', () => {
     expect(onExpandedChange).toHaveBeenCalledWith(tweetEl, true);
   });
 
+  it('펼친 트윗 액션을 article 루트가 아닌 X 기본 액션 바 바로 위에 배치한다', () => {
+    tweetEl.innerHTML = `
+      <div class="tweet-content-column">
+        <div class="tweet-actions-wrapper">
+          <div role="group"><button data-testid="reply">답글</button></div>
+        </div>
+      </div>
+    `;
+    hideTweet(tweetEl, 'collapse', {
+      reason: 'fadak',
+      handle: '@fadakuser',
+      onWhitelist: vi.fn(),
+    });
+
+    tweetEl.querySelector<HTMLElement>('[data-bbr-collapsed]')?.click();
+
+    const nativeActions = tweetEl.querySelector('[data-testid="reply"]')?.closest('[role="group"]');
+    const bbrActions = tweetEl.querySelector('[data-bbr-expanded-actions]');
+    expect(bbrActions?.nextElementSibling).toBe(nativeActions);
+    expect(bbrActions?.parentElement).toBe(nativeActions?.parentElement);
+    expect(bbrActions?.parentElement).not.toBe(tweetEl);
+  });
+
   it('펼친 트윗의 화이트리스트 버튼이 콜백을 호출한다', () => {
     const onWhitelist = vi.fn();
     hideTweet(tweetEl, 'collapse', { reason: 'fadak', handle: '@fadakuser', onWhitelist });

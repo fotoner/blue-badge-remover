@@ -22,7 +22,7 @@ const PLACEHOLDER_STYLES = `
   .bbr-placeholder:hover { color: #1d9bf0; }
   .bbr-expanded-actions {
     display: flex; align-items: center; justify-content: flex-end; gap: 4px;
-    padding: 0 12px 8px; color: #536471; font-size: 13px;
+    padding: 8px 0 0; color: #536471; font-size: 13px;
   }
   .bbr-expanded-action {
     min-height: 32px; padding: 0 8px; border: none; border-radius: 4px;
@@ -124,8 +124,23 @@ function expandTweet(
 ): void {
   showTweet(element);
   element.setAttribute(EXPANDED_ATTR, '1');
-  element.appendChild(createExpandedActions(element, context, onExpandedChange));
+  insertExpandedActions(element, createExpandedActions(element, context, onExpandedChange));
   onExpandedChange?.(element, true);
+}
+
+function insertExpandedActions(element: HTMLElement, actions: HTMLDivElement): void {
+  const replyButton = element.querySelector('[data-testid="reply"]');
+  const nativeActions = replyButton?.closest<HTMLElement>('[role="group"]');
+  if (nativeActions) {
+    nativeActions.insertAdjacentElement('beforebegin', actions);
+    return;
+  }
+  const contentRoot = element.firstElementChild;
+  if (contentRoot instanceof HTMLElement) {
+    contentRoot.appendChild(actions);
+  } else {
+    element.appendChild(actions);
+  }
 }
 
 export function hideTweet(
@@ -220,10 +235,11 @@ export function showTweet(element: HTMLElement): void {
   element.removeAttribute(ORIGINAL_CONTENT_KEY);
   element.removeAttribute(HIDE_REASON_ATTR);
   element.removeAttribute(EXPANDED_ATTR);
+  element.querySelector(`[${EXPANDED_ACTIONS_ATTR}]`)?.remove();
 
-  // 직접 자식 placeholder/action만 제거 — 인용 블록 안의 placeholder는 유지
+  // 직접 자식 placeholder만 제거 — 인용 블록 안의 placeholder는 유지
   for (const child of Array.from(element.children)) {
-    if (child.hasAttribute(COLLAPSED_ATTR) || child.hasAttribute(EXPANDED_ACTIONS_ATTR)) {
+    if (child.hasAttribute(COLLAPSED_ATTR)) {
       child.remove();
     }
   }
