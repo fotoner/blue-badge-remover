@@ -3,6 +3,7 @@ import { JSDOM } from 'jsdom';
 import {
   extractTweetAuthor,
   extractRetweeterName,
+  extractRetweeterHandle,
   findQuoteBlock,
   extractQuoteAuthor,
   extractTweetText,
@@ -104,6 +105,18 @@ describe('extractTweetAuthor', () => {
     const el = html(`<article data-testid="tweet"><div>텍스트만</div></article>`);
     expect(extractTweetAuthor(el)).toBeNull();
   });
+
+  it('socialContext 안 링크는 텍스트 로케일과 무관하게 건너뜀 (closest 스코프 스킵)', () => {
+    const el = html(`
+      <article data-testid="tweet">
+        <div data-testid="socialContext">
+          <a role="link" href="/retweeter">ユーザーさんがリポスト</a>
+        </div>
+        <a role="link" href="/original_author">@original_author</a>
+      </article>
+    `);
+    expect(extractTweetAuthor(el)?.handle).toBe('original_author');
+  });
 });
 
 // --- extractRetweeterName ---
@@ -132,6 +145,57 @@ describe('extractRetweeterName', () => {
   it('socialContext 없으면 null', () => {
     const el = html(`<article><div>일반 트윗</div></article>`);
     expect(extractRetweeterName(el)).toBeNull();
+  });
+});
+
+// --- extractRetweeterHandle ---
+
+describe('extractRetweeterHandle', () => {
+  it('socialContext 링크 href에서 핸들 추출', () => {
+    const el = html(`
+      <article>
+        <div data-testid="socialContext">
+          <a href="/retweeter_handle">리트윗한사람 님이 재게시함</a>
+        </div>
+      </article>
+    `);
+    expect(extractRetweeterHandle(el)).toBe('retweeter_handle');
+  });
+
+  it('로케일 독립 — 링크 텍스트가 일본어여도 href만으로 추출', () => {
+    const el = html(`
+      <article>
+        <div data-testid="socialContext">
+          <a href="/rt_user">ユーザーさんがリポスト</a>
+        </div>
+      </article>
+    `);
+    expect(extractRetweeterHandle(el)).toBe('rt_user');
+  });
+
+  it('링크 없는 텍스트-only socialContext → null', () => {
+    const el = html(`
+      <article>
+        <div data-testid="socialContext">SomeUser Retweeted</div>
+      </article>
+    `);
+    expect(extractRetweeterHandle(el)).toBeNull();
+  });
+
+  it('socialContext 없으면 null', () => {
+    const el = html(`<article><div>일반 트윗</div></article>`);
+    expect(extractRetweeterHandle(el)).toBeNull();
+  });
+
+  it('href가 /i/ 경로면 null (커뮤니티/토픽 링크 가드)', () => {
+    const el = html(`
+      <article>
+        <div data-testid="socialContext">
+          <a href="/i/communities/123">커뮤니티</a>
+        </div>
+      </article>
+    `);
+    expect(extractRetweeterHandle(el)).toBeNull();
   });
 });
 
@@ -287,6 +351,18 @@ describe('extractDisplayName', () => {
       </article>
     `);
     expect(extractDisplayName(el, 'test_user')).toBeNull();
+  });
+
+  it('socialContext 안 링크는 표시 이름 후보에서 제외 (로케일 독립)', () => {
+    const el = html(`
+      <article>
+        <div data-testid="socialContext">
+          <a role="link" href="/someone">ユーザーさんがリポスト</a>
+        </div>
+        <a role="link" href="/someone">표시이름</a>
+      </article>
+    `);
+    expect(extractDisplayName(el, 'someone')).toBe('표시이름');
   });
 });
 

@@ -13,6 +13,10 @@ export interface ClassifyInput {
   inFollow: boolean;
   isRetweet: boolean;
   isWhitelisted: boolean;
+  retweeterHandle: string | null;
+  retweeterInFollow: boolean;
+  retweeterIsWhitelisted: boolean;
+  retweeterIsCurrentUser: boolean;
   settings: Settings;
   activeFilterRules: FilterRule[];
   profile: ProfileInfo | null;
@@ -35,6 +39,8 @@ export interface QuoteClassifyInput {
   quotedIsWhitelisted: boolean;
   parentHandle: string;
   parentInFollow: boolean;
+  parentIsWhitelisted: boolean;
+  retweeterExempt: boolean;
   settings: Settings;
 }
 
@@ -45,12 +51,20 @@ export interface QuoteClassifyResult {
 
 /** 일반 트윗/리트윗 분류 (순수 함수, DOM 접근 없음) */
 export function classifyTweet(input: ClassifyInput): ClassifyResult {
-  const { handle, isFadak, inFollow, isRetweet, isWhitelisted, settings, activeFilterRules, profile, tweetText, pageType } = input;
+  const { handle, isFadak, inFollow, isRetweet, isWhitelisted, retweeterInFollow, retweeterIsWhitelisted, retweeterIsCurrentUser, settings, activeFilterRules, profile, tweetText, pageType } = input;
 
   if (!isFadak) return { action: 'skip' };
 
   // 팔로우/화이트리스트 예외
   if (inFollow || isWhitelisted) return { action: 'show', reason: inFollow ? 'follow' : 'whitelist' };
+
+  // 리트위터 예외 (A6) — 예외 유저(팔로우/화이트리스트/본인)가 재게시한 파딱 트윗은 키워드/리트윗 숨김 경로보다 우선하여 표시
+  if (isRetweet && (retweeterInFollow || retweeterIsWhitelisted || retweeterIsCurrentUser)) {
+    return {
+      action: 'show',
+      reason: retweeterInFollow ? 'retweeter-follow' : retweeterIsWhitelisted ? 'retweeter-whitelist' : 'retweeter-self',
+    };
+  }
 
   // 키워드 필터 체크
   if (settings.keywordFilterEnabled && profile) {
@@ -87,18 +101,25 @@ export function classifyTweet(input: ClassifyInput): ClassifyResult {
 
 /** 인용 트윗 분류 (순수 함수) */
 export function classifyQuote(input: QuoteClassifyInput): QuoteClassifyResult {
-  const { quotedHandle, quotedIsFadak, quotedInFollow, quotedIsWhitelisted, parentHandle, parentInFollow, settings } = input;
+  const { quotedHandle, quotedIsFadak, quotedInFollow, quotedIsWhitelisted, parentHandle, parentInFollow, parentIsWhitelisted, retweeterExempt, settings } = input;
+  const parentExempt = parentInFollow || parentIsWhitelisted;
 
-  // self-quote: 부모가 팔로우 중이고 자기 트윗을 인용
-  if (quotedHandle !== null && quotedHandle.toLowerCase() === parentHandle.toLowerCase() && parentInFollow) {
-    return { action: 'show', reason: 'self-quote-followed' };
+  // self-quote: 예외 부모(팔로우/화이트리스트)가 자기 트윗을 인용
+  if (quotedHandle !== null && quotedHandle.toLowerCase() === parentHandle.toLowerCase() && parentExempt) {
+    return { action: 'show', reason: parentInFollow ? 'self-quote-followed' : 'self-quote-whitelisted' };
   }
 
   if (!quotedIsFadak) return { action: 'show', reason: 'not-fadak' };
   if (quotedInFollow || quotedIsWhitelisted) return { action: 'show', reason: quotedInFollow ? 'follow' : 'whitelist' };
 
   const quoteAction = getQuoteAction(settings, true);
-  if (quoteAction === 'hide-entire') return { action: 'hide-entire', reason: 'quote-fadak' };
+  if (quoteAction === 'hide-entire') {
+    // A2/A6: 예외 부모 또는 예외 리트위터의 트윗 전체는 절대 숨기지 않음 — 인용 파딱 카드만 접기로 다운그레이드
+    if (parentExempt || retweeterExempt) {
+      return { action: 'hide-quote', reason: parentExempt ? 'quote-fadak-parent-exempt' : 'quote-fadak-retweeter-exempt' };
+    }
+    return { action: 'hide-entire', reason: 'quote-fadak' };
+  }
   if (quoteAction === 'hide-quote') return { action: 'hide-quote', reason: 'quote-fadak' };
   return { action: 'show', reason: 'quote-filter-off' };
 }

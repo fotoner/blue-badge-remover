@@ -2,6 +2,7 @@
 import { t, type Language, DEFAULT_LANGUAGE } from '@shared/i18n';
 
 const ORIGINAL_CONTENT_KEY = 'data-bbr-original';
+const HIDE_REASON_ATTR = 'data-bbr-reason';
 const COLLAPSED_ATTR = 'data-bbr-collapsed';
 const HIDDEN_QUOTE_ATTR = 'data-bbr-hidden-quote';
 const STYLE_INJECTED_ATTR = 'data-bbr-styles';
@@ -97,11 +98,13 @@ export function hideTweet(element: HTMLElement, mode: 'remove' | 'collapse', con
   if (mode === 'remove') {
     element.style.display = 'none';
     element.setAttribute(ORIGINAL_CONTENT_KEY, 'hidden');
+    element.setAttribute(HIDE_REASON_ATTR, context?.reason ?? 'unknown');
     return;
   }
 
   injectStyles();
   element.setAttribute(ORIGINAL_CONTENT_KEY, 'collapsed');
+  element.setAttribute(HIDE_REASON_ATTR, context?.reason ?? 'unknown');
   const originalChildren = Array.from(element.childNodes);
   originalChildren.forEach((child) => {
     if (child instanceof HTMLElement) {
@@ -163,6 +166,7 @@ const EXPANDED_ATTR = 'data-bbr-expanded';
 export function showTweet(element: HTMLElement): void {
   element.style.display = '';
   element.removeAttribute(ORIGINAL_CONTENT_KEY);
+  element.removeAttribute(HIDE_REASON_ATTR);
   element.setAttribute(EXPANDED_ATTR, '1');
 
   // 직접 자식 placeholder만 제거 — 인용 블록 안의 placeholder는 유지
@@ -179,7 +183,7 @@ export function showTweet(element: HTMLElement): void {
   });
 }
 
-function showQuoteBlock(element: HTMLElement): void {
+export function showQuoteBlock(element: HTMLElement): void {
   element.removeAttribute(HIDDEN_QUOTE_ATTR);
 
   const placeholder = element.querySelector(`[${COLLAPSED_ATTR}]`);

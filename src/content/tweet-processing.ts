@@ -4,6 +4,8 @@
 export function extractTweetAuthor(tweetEl: HTMLElement): { handle: string } | null {
   const allLinks = tweetEl.querySelectorAll('a[role="link"][href^="/"]');
   for (const link of allLinks) {
+    // socialContext(재게시/고정 등) 내부 링크는 로케일과 무관하게 제외; 텍스트 정규식은 testid 없는 DOM 변형 폴백
+    if (link.closest('[data-testid="socialContext"]')) continue;
     const text = link.textContent ?? '';
     if (/재게시함|Retweeted|reposted/i.test(text)) continue;
     const href = link.getAttribute('href');
@@ -37,6 +39,21 @@ export function extractRetweeterName(tweetEl: HTMLElement): string | null {
   }
   const text = socialContext.textContent ?? '';
   return text.replace(/\s*(Retweeted|reposted|님이\s*재게시함|님이\s*리트윗함|님이\s*리포스트함|님이\s*리트윗.*|님이\s*리포스트.*).*/i, '').trim() || null;
+}
+
+/**
+ * socialContext 앵커의 href pathname으로 리트위터 핸들 추출 — 로케일 독립
+ * ('재게시함'/'Retweeted' 등 텍스트에 의존하지 않음). 커뮤니티/토픽 링크('/i/...')는 제외.
+ */
+export function extractRetweeterHandle(tweetEl: HTMLElement): string | null {
+  const socialContext = tweetEl.querySelector('[data-testid="socialContext"]');
+  if (!socialContext) return null;
+  const link = socialContext.querySelector('a[href^="/"]');
+  const href = link?.getAttribute('href');
+  if (!href) return null;
+  const handle = href.slice(1).split(/[/?#]/)[0];
+  if (!handle || handle === 'i') return null;
+  return handle;
 }
 
 export function findQuoteBlock(tweetEl: HTMLElement): HTMLElement | null {
@@ -121,6 +138,8 @@ export function extractTweetText(tweetEl: HTMLElement): string {
 export function extractDisplayName(tweetEl: HTMLElement, handle: string): string | null {
   const links = tweetEl.querySelectorAll('a[role="link"]');
   for (const link of links) {
+    // socialContext 내부 링크는 로케일과 무관하게 표시 이름 후보에서 제외
+    if (link.closest('[data-testid="socialContext"]')) continue;
     const href = link.getAttribute('href') ?? '';
     if (href === `/${handle}` && !link.textContent?.startsWith('@')) {
       const name = link.textContent?.trim();

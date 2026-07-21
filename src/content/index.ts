@@ -10,10 +10,10 @@ import { listenForNavigation, setOnNavigate } from './navigation';
 import { collectFollowsFromDOM, saveFollowHandles, disconnectFollowObserver, listenForFollowButtonClicks, getMyHandle } from './follow-collector';
 import { isProfilePage, getProfileLinkHref } from './page-utils';
 import { observeSettingsShortcut } from './settings-shortcut';
-import { setSettings, setFollowSet, setWhitelistSet, setCurrentUserHandle, getSettings, getFollowSet, getCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, profileCache, collectorBuffer } from './state';
+import { setSettings, setFollowSet, setWhitelistSet, setCurrentUserHandle, getSettings, getFollowSet, isHandleFollowed, isHandleWhitelisted, profileCache, collectorBuffer } from './state';
 import { flushCollector } from './collector-buffer';
 import { loadFilterRules } from './filter-pipeline';
-import { processTweet, restoreHiddenTweets, reprocessExistingTweets } from './tweet-orchestrator';
+import { processTweet, restoreHiddenTweets, reprocessExistingTweets, applyCurrentUserFallback } from './tweet-orchestrator';
 import { listenForMessages } from './message-handler';
 import { listenForSettingsChanges } from './storage-listener';
 import { startStatsFlush, stopStatsFlush, flushStats, setOnFlush } from '@features/stats';
@@ -198,9 +198,7 @@ async function init(): Promise<void> {
 
   setTimeout(() => {
     void detectAndHandleAccountSwitch();
-    if (!getCurrentUserHandle()) {
-      setCurrentUserHandle(getMyHandle());
-    }
+    applyCurrentUserFallback(getMyHandle);
     showFadakProfileBanner(fadakBannerDeps);
     showFadakDetailBanner(fadakBannerDeps);
     startAccountSwitchWatcher();
