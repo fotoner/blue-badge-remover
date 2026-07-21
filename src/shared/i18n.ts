@@ -75,6 +75,8 @@ type TranslationKeys =
   | 'openSettings'
   | 'updateBanner'
   | 'updateBannerVersion'
+  | 'milestoneBannerLabel'
+  | 'milestoneBannerHint'
   | 'milestoneMessage'
   | 'dismiss'
   | 'shareText';
@@ -154,6 +156,8 @@ const ko: Translations = {
   updateBannerVersion: 'v{version}으로 업데이트되었습니다!',
   dismiss: '닫기',
   shareText: '오늘 파딱 트윗 {count}개를 숨겼습니다 🧹\n\n#파딱제거기 #BlueBadgeRemover',
+  milestoneBannerLabel: '마일스톤 알림',
+  milestoneBannerHint: '100개, 500개 등 목표 달성 시 타임라인 상단에 축하 배너를 표시합니다 (기본 꺼짐)',
   milestoneMessage: '🎉 {count}번째 파딱 트윗을 숨겼습니다!',
 };
 
@@ -230,6 +234,8 @@ const en: Translations = {
   updateBannerVersion: 'Updated to v{version}!',
   dismiss: 'Dismiss',
   shareText: 'Hid {count} paid badge tweets today 🧹\n\n#BlueBadgeRemover',
+  milestoneBannerLabel: 'Milestone Notifications',
+  milestoneBannerHint: 'Show a celebration banner at the top of the timeline when you cross hiding milestones like 100 or 500 (off by default)',
   milestoneMessage: '🎉 Hidden {count} paid badge tweets!',
 };
 
@@ -306,6 +312,8 @@ const ja: Translations = {
   updateBannerVersion: 'v{version}に更新されました！',
   dismiss: '閉じる',
   shareText: '今日{count}件の課金バッジツイートを非表示にしました 🧹\n\n#BlueBadgeRemover',
+  milestoneBannerLabel: 'マイルストーン通知',
+  milestoneBannerHint: '100件、500件などの節目に達したとき、タイムライン上部にお祝いバナーを表示します（デフォルトでオフ）',
   milestoneMessage: '🎉 {count}件の課金バッジツイートを非表示にしました！',
 };
 

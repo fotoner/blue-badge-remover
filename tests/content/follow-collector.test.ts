@@ -74,6 +74,7 @@ describe('collectFollowsFromDOM - guard: myHandle !== pathUser', () => {
         keywordFilterEnabled: false,
         keywordCollectorEnabled: false,
         defaultFilterEnabled: true,
+        milestoneBannerEnabled: false,
       }),
       setFollowSet: vi.fn(),
     };

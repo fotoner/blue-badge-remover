@@ -14,6 +14,7 @@ const defaultSettings: Settings = {
   keywordFilterEnabled: false,
   keywordCollectorEnabled: false,
   defaultFilterEnabled: true,
+  milestoneBannerEnabled: false,
 };
 
 function makeInput(overrides: Partial<ClassifyInput> = {}): ClassifyInput {

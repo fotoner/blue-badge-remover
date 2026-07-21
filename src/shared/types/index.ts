@@ -15,6 +15,7 @@ export interface Settings {
   keywordFilterEnabled: boolean;
   keywordCollectorEnabled: boolean;
   defaultFilterEnabled: boolean;
+  milestoneBannerEnabled: boolean;
 }
 
 export interface CollectedFadak {

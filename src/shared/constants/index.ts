@@ -17,6 +17,7 @@ export const DEFAULT_SETTINGS: Settings = {
   keywordFilterEnabled: false,
   keywordCollectorEnabled: false,
   defaultFilterEnabled: true,
+  milestoneBannerEnabled: false,
 };
 
 export const STORAGE_KEYS = {
@@ -51,6 +52,8 @@ export const TIMINGS = {
   BANNER_SUCCESS_DISMISS: 1500,
   /** 파딱 배너 옵저버 타임아웃 */
   BANNER_OBSERVER_TIMEOUT: 10000,
+  /** 마일스톤 배너 자동 닫힘 시간 */
+  MILESTONE_BANNER_AUTO_DISMISS: 8000,
   /** 팔로우 수집 재시도 지연 */
   FOLLOW_COLLECT_RETRY: 3000,
   /** 팔로우 핸들 추출 초기 지연 */

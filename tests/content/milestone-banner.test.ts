@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { TIMINGS } from '@shared/constants';
 
 const store = new Map<string, unknown>();
 
@@ -29,9 +30,13 @@ vi.mock('wxt/browser', () => ({
   },
 }));
 
-// Mock ./state to provide settings with language
+// Mock ./state to provide settings with language + milestoneBannerEnabled.
+// Module-level mutable object so both the enabled and disabled gate paths
+// can be exercised from the same single mock (reset in beforeEach below).
+let mockSettings = { language: 'ko', milestoneBannerEnabled: true };
+
 vi.mock('../../src/content/state', () => ({
-  getSettings: () => ({ language: 'ko' }),
+  getSettings: () => mockSettings,
 }));
 
 // Mock @shared/i18n — t() returns a formatted string
@@ -44,6 +49,7 @@ const { checkMilestone } = await import('../../src/content/milestone-banner');
 
 beforeEach(() => {
   store.clear();
+  mockSettings = { language: 'ko', milestoneBannerEnabled: true };
   // Clean up any banner DOM elements
   const banner = document.getElementById('bbr-milestone-banner');
   if (banner) banner.remove();
@@ -104,5 +110,65 @@ describe('checkMilestone', () => {
     // lastCelebrated unchanged
     expect(store.get('bbr-milestone-last')).toBe(100);
     expect(document.getElementById('bbr-milestone-banner')).toBeNull();
+  });
+
+  it('does nothing when milestoneBannerEnabled is false, even at a milestone', async () => {
+    setupDOM();
+    mockSettings.milestoneBannerEnabled = false;
+
+    await checkMilestone(100);
+
+    expect(document.getElementById('bbr-milestone-banner')).toBeNull();
+    expect(store.has('bbr-milestone-last')).toBe(false);
+  });
+
+  it('shows banner when milestoneBannerEnabled is true and a milestone is crossed', async () => {
+    setupDOM();
+    mockSettings.milestoneBannerEnabled = true;
+
+    await checkMilestone(100);
+
+    expect(document.getElementById('bbr-milestone-banner')).not.toBeNull();
+    expect(store.get('bbr-milestone-last')).toBe(100);
+  });
+
+  describe('auto-dismiss timer', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('auto-dismisses the banner after TIMINGS.MILESTONE_BANNER_AUTO_DISMISS', async () => {
+      setupDOM();
+      mockSettings.milestoneBannerEnabled = true;
+
+      await checkMilestone(100);
+      expect(document.getElementById('bbr-milestone-banner')).not.toBeNull();
+
+      vi.advanceTimersByTime(TIMINGS.MILESTONE_BANNER_AUTO_DISMISS);
+      expect(document.getElementById('bbr-milestone-banner')).toBeNull();
+    });
+
+    it('clears the auto-dismiss timer when the banner is manually closed', async () => {
+      setupDOM();
+      mockSettings.milestoneBannerEnabled = true;
+
+      await checkMilestone(100);
+      const banner = document.getElementById('bbr-milestone-banner');
+      expect(banner).not.toBeNull();
+
+      const dismissButton = banner!.querySelector('button');
+      expect(dismissButton).not.toBeNull();
+
+      const clearSpy = vi.spyOn(globalThis, 'clearTimeout');
+      dismissButton!.click();
+
+      expect(clearSpy).toHaveBeenCalled();
+      expect(document.getElementById('bbr-milestone-banner')).toBeNull();
+      clearSpy.mockRestore();
+    });
   });
 });

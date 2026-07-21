@@ -2,6 +2,7 @@
 // 마일스톤 축하 배너: 100/500/1K/5K/10K 도달 시 타임라인 상단에 표시.
 import { browser } from 'wxt/browser';
 import { t, type Language } from '@shared/i18n';
+import { TIMINGS } from '@shared/constants';
 import { getSettings } from './state';
 
 const MILESTONE_BANNER_ID = 'bbr-milestone-banner';
@@ -9,6 +10,7 @@ const MILESTONE_STORAGE_KEY = 'bbr-milestone-last';
 const MILESTONES = [100, 500, 1000, 5000, 10000];
 
 export async function checkMilestone(totalHidden: number): Promise<void> {
+  if (!getSettings().milestoneBannerEnabled) return;
   if (totalHidden <= 0) return;
 
   const result = await browser.storage.local.get([MILESTONE_STORAGE_KEY]);
@@ -37,6 +39,8 @@ function showMilestoneBanner(count: number): void {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   `;
 
+  const dismissTimer = setTimeout(() => banner.remove(), TIMINGS.MILESTONE_BANNER_AUTO_DISMISS);
+
   const text = document.createElement('span');
   const lang = getSettings().language;
   text.textContent = t('milestoneMessage', lang, { count: count.toLocaleString() });
@@ -47,7 +51,10 @@ function showMilestoneBanner(count: number): void {
     background: none; border: none; color: white; font-size: 16px;
     cursor: pointer; padding: 0 4px; opacity: 0.7;
   `;
-  dismiss.addEventListener('click', () => banner.remove());
+  dismiss.addEventListener('click', () => {
+    clearTimeout(dismissTimer);
+    banner.remove();
+  });
 
   banner.appendChild(text);
   banner.appendChild(dismiss);
