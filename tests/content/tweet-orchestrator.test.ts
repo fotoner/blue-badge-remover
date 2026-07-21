@@ -57,6 +57,7 @@ import {
   setWhitelistSet,
   setCurrentUserHandle,
   getCurrentUserHandle,
+  getExpandedSet,
 } from '../../src/content/state';
 import { processTweet, restoreHiddenTweets, applyCurrentUserFallback } from '../../src/content/tweet-orchestrator';
 
@@ -142,6 +143,7 @@ beforeEach(() => {
   setFollowSet(new Set());
   setWhitelistSet(new Set());
   setCurrentUserHandle(null);
+  getExpandedSet().clear();
 
   vi.clearAllMocks();
   // 파딱 여부는 fixture의 뱃지 배치(구조)로 제어:
@@ -207,6 +209,24 @@ describe('processTweet', () => {
       expect.objectContaining({ reason: 'fadak', handle: '@testuser' }),
       expect.any(Function),
     );
+  });
+
+  it('사용자가 다시 접으면 펼침 상태의 status path를 제거한다', () => {
+    const tweet = createTweetEl('testuser', { badge: true });
+    const statusLink = doc.createElement('a');
+    statusLink.setAttribute('href', '/testuser/status/123');
+    statusLink.appendChild(doc.createElement('time'));
+    tweet.appendChild(statusLink);
+    processTweet(tweet);
+    const onExpandedChange = mockHideTweet.mock.calls[0]?.[3] as
+      | ((element: HTMLElement, expanded: boolean) => void)
+      | undefined;
+
+    onExpandedChange?.(tweet, true);
+    expect(getExpandedSet().has('/testuser/status/123')).toBe(true);
+
+    onExpandedChange?.(tweet, false);
+    expect(getExpandedSet().has('/testuser/status/123')).toBe(false);
   });
 
   it('비파딱 트윗은 숨기지 않는다', () => {
@@ -413,6 +433,7 @@ describe('processTweet', () => {
       tweet,
       'remove',
       expect.objectContaining({ reason: 'quote-entire', handle: '@quoted_user' }),
+      expect.any(Function),
     );
     expect(mockHideQuoteBlock).not.toHaveBeenCalled();
   });

@@ -4,6 +4,8 @@ import { t, type Language, DEFAULT_LANGUAGE } from '@shared/i18n';
 const ORIGINAL_CONTENT_KEY = 'data-bbr-original';
 const HIDE_REASON_ATTR = 'data-bbr-reason';
 const COLLAPSED_ATTR = 'data-bbr-collapsed';
+const EXPANDED_ATTR = 'data-bbr-expanded';
+const EXPANDED_ACTIONS_ATTR = 'data-bbr-expanded-actions';
 const HIDDEN_QUOTE_ATTR = 'data-bbr-hidden-quote';
 const STYLE_INJECTED_ATTR = 'data-bbr-styles';
 
@@ -18,9 +20,17 @@ const PLACEHOLDER_STYLES = `
     min-height: 48px;
   }
   .bbr-placeholder:hover { color: #1d9bf0; }
-  .bbr-whitelist-button {
-    margin-left: auto; padding: 4px 10px; border: 1px solid currentColor;
-    border-radius: 12px; color: inherit; background: transparent; cursor: pointer;
+  .bbr-expanded-actions {
+    display: flex; align-items: center; justify-content: flex-end; gap: 4px;
+    padding: 0 12px 8px; color: #536471; font-size: 13px;
+  }
+  .bbr-expanded-action {
+    min-height: 32px; padding: 0 8px; border: none; border-radius: 4px;
+    color: inherit; background: transparent; font: inherit; cursor: pointer;
+    transition: color 0.15s, background-color 0.15s;
+  }
+  .bbr-expanded-action:hover {
+    color: #1d9bf0; background: rgba(29, 155, 240, 0.1);
   }
   .bbr-placeholder-icon { flex-shrink: 0; width: 16px; height: 16px; opacity: 0.6; }
   .bbr-placeholder:hover .bbr-placeholder-icon { opacity: 1; }
@@ -67,7 +77,7 @@ const SHIELD_ICON = `<svg class="bbr-placeholder-icon" viewBox="0 0 16 16" fill=
 function createWhitelistButton(onWhitelist: () => void | Promise<void>): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = 'bbr-whitelist-button';
+  button.className = 'bbr-expanded-action bbr-whitelist-button';
   button.textContent = t('addToWhitelist', currentLanguage);
   button.addEventListener('click', (event) => {
     event.stopPropagation();
@@ -78,7 +88,52 @@ function createWhitelistButton(onWhitelist: () => void | Promise<void>): HTMLBut
   return button;
 }
 
-export function hideTweet(element: HTMLElement, mode: 'remove' | 'collapse', context?: HideContext, onExpand?: (el: HTMLElement) => void): void {
+type ExpandedChangeHandler = (element: HTMLElement, expanded: boolean) => void;
+
+function createExpandedActions(
+  element: HTMLElement,
+  context: HideContext | undefined,
+  onExpandedChange: ExpandedChangeHandler | undefined,
+): HTMLDivElement {
+  const actions = document.createElement('div');
+  actions.setAttribute(EXPANDED_ACTIONS_ATTR, 'true');
+  actions.className = 'bbr-expanded-actions';
+  actions.setAttribute('role', 'group');
+  if (context?.onWhitelist) actions.appendChild(createWhitelistButton(context.onWhitelist));
+
+  const collapseButton = document.createElement('button');
+  collapseButton.type = 'button';
+  collapseButton.className = 'bbr-expanded-action bbr-collapse-button';
+  collapseButton.textContent = t('collapseTweet', currentLanguage);
+  collapseButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    event.preventDefault();
+    actions.remove();
+    element.removeAttribute(EXPANDED_ATTR);
+    hideTweet(element, 'collapse', context, onExpandedChange);
+    onExpandedChange?.(element, false);
+  }, { once: true });
+  actions.appendChild(collapseButton);
+  return actions;
+}
+
+function expandTweet(
+  element: HTMLElement,
+  context: HideContext | undefined,
+  onExpandedChange: ExpandedChangeHandler | undefined,
+): void {
+  showTweet(element);
+  element.setAttribute(EXPANDED_ATTR, '1');
+  element.appendChild(createExpandedActions(element, context, onExpandedChange));
+  onExpandedChange?.(element, true);
+}
+
+export function hideTweet(
+  element: HTMLElement,
+  mode: 'remove' | 'collapse',
+  context?: HideContext,
+  onExpandedChange?: ExpandedChangeHandler,
+): void {
   if (element.hasAttribute(ORIGINAL_CONTENT_KEY)) return;
   if (element.hasAttribute(EXPANDED_ATTR)) return;
   const preservedHeight = context?.preserveHeight
@@ -119,15 +174,10 @@ export function hideTweet(element: HTMLElement, mode: 'remove' | 'collapse', con
   textSpan.textContent = label;
   placeholder.appendChild(textSpan);
 
-  if (context?.onWhitelist) {
-    placeholder.appendChild(createWhitelistButton(context.onWhitelist));
-  }
-
   placeholder.addEventListener('click', (e) => {
     e.stopPropagation();
     e.preventDefault();
-    showTweet(element);
-    onExpand?.(element);
+    expandTweet(element, context, onExpandedChange);
   }, { once: true });
   element.appendChild(placeholder);
 }
@@ -162,8 +212,6 @@ export function hideQuoteBlock(quoteElement: HTMLElement, context?: HideQuoteCon
   quoteElement.appendChild(placeholder);
 }
 
-const EXPANDED_ATTR = 'data-bbr-expanded';
-
 export function showTweet(element: HTMLElement): void {
   element.style.display = '';
   element.style.visibility = '';
@@ -171,11 +219,11 @@ export function showTweet(element: HTMLElement): void {
   element.style.minHeight = '';
   element.removeAttribute(ORIGINAL_CONTENT_KEY);
   element.removeAttribute(HIDE_REASON_ATTR);
-  element.setAttribute(EXPANDED_ATTR, '1');
+  element.removeAttribute(EXPANDED_ATTR);
 
-  // 직접 자식 placeholder만 제거 — 인용 블록 안의 placeholder는 유지
+  // 직접 자식 placeholder/action만 제거 — 인용 블록 안의 placeholder는 유지
   for (const child of Array.from(element.children)) {
-    if (child.hasAttribute(COLLAPSED_ATTR)) {
+    if (child.hasAttribute(COLLAPSED_ATTR) || child.hasAttribute(EXPANDED_ACTIONS_ATTR)) {
       child.remove();
     }
   }

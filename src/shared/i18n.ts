@@ -66,6 +66,7 @@ type TranslationKeys =
   | 'lists'
   | 'addToWhitelist'
   | 'addedToWhitelist'
+  | 'collapseTweet'
   | 'onboardingBanner'
   | 'onboardingCta'
   | 'onboardingDismiss'
@@ -140,13 +141,14 @@ const ko: Translations = {
   whitelistEmpty: '등록된 계정이 없습니다',
   keywordFilterBeta: '키워드 필터',
   keywordFilterBetaDesc: '모든 파딱이 아닌, 특정 키워드에 해당하는 바이오(프로필)나 이름, 본문을 가지고 있는 글만 가립니다. 가끔 유용한 정보 파딱 등의 글을 보고 싶은 분들에게 추천입니다.',
-  aggressorFilter: '신규 고확산 계정 함께 숨기기',
-  aggressorFilterDesc: '선별 모드에서 생성 6개월 이내·팔로워 1천 이상·팔로잉/팔로워 비율 10% 이하 계정을 추가로 숨깁니다.',
+  aggressorFilter: '신규 고확산 계정 숨기기',
+  aggressorFilterDesc: '생성 6개월 이내·팔로워 1천 명 이상·팔로잉/팔로워 비율 10% 이하인 파딱 계정을 선별해 숨깁니다.',
   advancedFilterSettings: '고급 필터 설정',
   bookmarks: '북마크',
   lists: '리스트',
   addToWhitelist: '화이트리스트에 추가',
   addedToWhitelist: '화이트리스트에 추가됨',
+  collapseTweet: '다시 접기',
   onboardingBanner: '팔로잉 목록을 동기화하면 팔로우 중인 계정이 필터링에서 제외됩니다.',
   onboardingCta: '팔로잉 페이지 열기',
   onboardingDismiss: '닫기',
@@ -220,13 +222,14 @@ const en: Translations = {
   whitelistEmpty: 'No accounts added',
   keywordFilterBeta: 'Keyword Filter',
   keywordFilterBetaDesc: 'It does not hide all Paid badge posts, but only those containing specific keywords in the bio, name or the main text. This is recommended for users who occasionally want to see useful information from Paid badge holders.',
-  aggressorFilter: 'Also hide new high-reach accounts',
-  aggressorFilterDesc: 'In selective mode, also hide accounts created within 6 months with at least 1,000 followers and a following-to-followers ratio of 10% or less.',
+  aggressorFilter: 'Hide new high-reach accounts',
+  aggressorFilterDesc: 'Hide paid badge accounts created within 6 months with at least 1,000 followers and a following-to-followers ratio of 10% or less.',
   advancedFilterSettings: 'Advanced Filter Settings',
   bookmarks: 'Bookmarks',
   lists: 'Lists',
   addToWhitelist: 'Add to Whitelist',
   addedToWhitelist: 'Added to Whitelist',
+  collapseTweet: 'Collapse again',
   onboardingBanner: 'Sync your following list to exclude followed accounts from filtering.',
   onboardingCta: 'Open Following Page',
   onboardingDismiss: 'Dismiss',
@@ -300,13 +303,14 @@ const ja: Translations = {
   whitelistEmpty: '登録なし',
   keywordFilterBeta: 'キーワードフィルター',
   keywordFilterBetaDesc: 'すべての課金バッジの投稿を非表示にするのではなく、プロフィールや名前、本文に特定のキーワードが含まれている投稿のみを非表示にします。時々、課金バッジユーザーによる有益な情報を確認したい方に適しています。',
-  aggressorFilter: '新規の高拡散アカウントも非表示',
-  aggressorFilterDesc: '選別モードで、作成6か月以内・フォロワー1,000人以上・フォロー数/フォロワー数が10%以下のアカウントも非表示にします。',
+  aggressorFilter: '新規の高拡散アカウントを非表示',
+  aggressorFilterDesc: '作成6か月以内・フォロワー1,000人以上・フォロー数/フォロワー数が10%以下の課金バッジアカウントを選別して非表示にします。',
   advancedFilterSettings: '高度なフィルター設定',
   bookmarks: 'ブックマーク',
   lists: 'リスト',
   addToWhitelist: 'ホワイトリストに追加',
   addedToWhitelist: 'ホワイトリストに追加済み',
+  collapseTweet: 'もう一度折りたたむ',
   onboardingBanner: 'フォローリストを同期すると、フォロー中のアカウントがフィルタリングから除外されます。',
   onboardingCta: 'フォローページを開く',
   onboardingDismiss: '閉じる',

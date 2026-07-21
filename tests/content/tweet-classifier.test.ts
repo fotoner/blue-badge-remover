@@ -95,7 +95,31 @@ describe('classifyTweet', () => {
     expect(result.category).toBe('코인');
   });
 
-  it('선별 모드에서 어그로 휴리스틱 계정은 키워드 불일치여도 숨긴다', () => {
+  it('신규 고확산 필터만 켜도 조건에 맞는 계정을 숨긴다', () => {
+    const result = classifyTweet(makeInput({
+      settings: { ...defaultSettings, aggressorFilterEnabled: true },
+      profile: {
+        handle: 'new_user', displayName: 'New', bio: '',
+        createdAt: new Date().toISOString(), followersCount: 2_000, followingCount: 100,
+      },
+    }));
+    expect(result.action).toBe('hide');
+    expect(result.reason).toBe('aggressor-profile');
+  });
+
+  it('신규 고확산 필터만 켰을 때 조건에 맞지 않는 계정은 표시한다', () => {
+    const result = classifyTweet(makeInput({
+      settings: { ...defaultSettings, aggressorFilterEnabled: true },
+      profile: {
+        handle: 'established_user', displayName: 'Established', bio: '',
+        createdAt: '2020-01-01T00:00:00.000Z', followersCount: 2_000, followingCount: 100,
+      },
+    }));
+    expect(result.action).toBe('show');
+    expect(result.reason).toBe('aggressor-not-matched');
+  });
+
+  it('두 선별 필터를 켜면 키워드 불일치여도 신규 고확산 조건으로 숨긴다', () => {
     const result = classifyTweet(makeInput({
       settings: { ...defaultSettings, keywordFilterEnabled: true, aggressorFilterEnabled: true },
       profile: {

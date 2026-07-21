@@ -70,12 +70,20 @@ export function classifyTweet(input: ClassifyInput): ClassifyResult {
     };
   }
 
-  // 키워드 필터 체크
-  if (settings.keywordFilterEnabled && profile) {
-    const result: KeywordMatchResult = matchesKeywordFilter(profile, activeFilterRules, tweetText);
-    const aggressorMatched = settings.aggressorFilterEnabled && isAggressorProfile(profile);
-    if (!result.matched && !aggressorMatched) return { action: 'show', reason: 'keyword-not-matched' };
-    // 키워드 매칭됨 — 숨김 진행, 매칭 정보 포함
+  // 선택 필터는 서로 독립적이며, 둘 다 켜면 OR로 판정한다.
+  const selectiveFilterEnabled = settings.keywordFilterEnabled || settings.aggressorFilterEnabled;
+  if (selectiveFilterEnabled) {
+    const result: KeywordMatchResult = settings.keywordFilterEnabled && profile
+      ? matchesKeywordFilter(profile, activeFilterRules, tweetText)
+      : { matched: false };
+    const aggressorMatched = Boolean(
+      settings.aggressorFilterEnabled && profile && isAggressorProfile(profile),
+    );
+    if (!result.matched && !aggressorMatched) {
+      const reason = settings.keywordFilterEnabled ? 'keyword-not-matched' : 'aggressor-not-matched';
+      return { action: 'show', reason };
+    }
+    // 활성화된 조건 중 하나라도 매칭됨 — 숨김 진행, 키워드 매칭 정보가 있으면 포함
     if (isRetweet) {
       const shouldHide = shouldHideRetweet({ settings, isFadak: true, isRetweet: true });
       return shouldHide

@@ -20,10 +20,10 @@ Key features:
 
 - Detects paid blue badges without hiding gold organization or gray government verification.
 - Keeps accounts you follow visible, with automatic detection and full following-list sync.
-- Supports bulk whitelist entry and one-click exclusions from collapsed posts.
+- Supports bulk whitelist entry and one-click exclusions after expanding a collapsed post.
 - Selectively filters by built-in, custom, or imported keyword packs.
 - Protects accounts whose handle, display name, or bio contains your favorite people, genres, or communities.
-- Optionally includes new high-reach accounts in selective mode using local profile metadata.
+- Optionally filters new high-reach paid badge accounts using local profile metadata.
 - Handles retweets and quote posts separately across timeline, replies, search, bookmarks, and lists.
 - Exports and imports whitelist, custom filter, and protection lists as validated JSON.
 - Stores settings and statistics locally. No analytics, external server, or authentication token storage.

@@ -35,6 +35,16 @@ function checkFadak(element: HTMLElement): boolean {
   return badge !== null && isBlueBadgeElement(badge);
 }
 
+function trackExpandedTweet(element: HTMLElement, expanded: boolean): void {
+  const statusPath = extractTweetStatusPath(element);
+  if (!statusPath) return;
+  if (expanded) {
+    getExpandedSet().add(statusPath);
+  } else {
+    getExpandedSet().delete(statusPath);
+  }
+}
+
 interface RetweeterContext {
   isRetweet: boolean;
   handle: string | null;
@@ -103,10 +113,7 @@ function applyTweetResult(
     matchedRule: result.matchedRule,
     preserveHeight: isScrollRestorationActive(),
     onWhitelist: () => addToWhitelist(`@${handle}`),
-  }, (element) => {
-    const expandedPath = extractTweetStatusPath(element);
-    if (expandedPath) getExpandedSet().add(expandedPath);
-  });
+  }, trackExpandedTweet);
   recordHide(tweetEl, result.category, result.packId, statusPath);
 }
 
@@ -185,7 +192,7 @@ function processQuoteBlock(
       quotedBy: userLabel,
       preserveHeight: isScrollRestorationActive(),
       onWhitelist: quotedHandle ? () => addToWhitelist(`@${quotedHandle}`) : undefined,
-    });
+    }, trackExpandedTweet);
     return;
   }
   // 판정이 hide-entire보다 약해졌으면(다운그레이드/해제) quote-entire로 숨겨진 트윗을 여기서만 복원
