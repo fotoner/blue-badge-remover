@@ -27,5 +27,13 @@
     "vite": "^8.0.3",
     "vitest": "^4.1.2",
     "wxt": "^0.20.20"
+  },
+  "overrides": {
+    "shell-quote": "^1.10.0",
+    "tmp": "^0.2.7",
+    "adm-zip": "^0.6.0",
+    "node-notifier": {
+      "uuid": "^11.1.1"
+    }
   }
 }
