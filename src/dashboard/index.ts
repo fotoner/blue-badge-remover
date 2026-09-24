@@ -19,7 +19,7 @@ async function init(): Promise<void> {
   renderSettingsToDOM(settings);
   applyTranslations(settings.language);
   await renderSyncStatus(settings.language);
-  await renderStats(settings.keywordFilterEnabled);
+  await renderStats(settings);
   bindAllEvents();
 }
 
@@ -83,11 +83,12 @@ function bindAllEvents(): void {
     await save();
     applyTranslations(settings.language);
     await renderSyncStatus(settings.language);
+    await renderStats(settings);
   });
 
   bindSettingsEvents(() => settings.language);
   watchSyncStatus(() => settings.language);
-  bindStatsEvents(settings.keywordFilterEnabled);
+  bindStatsEvents(() => settings);
 
   // 고급 필터 설정 → options 페이지
   document.getElementById('open-options-btn')?.addEventListener('click', () => {

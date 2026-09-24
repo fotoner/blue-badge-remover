@@ -1,15 +1,19 @@
 import { getTodayStats, getAllTimeTotal, resetAllStats } from '@features/stats';
+import { t } from '@shared/i18n';
+import type { Settings } from '@shared/types';
 import { formatStatCount, computeCategoryBars } from './stats-helpers';
 
-export async function renderStats(keywordFilterEnabled: boolean): Promise<void> {
+type StatsSettings = Pick<Settings, 'keywordFilterEnabled' | 'language'>;
+
+export async function renderStats({ keywordFilterEnabled, language }: StatsSettings): Promise<void> {
   const stats = await getTodayStats();
   const allTimeTotal = await getAllTimeTotal();
 
   const heroEl = document.getElementById('hero-count');
-  if (heroEl) heroEl.textContent = formatStatCount(stats.totalHidden);
+  if (heroEl) heroEl.textContent = formatStatCount(stats.totalHidden, language);
 
   const totalEl = document.getElementById('total-count');
-  if (totalEl) totalEl.textContent = formatStatCount(allTimeTotal);
+  if (totalEl) totalEl.textContent = formatStatCount(allTimeTotal, language);
 
   const emptyEl = document.getElementById('stats-empty');
   const barsEl = document.getElementById('category-bars');
@@ -36,14 +40,16 @@ export async function renderStats(keywordFilterEnabled: boolean): Promise<void> 
   }
 }
 
-export function bindStatsEvents(keywordFilterEnabled: boolean): void {
+/** 바인딩 시점 값이 아니라 현재 설정을 읽는다 — 언어/키워드 필터 변경 후에도 맞게 표시 */
+export function bindStatsEvents(getSettings: () => StatsSettings): void {
   document.getElementById('reset-stats-btn')?.addEventListener('click', async () => {
     const btn = document.getElementById('reset-stats-btn') as HTMLButtonElement;
-    btn.textContent = '초기화 중...';
+    const settings = getSettings();
+    btn.textContent = t('resettingStats', settings.language);
     btn.disabled = true;
     await resetAllStats();
-    await renderStats(keywordFilterEnabled);
-    btn.textContent = '통계 초기화';
+    await renderStats(settings);
+    btn.textContent = t('resetStats', settings.language);
     btn.disabled = false;
   });
 }

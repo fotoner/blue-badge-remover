@@ -82,7 +82,18 @@ type TranslationKeys =
   | 'milestoneBannerHint'
   | 'milestoneMessage'
   | 'dismiss'
-  | 'shareText';
+  | 'shareText'
+  | 'statsTitle'
+  | 'todayHiddenLabel'
+  | 'totalHiddenLabel'
+  | 'shareOnX'
+  | 'statsEmpty'
+  | 'resetStats'
+  | 'resettingStats'
+  | 'filterTitle'
+  | 'keywordCollector'
+  | 'keywordCollectorDesc'
+  | 'statCount';
 
 type Translations = Record<TranslationKeys, string>;
 
@@ -162,6 +173,17 @@ const ko: Translations = {
   updateBannerVersion: 'v{version}으로 업데이트되었습니다!',
   dismiss: '닫기',
   shareText: '오늘 파딱 트윗 {count}개를 숨겼습니다 🧹\n\n#파딱제거기 #BlueBadgeRemover',
+  statsTitle: '통계',
+  todayHiddenLabel: '오늘 숨긴 파딱 트윗',
+  totalHiddenLabel: '지금까지 숨긴 총 파딱 트윗',
+  shareOnX: 'X에 공유하기',
+  statsEmpty: '아직 통계가 없습니다. X를 사용하면 자동으로 수집됩니다.',
+  resetStats: '통계 초기화',
+  resettingStats: '초기화 중...',
+  filterTitle: '필터',
+  keywordCollector: '키워드 수집',
+  keywordCollectorDesc: '필터링되지 않은 파딱의 텍스트를 수집합니다',
+  statCount: '{count}개',
   milestoneBannerLabel: '마일스톤 알림',
   milestoneBannerHint: '100개, 500개 등 목표 달성 시 타임라인 상단에 축하 배너를 표시합니다 (기본 꺼짐)',
   milestoneMessage: '🎉 {count}번째 파딱 트윗을 숨겼습니다!',
@@ -243,6 +265,17 @@ const en: Translations = {
   updateBannerVersion: 'Updated to v{version}!',
   dismiss: 'Dismiss',
   shareText: 'Hid {count} paid badge tweets today 🧹\n\n#BlueBadgeRemover',
+  statsTitle: 'Stats',
+  todayHiddenLabel: 'Paid badge tweets hidden today',
+  totalHiddenLabel: 'Total paid badge tweets hidden',
+  shareOnX: 'Share on X',
+  statsEmpty: 'No stats yet. They are collected automatically as you use X.',
+  resetStats: 'Reset stats',
+  resettingStats: 'Resetting...',
+  filterTitle: 'Filters',
+  keywordCollector: 'Keyword collector',
+  keywordCollectorDesc: 'Collects text from paid badge accounts that were not filtered',
+  statCount: '{count}',
   milestoneBannerLabel: 'Milestone Notifications',
   milestoneBannerHint: 'Show a celebration banner at the top of the timeline when you cross hiding milestones like 100 or 500 (off by default)',
   milestoneMessage: '🎉 Hidden {count} paid badge tweets!',
@@ -324,6 +357,17 @@ const ja: Translations = {
   updateBannerVersion: 'v{version}に更新されました！',
   dismiss: '閉じる',
   shareText: '今日{count}件の課金バッジツイートを非表示にしました 🧹\n\n#BlueBadgeRemover',
+  statsTitle: '統計',
+  todayHiddenLabel: '今日非表示にした課金バッジツイート',
+  totalHiddenLabel: 'これまでに非表示にした課金バッジツイート',
+  shareOnX: 'Xで共有',
+  statsEmpty: 'まだ統計がありません。Xを使うと自動で集計されます。',
+  resetStats: '統計をリセット',
+  resettingStats: 'リセット中...',
+  filterTitle: 'フィルター',
+  keywordCollector: 'キーワード収集',
+  keywordCollectorDesc: 'フィルターされなかった課金バッジアカウントのテキストを収集します',
+  statCount: '{count}件',
   milestoneBannerLabel: 'マイルストーン通知',
   milestoneBannerHint: '100件、500件などの節目に達したとき、タイムライン上部にお祝いバナーを表示します（デフォルトでオフ）',
   milestoneMessage: '🎉 {count}件の課金バッジツイートを非表示にしました！',
