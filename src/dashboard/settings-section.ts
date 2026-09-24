@@ -68,14 +68,14 @@ export async function renderSyncStatus(lang: Language): Promise<void> {
   }
 }
 
-export function bindSettingsEvents(settings: Settings): void {
+export function bindSettingsEvents(getLanguage: () => Language): void {
   // Sync button
   document.getElementById('sync-btn')?.addEventListener('click', () => {
     void browser.tabs.create({ url: 'https://x.com/following' });
     const btn = document.getElementById('sync-btn') as HTMLButtonElement;
-    btn.textContent = t('scrollOnFollowingPage', settings.language);
+    btn.textContent = t('scrollOnFollowingPage', getLanguage());
     setTimeout(() => {
-      btn.textContent = t('openFollowingPage', settings.language);
+      btn.textContent = t('openFollowingPage', getLanguage());
     }, 3000);
   });
 

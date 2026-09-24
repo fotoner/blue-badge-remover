@@ -3,19 +3,31 @@ import type { Settings } from '@shared/types';
 import { DEFAULT_SETTINGS, MESSAGE_TYPES, STORAGE_KEYS } from '@shared/constants';
 import type { WhitelistRequest, WhitelistResponse } from './whitelist-storage';
 
-export async function getSettings(): Promise<Settings> {
-  const result = await browser.storage.local.get([STORAGE_KEYS.SETTINGS]);
-  const stored = result[STORAGE_KEYS.SETTINGS] as Partial<Settings> | undefined;
-  if (!stored) return DEFAULT_SETTINGS;
+export type SettingsPatch = Partial<Omit<Settings, 'filter'>> & { filter?: Partial<Settings['filter']> };
+
+function mergeSettings(base: Partial<Settings> | undefined, patch: SettingsPatch = {}): Settings {
   return {
     ...DEFAULT_SETTINGS,
-    ...stored,
-    filter: { ...DEFAULT_SETTINGS.filter, ...stored.filter },
+    ...base,
+    ...patch,
+    filter: { ...DEFAULT_SETTINGS.filter, ...base?.filter, ...patch.filter },
   };
 }
 
-export async function saveSettings(settings: Settings): Promise<void> {
-  await browser.storage.local.set({ [STORAGE_KEYS.SETTINGS]: settings });
+/** 항상 새 객체를 반환 — 호출부가 수정해도 DEFAULT_SETTINGS가 오염되지 않는다 */
+export async function getSettings(): Promise<Settings> {
+  const result = await browser.storage.local.get([STORAGE_KEYS.SETTINGS]);
+  return mergeSettings(result[STORAGE_KEYS.SETTINGS] as Partial<Settings> | undefined);
+}
+
+/**
+ * 최신 저장값을 다시 읽어 변경분만 병합해 저장한다.
+ * 화면을 연 시점의 설정 스냅샷을 통째로 저장하면 다른 화면(options 등)의 변경을 되돌린다.
+ */
+export async function updateSettings(patch: SettingsPatch): Promise<Settings> {
+  const merged = mergeSettings(await getSettings(), patch);
+  await browser.storage.local.set({ [STORAGE_KEYS.SETTINGS]: merged });
+  return merged;
 }
 
 async function sendWhitelistRequest(request: WhitelistRequest): Promise<WhitelistResponse> {

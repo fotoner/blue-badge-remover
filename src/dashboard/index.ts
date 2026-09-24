@@ -1,5 +1,5 @@
 import { browser } from 'wxt/browser';
-import { getSettings, saveSettings } from '@features/settings';
+import { getSettings, updateSettings, type SettingsPatch } from '@features/settings';
 import { t, type Language } from '@shared/i18n';
 import type { Settings } from '@shared/types';
 import { renderStats, bindStatsEvents } from './stats-section';
@@ -46,30 +46,31 @@ function applyTranslations(lang: Language): void {
   });
 }
 
+function readDashboardSettings(): SettingsPatch {
+  return {
+    filter: {
+      timeline: checked('filter-timeline'),
+      replies: checked('filter-replies'),
+      search: checked('filter-search'),
+      bookmarks: checked('filter-bookmarks'),
+      lists: checked('filter-lists'),
+    },
+    retweetFilter: checked('retweetFilter'),
+    debugMode: checked('debugMode'),
+    milestoneBannerEnabled: checked('milestoneBannerEnabled'),
+    keywordFilterEnabled: checked('keywordFilterEnabled'),
+    aggressorFilterEnabled: checked('aggressorFilterEnabled'),
+    keywordCollectorEnabled: checked('keywordCollectorEnabled'),
+    language: (document.getElementById('language') as HTMLSelectElement).value as Settings['language'],
+    hideMode: (document.querySelector('input[name="hideMode"]:checked') as HTMLInputElement).value as Settings['hideMode'],
+    quoteMode: (document.querySelector('input[name="quoteMode"]:checked') as HTMLInputElement).value as Settings['quoteMode'],
+  };
+}
+
 function bindAllEvents(): void {
+  // 이 화면이 관리하는 필드만 병합 저장 — enabled(popup), defaultFilterEnabled(options)는 건드리지 않음
   const save = async (): Promise<void> => {
-    settings.filter.timeline = checked('filter-timeline');
-    settings.filter.replies = checked('filter-replies');
-    settings.filter.search = checked('filter-search');
-    settings.filter.bookmarks = checked('filter-bookmarks');
-    settings.filter.lists = checked('filter-lists');
-    settings.retweetFilter = checked('retweetFilter');
-    settings.debugMode = checked('debugMode');
-    settings.milestoneBannerEnabled = checked('milestoneBannerEnabled');
-    settings.keywordFilterEnabled = checked('keywordFilterEnabled');
-    settings.aggressorFilterEnabled = checked('aggressorFilterEnabled');
-    settings.keywordCollectorEnabled = checked('keywordCollectorEnabled');
-    settings.language = (
-      document.getElementById('language') as HTMLSelectElement
-    ).value as Settings['language'];
-    settings.hideMode = (
-      document.querySelector('input[name="hideMode"]:checked') as HTMLInputElement
-    ).value as Settings['hideMode'];
-    settings.quoteMode = (
-      document.querySelector('input[name="quoteMode"]:checked') as HTMLInputElement
-    ).value as Settings['quoteMode'];
-    // defaultFilterEnabled는 options 페이지에서 관리 — 여기서 덮어쓰지 않음
-    await saveSettings(settings);
+    settings = await updateSettings(readDashboardSettings());
   };
 
   document.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach((input) => {
@@ -83,7 +84,7 @@ function bindAllEvents(): void {
     await renderSyncStatus(settings.language);
   });
 
-  bindSettingsEvents(settings);
+  bindSettingsEvents(() => settings.language);
   bindStatsEvents(settings.keywordFilterEnabled);
 
   // 고급 필터 설정 → options 페이지

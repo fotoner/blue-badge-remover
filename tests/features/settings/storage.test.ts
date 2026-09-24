@@ -29,7 +29,7 @@ vi.mock('wxt/browser', () => ({
 // Dynamic import after mock is set up
 const { handleWhitelistRequest } = await import('@features/settings/whitelist-storage');
 mockSendMessage.mockImplementation((request: unknown) => handleWhitelistRequest(request));
-const { getSettings, getWhitelist, addToWhitelist, addManyToWhitelist, removeFromWhitelist } = await import('@features/settings/storage');
+const { getSettings, updateSettings, getWhitelist, addToWhitelist, addManyToWhitelist, removeFromWhitelist } = await import('@features/settings/storage');
 const { browser } = await import('wxt/browser');
 
 beforeEach(() => {
@@ -79,6 +79,34 @@ describe('getSettings', () => {
     const settings = await getSettings();
     expect(settings.enabled).toBe(true);
     expect(settings.keywordFilterEnabled).toBe(DEFAULT_SETTINGS.keywordFilterEnabled);
+  });
+});
+
+describe('settings 불변성과 부분 갱신', () => {
+  it('저장된 설정이 없을 때 반환값을 수정해도 DEFAULT_SETTINGS는 바뀌지 않는다', async () => {
+    const settings = await getSettings();
+    settings.filter.timeline = !DEFAULT_SETTINGS.filter.timeline;
+    settings.enabled = !DEFAULT_SETTINGS.enabled;
+    const again = await getSettings();
+    expect(again).toEqual(DEFAULT_SETTINGS);
+    expect(again.filter).not.toBe(DEFAULT_SETTINGS.filter);
+  });
+
+  // 대시보드/팝업이 열린 시점 스냅샷을 통째로 저장해 다른 화면의 변경을 되돌리던 문제
+  it('updateSettings는 최신 저장값에 변경분만 병합한다', async () => {
+    mockStorage['settings'] = { ...DEFAULT_SETTINGS, defaultFilterEnabled: true };
+    const merged = await updateSettings({ keywordFilterEnabled: true });
+    expect(merged.defaultFilterEnabled).toBe(true);
+    expect(merged.keywordFilterEnabled).toBe(true);
+    expect(mockStorage['settings']).toEqual(merged);
+  });
+
+  it('updateSettings는 filter 하위 필드를 부분 병합한다', async () => {
+    mockStorage['settings'] = { ...DEFAULT_SETTINGS, filter: { ...DEFAULT_SETTINGS.filter, search: false } };
+    const merged = await updateSettings({ filter: { replies: false } });
+    expect(merged.filter.search).toBe(false);
+    expect(merged.filter.replies).toBe(false);
+    expect(merged.filter.timeline).toBe(DEFAULT_SETTINGS.filter.timeline);
   });
 });
 
