@@ -40,6 +40,8 @@ export function resolveAccountSwitchFollows(
 // FOLLOW_CACHE/FOLLOW_LIST read-modify-write를 탭 안에서 직렬화하는 큐.
 // 저장·언팔로우 삭제·계정 전환이 같은 스냅샷을 읽으면 나중 쓰기가 앞선 변경을 덮어써 핸들을 잃는다.
 // 모든 팔로우 storage 쓰기는 이 큐를 거쳐야 한다.
+// 주의: 큐 작업 안에서 runFollowStorageTask(및 saveFollowHandles/removeFollowHandle/
+// switchFollowAccount)를 다시 호출해 await하면 자기 자신의 완료를 기다리는 교착 상태가 된다.
 let followStorageQueue: Promise<void> = Promise.resolve();
 
 export function runFollowStorageTask<T>(task: () => Promise<T>): Promise<T> {

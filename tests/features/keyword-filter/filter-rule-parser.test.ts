@@ -89,6 +89,19 @@ describe('parseFilterList', () => {
     expect(rule.pattern.test('비트코인 소개\n무료 에어드랍')).toBe(true);
   });
 
+  // 와일드카드도 키워드 규칙(textContains)과 같은 toLowerCase 기준으로 대소문자를 무시한다.
+  // 정규식 /i와는 일부 비ASCII 문자(그리스어 어말 시그마, 터키어 İ 등)에서 결과가 다를 수 있으나
+  // 같은 필터 목록 안에서 키워드/와일드카드 규칙의 판정 기준을 일치시키는 쪽을 택했다.
+  it('대소문자 무시 기준이 키워드 규칙과 같다', () => {
+    const [wildcard] = parseFilterList('*İ*');
+    const [keyword] = parseFilterList('İ');
+    if (wildcard?.type !== 'wildcard' || keyword?.type !== 'keyword') throw new Error('unexpected rules');
+    for (const text of ['istanbul', 'İSTANBUL', 'σιγμα', 'Crème', 'BITCOIN 코인']) {
+      const keywordMatched = text.toLowerCase().includes(keyword.value.toLowerCase());
+      expect(wildcard.pattern.test(text)).toBe(keywordMatched);
+    }
+  });
+
   // 가져온 필터 팩의 악성 패턴이 백트래킹 폭발로 탭을 멈추게 하던 문제 (ReDoS)
   it('매칭되지 않는 긴 텍스트에서도 선형 시간에 끝난다', () => {
     const [rule] = parseFilterList('aa*aa*aa*aa*aa*ab');
