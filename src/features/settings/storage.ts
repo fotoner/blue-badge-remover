@@ -58,6 +58,15 @@ export async function addManyToWhitelist(handles: string[]): Promise<void> {
   });
 }
 
+/** 백업 가져오기용 — 목록 전체를 background 큐에서 교체한다 */
+export async function replaceWhitelist(handles: string[]): Promise<void> {
+  await sendWhitelistRequest({
+    type: MESSAGE_TYPES.WHITELIST,
+    operation: 'replace',
+    handles,
+  });
+}
+
 export async function removeFromWhitelist(handle: string): Promise<void> {
   await sendWhitelistRequest({
     type: MESSAGE_TYPES.WHITELIST,

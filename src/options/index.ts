@@ -48,7 +48,9 @@ async function init(): Promise<void> {
   });
   await renderFilterPacks();
   bindPackEvents(customEl);
-  bindSettingsTransferEvents(customEl);
+  bindSettingsTransferEvents(customEl, () => {
+    void updateStats(defaultFilterToggle.checked, disabledCategories, customEl.value);
+  });
   await initProtectionSettings();
 }
 
