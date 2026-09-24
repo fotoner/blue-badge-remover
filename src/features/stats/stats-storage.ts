@@ -69,7 +69,8 @@ export async function resetAllStats(): Promise<void> {
 
 export async function cleanupOldStats(): Promise<void> {
   const all = await browser.storage.local.get(null);
-  const statsKeys = Object.keys(all).filter((k) => k.startsWith(KEY_PREFIX));
+  // stats-total도 같은 접두사를 쓰므로 제외 — 포함하면 보관 일수가 하루 줄어든다
+  const statsKeys = Object.keys(all).filter((k) => k.startsWith(KEY_PREFIX) && k !== TOTAL_KEY);
   if (statsKeys.length <= MAX_DAYS) return;
 
   const sorted = statsKeys.sort();
