@@ -7,6 +7,7 @@ import {
   renderSettingsToDOM,
   bindSettingsEvents,
   renderSyncStatus,
+  watchSyncStatus,
 } from './settings-section';
 
 let settings: Settings;
@@ -85,6 +86,7 @@ function bindAllEvents(): void {
   });
 
   bindSettingsEvents(() => settings.language);
+  watchSyncStatus(() => settings.language);
   bindStatsEvents(settings.keywordFilterEnabled);
 
   // 고급 필터 설정 → options 페이지
