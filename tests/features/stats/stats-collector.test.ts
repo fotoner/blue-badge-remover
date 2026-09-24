@@ -255,6 +255,17 @@ describe('flushStats', () => {
     expect(mockIncrementTotal).toHaveBeenCalledWith(1);
   });
 
+  it('누계 조회/콜백이 실패해도 flush는 reject하지 않는다 (fire-and-forget 호출부)', async () => {
+    const onFlush = vi.fn();
+    setOnFlush(onFlush);
+    mockGetAllTimeTotal.mockRejectedValueOnce(new Error('storage unavailable'));
+    recordHide(makeElement());
+
+    await expect(flushStats()).resolves.toBeUndefined();
+    expect(onFlush).not.toHaveBeenCalled();
+    setOnFlush(() => {});
+  });
+
   it('calls onFlush callback with all-time total', async () => {
     const onFlush = vi.fn();
     setOnFlush(onFlush);

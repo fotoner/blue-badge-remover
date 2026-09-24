@@ -27,13 +27,10 @@ export async function getTodayStats(date?: string): Promise<DailyStats> {
   return (result[key] as DailyStats | undefined) ?? emptyStats(key.slice(KEY_PREFIX.length));
 }
 
+/** 실패는 호출부(flush)로 전달 — flush가 기록을 버퍼로 되돌려 재시도한다 */
 export async function saveDayStats(stats: DailyStats): Promise<void> {
   const key = KEY_PREFIX + stats.date;
-  try {
-    await browser.storage.local.set({ [key]: stats });
-  } catch {
-    // storage quota exceeded — 조용히 실패
-  }
+  await browser.storage.local.set({ [key]: stats });
 }
 
 export async function getStatsRange(days: number): Promise<DailyStats[]> {

@@ -113,8 +113,11 @@ async function flushPending(): Promise<void> {
     });
   }
   if (onFlushCallback) {
-    const allTime = await getAllTimeTotal();
-    onFlushCallback(allTime);
+    try {
+      onFlushCallback(await getAllTimeTotal());
+    } catch (error) {
+      logger.warn('Stats milestone check failed', { error: String(error) });
+    }
   }
 }
 

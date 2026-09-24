@@ -84,6 +84,15 @@ describe('saveDayStats', () => {
     const retrieved = await getTodayStats(date);
     expect(retrieved).toEqual(stats);
   });
+
+  // 실패를 삼키면 flush가 버퍼를 비운 채 성공으로 간주해 기록이 사라진다
+  it('storage 쓰기 실패를 호출부로 전달한다', async () => {
+    const { browser } = await import('wxt/browser');
+    const setMock = browser.storage.local.set as unknown as ReturnType<typeof vi.fn>;
+    setMock.mockRejectedValueOnce(new Error('QUOTA_BYTES quota exceeded'));
+    await expect(saveDayStats({ date: '2026-03-21', totalHidden: 1, totalShown: 0, byCategory: {}, byPack: {} }))
+      .rejects.toThrow('quota');
+  });
 });
 
 describe('getAllTimeTotal', () => {
