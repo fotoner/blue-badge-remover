@@ -3,6 +3,7 @@ import { getWhitelist, replaceWhitelist } from '@features/settings';
 import { parseFilterList } from '@features/keyword-filter';
 import { STORAGE_KEYS } from '@shared/constants';
 import { logger } from '@shared/utils/logger';
+import { askInlineConfirm } from './inline-confirm';
 
 const SCHEMA_VERSION = 1;
 const MAX_FILTER_LENGTH = 200_000;
@@ -111,13 +112,13 @@ export interface ImportSummary {
 }
 
 export interface ImportDeps {
-  confirmReplace: (summary: ImportSummary) => boolean;
+  confirmReplace: (summary: ImportSummary) => Promise<boolean>;
   replaceWhitelist: (handles: string[]) => Promise<void>;
   saveLists: (customFilterList: string, protectedKeywords: string[]) => Promise<void>;
 }
 
 export type ImportOutcome =
-  | { status: 'imported'; backup: FilterListBackup; summary: ImportSummary }
+  | { status: 'imported' | 'partial'; backup: FilterListBackup; summary: ImportSummary }
   | { status: 'cancelled' }
   | { status: 'invalid'; reason: 'too-large' | 'invalid-format' };
 
@@ -139,18 +140,31 @@ export async function importFilterListFile(file: File, deps: ImportDeps): Promis
     customRules: parseFilterList(backup.customFilterList).length,
     protectedKeywords: backup.protectedKeywords.length,
   };
-  if (!deps.confirmReplace(summary)) return { status: 'cancelled' };
-  // 화이트리스트는 background 큐 경유 — 다른 탭의 동시 추가/삭제와 섞이지 않게 한다
-  await deps.replaceWhitelist(backup.whitelist);
+  if (!(await deps.confirmReplace(summary))) return { status: 'cancelled' };
+  // 두 저장소(로컬 목록 / background 화이트리스트 큐)는 원자적으로 묶을 수 없다.
+  // 로컬 목록을 먼저 저장해, 여기서 실패하면 아무것도 바뀌지 않게 한다.
   await deps.saveLists(backup.customFilterList, backup.protectedKeywords);
+  try {
+    // 화이트리스트는 background 큐 경유 — 다른 탭의 동시 추가/삭제와 섞이지 않게 한다
+    await deps.replaceWhitelist(backup.whitelist);
+  } catch (error) {
+    logger.warn('Whitelist replace failed during import', { error: String(error) });
+    return { status: 'partial', backup, summary };
+  }
   return { status: 'imported', backup, summary };
 }
 
 const importDeps: ImportDeps = {
-  confirmReplace: (summary) => window.confirm(
-    `현재 화이트리스트·커스텀 필터·보호 키워드를 백업 내용으로 바꿉니다.\n`
-    + `(화이트리스트 ${summary.whitelist}개 · 커스텀 규칙 ${summary.customRules}개 · 보호 키워드 ${summary.protectedKeywords}개)\n계속할까요?`,
-  ),
+  confirmReplace: async (summary) => {
+    const container = document.getElementById('lists-import-confirm');
+    if (!container) return false;
+    return askInlineConfirm(
+      container,
+      `현재 화이트리스트·커스텀 필터·보호 키워드를 백업 내용으로 바꿉니다 `
+      + `(화이트리스트 ${summary.whitelist}개 · 커스텀 규칙 ${summary.customRules}개 · 보호 키워드 ${summary.protectedKeywords}개).`,
+      '바꾸기',
+    );
+  },
   replaceWhitelist,
   saveLists: async (customFilterList, protectedKeywords) => {
     await browser.storage.local.set({
@@ -165,11 +179,15 @@ const INVALID_MESSAGES: Record<'too-large' | 'invalid-format', string> = {
   'invalid-format': '올바른 백업 파일이 아닙니다',
 };
 
+const STATUS_CLEAR_MS = 4000;
+
 function showTransferStatus(message: string, success: boolean): void {
   const status = document.getElementById('lists-transfer-status');
   if (!status) return;
   status.textContent = message;
   status.className = `save-status ${success ? 'success' : 'error'}`;
+  // 같은 페이지의 다른 상태 표시처럼 자동으로 지운다 — 그 사이 새 메시지가 오면 유지
+  setTimeout(() => { if (status.textContent === message) status.textContent = ''; }, STATUS_CLEAR_MS);
 }
 
 async function importFilterLists(
@@ -187,9 +205,13 @@ async function importFilterLists(
     }
     if (outcome.status === 'cancelled') return;
     renderImportedFilterLists(outcome.backup, fields.custom, fields.protected);
-    const { whitelist, customRules, protectedKeywords } = outcome.summary;
-    showTransferStatus(`가져왔습니다 (화이트리스트 ${whitelist}개 · 규칙 ${customRules}개 · 보호 키워드 ${protectedKeywords}개)`, true);
     onImported();
+    const { whitelist, customRules, protectedKeywords } = outcome.summary;
+    if (outcome.status === 'partial') {
+      showTransferStatus('필터·보호 키워드는 가져왔지만 화이트리스트 교체에 실패했습니다. 다시 시도해 주세요', false);
+      return;
+    }
+    showTransferStatus(`가져왔습니다 (화이트리스트 ${whitelist}개 · 규칙 ${customRules}개 · 보호 키워드 ${protectedKeywords}개)`, true);
   } catch (error) {
     logger.warn('Filter list backup import failed', { error: String(error) });
     showTransferStatus('가져오기에 실패했습니다', false);

@@ -20,5 +20,6 @@ describe('options entrypoint', () => {
 
   it('실제 빌드 화면에 목록 가져오기 결과 표시 영역을 포함한다', () => {
     expect(optionsHtml).toContain('id="lists-transfer-status"');
+    expect(optionsHtml).toContain('id="lists-import-confirm"');
   });
 });

@@ -16,7 +16,7 @@ function makeImportDeps(confirmResult = true): Parameters<typeof importFilterLis
   confirmReplace: ReturnType<typeof vi.fn>;
 } {
   return {
-    confirmReplace: vi.fn(() => confirmResult),
+    confirmReplace: vi.fn(async () => confirmResult),
     replaceWhitelist: vi.fn(async () => {}),
     saveLists: vi.fn(async () => {}),
   };
@@ -37,6 +37,29 @@ describe('importFilterListFile', () => {
     expect(deps.confirmReplace).toHaveBeenCalledWith(expect.objectContaining({ whitelist: 1, customRules: 2, protectedKeywords: 1 }));
     expect(deps.replaceWhitelist).toHaveBeenCalledWith(['@alice']);
     expect(deps.saveLists).toHaveBeenCalledWith('coin\ntesla', ['game']);
+  });
+
+  it('필터/보호 키워드를 먼저 저장하고 화이트리스트를 나중에 교체한다', async () => {
+    const deps = makeImportDeps();
+    const order: string[] = [];
+    deps.saveLists.mockImplementation(async () => { order.push('lists'); });
+    deps.replaceWhitelist.mockImplementation(async () => { order.push('whitelist'); });
+    await importFilterListFile(backupFile(VALID_BACKUP), deps);
+    expect(order).toEqual(['lists', 'whitelist']);
+  });
+
+  it('필터 저장이 실패하면 화이트리스트는 건드리지 않는다 (아무것도 바뀌지 않음)', async () => {
+    const deps = makeImportDeps();
+    deps.saveLists.mockRejectedValueOnce(new Error('storage'));
+    await expect(importFilterListFile(backupFile(VALID_BACKUP), deps)).rejects.toThrow('storage');
+    expect(deps.replaceWhitelist).not.toHaveBeenCalled();
+  });
+
+  it('화이트리스트 교체만 실패하면 partial로 알린다', async () => {
+    const deps = makeImportDeps();
+    deps.replaceWhitelist.mockRejectedValueOnce(new Error('background'));
+    const outcome = await importFilterListFile(backupFile(VALID_BACKUP), deps);
+    expect(outcome.status).toBe('partial');
   });
 
   it('사용자가 취소하면 아무것도 저장하지 않는다', async () => {
