@@ -222,12 +222,10 @@ function processQuoteBlock(
 export function restoreHiddenTweets(): void {
   getExpandedSet().clear();
   const feed = document.querySelector('main') ?? document.body;
-  feed.querySelectorAll('article[data-testid="tweet"][data-bbr-original]').forEach((tweet) => {
+  // 펼쳐진 트윗도 showTweet으로 정리 — 속성만 지우면 펼침 액션 버튼이 남아 재숨김을 유발한다
+  const hiddenOrExpanded = 'article[data-testid="tweet"][data-bbr-original], article[data-testid="tweet"][data-bbr-expanded]';
+  feed.querySelectorAll(hiddenOrExpanded).forEach((tweet) => {
     showTweet(tweet as HTMLElement);
-  });
-  // expanded 마커 제거 — showTweet이 설정하므로 반드시 showTweet 이후에 제거
-  feed.querySelectorAll('article[data-testid="tweet"][data-bbr-expanded]').forEach((tweet) => {
-    tweet.removeAttribute('data-bbr-expanded');
   });
   feed.querySelectorAll('[data-bbr-hidden-quote]').forEach((quote) => {
     showQuoteBlock(quote as HTMLElement);
