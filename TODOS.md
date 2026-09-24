@@ -99,10 +99,17 @@
 ### ~~dev 의존성 취약점~~ (v1.6.1)
 - `npm audit` 0건 (undici, adm-zip, vitest, postcss 등)
 
+### ~~잠재 버그 감사 8건~~ (v1.6.1)
+- 펼친 트윗 액션 버튼 잔존, 와일드카드 ReDoS, 설정 스냅샷 덮어쓰기, 통계 flush 유실·29일 보관, 팔로우 저장 큐 우회, 목록 가져오기 피드백/큐 우회, 대시보드 동기화 현황 미갱신
+
 ## 향후
 
 ### 팔로우 감지 실환경 검증
 - [ ] 타임라인 GraphQL 응답의 `following` 플래그 실제 위치 확인 (`data-extractors.ts`가 3개 후보 경로를 관용적으로 검사 중) — 실계정 + debugMode로 리스트 타임라인 확인
+
+### 신뢰성 후속
+- [ ] 팔로우 캐시 쓰기를 background로 이전 — 현재 탭마다 content script 큐라 두 탭이 동시에 FOLLOW_CACHE를 쓰면 한쪽 추가가 유실될 수 있음 (화이트리스트는 background 큐로 해결됨)
+- [ ] MAIN→ISOLATED postMessage 발신자 인증 검토 — x.com 페이지 스크립트가 `BBR_PROFILE_DATA`를 위조하면 키워드 판정이 바뀔 수 있음 (페이지 스크립트 실행이 전제라 위험 수용 중)
 
 ### 선택 개선
 - [ ] 국기 이모지 키워드 경계 매칭 — 현재 substring 매칭이라 `🇸🇮🇱🇻`(슬로베니아+라트비아)가 `🇮🇱`에 걸림. 🇰🇷·🇺🇸도 같은 한계 (`keyword-matcher.ts`)
