@@ -105,6 +105,7 @@
 - [ ] 타임라인 GraphQL 응답의 `following` 플래그 실제 위치 확인 (`data-extractors.ts`가 3개 후보 경로를 관용적으로 검사 중) — 실계정 + debugMode로 리스트 타임라인 확인
 
 ### 선택 개선
+- [ ] 국기 이모지 키워드 경계 매칭 — 현재 substring 매칭이라 `🇸🇮🇱🇻`(슬로베니아+라트비아)가 `🇮🇱`에 걸림. 🇰🇷·🇺🇸도 같은 한계 (`keyword-matcher.ts`)
 - [ ] 인용 작성자 추출을 링크 기반 우선으로 전환 (`extractQuoteAuthor`)
 - [ ] API 팔로우 감지 안정화 후 fiber 채널 강등
 - [ ] 기부 버튼
