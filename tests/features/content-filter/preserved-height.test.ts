@@ -64,26 +64,29 @@ describe('보존 높이 표시와 해제', () => {
     expect(tweet.hasAttribute(PRESERVED)).toBe(false);
   });
 
-  it('해제로 위쪽 높이가 줄어도 보이는 트윗이 제자리에 있도록 스크롤을 보정한다', () => {
+  // X 타임라인이 셀 크기 변화에 맞춰 스스로 스크롤을 조정한다 — 여기서 또 보정하면 이중 보정으로 맨 위까지 튄다
+  it('해제는 스크롤을 직접 조작하지 않는다', () => {
     const hidden = makeTweet(662);
     hideTweet(hidden, 'remove', { reason: 'retweet', preserveHeight: true });
     const visible = makeTweet(300);
-    // 위쪽 숨김 트윗이 접히면(display:none) 보이는 트윗이 662px 위로 당겨진다
+    // 위쪽 숨김 트윗이 접히면(display:none) 보이는 트윗이 662px 당겨지는 상황
     visible.getBoundingClientRect = () => {
       const top = hidden.style.display === 'none' ? 138 : 800;
       return { top, bottom: top + 300, height: 300 } as DOMRect;
     };
     const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {});
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
 
     releasePreservedHeights();
 
-    expect(scrollBy).toHaveBeenCalledWith(0, -662);
+    expect(hidden.style.display).toBe('none');
+    expect(scrollBy).not.toHaveBeenCalled();
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 
-  it('보존된 트윗이 없으면 아무것도 하지 않는다', () => {
-    makeTweet(300);
-    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {});
+  it('보존된 트윗이 없으면 아무것도 바꾸지 않는다', () => {
+    const tweet = makeTweet(300);
     releasePreservedHeights();
-    expect(scrollBy).not.toHaveBeenCalled();
+    expect(tweet.getAttribute('style')).toBeNull();
   });
 });

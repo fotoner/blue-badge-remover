@@ -32,28 +32,13 @@ function releaseOne(element: HTMLElement): void {
   }
 }
 
-/** 화면에 걸쳐 있는 첫 트윗 — 해제 전후 위치를 비교해 스크롤을 보정하는 기준 */
-function findViewportAnchor(): HTMLElement | null {
-  const tweets = document.querySelectorAll<HTMLElement>(`article[data-testid="tweet"]:not([${PRESERVED_HEIGHT_ATTR}])`);
-  for (const tweet of Array.from(tweets)) {
-    if (tweet.style.display === 'none') continue;
-    if (tweet.getBoundingClientRect().bottom > 0) return tweet;
-  }
-  return null;
-}
-
 /**
  * 보존한 높이를 모두 해제하고 원래 숨김 방식으로 되돌린다.
- * 화면 위쪽 트윗이 줄어들면 보이는 내용이 당겨지므로, 기준 트윗 위치 변화만큼 스크롤을 보정한다
- * (브라우저 스크롤 앵커링이 이미 보정했다면 변화가 0이라 아무것도 하지 않는다).
+ * 스크롤은 직접 보정하지 않는다 — X 타임라인이 셀 크기 변화에 맞춰 스스로 스크롤을 조정하므로,
+ * 여기서 scrollBy로 한 번 더 보정하면 이중 보정으로 화면이 맨 위까지 튄다(실브라우저 확인).
  */
 export function releasePreservedHeights(): void {
   const targets = document.querySelectorAll<HTMLElement>(`[${PRESERVED_HEIGHT_ATTR}]`);
   if (targets.length === 0) return;
-  const anchor = findViewportAnchor();
-  const before = anchor?.getBoundingClientRect().top;
   targets.forEach(releaseOne);
-  if (!anchor || before === undefined) return;
-  const shift = anchor.getBoundingClientRect().top - before;
-  if (shift !== 0) window.scrollBy(0, shift);
 }
