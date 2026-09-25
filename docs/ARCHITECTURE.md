@@ -39,6 +39,8 @@ src/
 │   ├── filter-pipeline.ts    필터 규칙 로드 (내장+커스텀+팩 병합)
 │   ├── milestone-banner.ts   마일스톤 축하 배너
 │   ├── collector-buffer.ts   키워드 수집기 버퍼
+│   ├── page-utils.ts         페이지 유형 판별
+│   ├── settings-shortcut.ts  사이드바 설정 바로가기 주입
 │   └── fadak-banner.ts       프로필/상세 경고 배너
 ├── features/
 │   ├── badge-detection/      D1: SVG 뱃지 감지
@@ -56,7 +58,9 @@ src/
 └── injected/
     ├── fetch-interceptor.ts      MAIN world에서 X API fetch/XHR 인터셉트
     ├── data-extractors.ts        API 응답 데이터 추출
-    └── fiber-follow-observer.ts  React fiber 팔로우 감지
+    ├── fiber-follow-observer.ts  React fiber 팔로우 감지
+    ├── follow-bridge.ts          팔로우 핸들 큐잉 (계정 확정 후 전송)
+    └── profile-batches.ts        프로필 메시지 배치 분할
 ```
 
 ## 의존성 규칙

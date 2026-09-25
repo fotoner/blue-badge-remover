@@ -48,9 +48,14 @@ export interface ProfileInfo {
   followingCount?: number;
 }
 
+/** 와일드카드 규칙 매처 — 선형 시간 구현 (RegExp도 구조적으로 호환) */
+export interface WildcardMatcher {
+  test(text: string): boolean;
+}
+
 export type FilterRule =
   | { type: 'keyword'; value: string; packId?: string; category?: string; reason?: string }
-  | { type: 'wildcard'; pattern: RegExp; original: string; packId?: string; category?: string; reason?: string }
+  | { type: 'wildcard'; pattern: WildcardMatcher; original: string; packId?: string; category?: string; reason?: string }
   | { type: 'exception'; handle: string; packId?: string; category?: string };
 
 export interface KeywordMatchResult {

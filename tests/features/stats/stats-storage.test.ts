@@ -84,6 +84,15 @@ describe('saveDayStats', () => {
     const retrieved = await getTodayStats(date);
     expect(retrieved).toEqual(stats);
   });
+
+  // 실패를 삼키면 flush가 버퍼를 비운 채 성공으로 간주해 기록이 사라진다
+  it('storage 쓰기 실패를 호출부로 전달한다', async () => {
+    const { browser } = await import('wxt/browser');
+    const setMock = browser.storage.local.set as unknown as ReturnType<typeof vi.fn>;
+    setMock.mockRejectedValueOnce(new Error('QUOTA_BYTES quota exceeded'));
+    await expect(saveDayStats({ date: '2026-03-21', totalHidden: 1, totalShown: 0, byCategory: {}, byPack: {} }))
+      .rejects.toThrow('quota');
+  });
 });
 
 describe('getAllTimeTotal', () => {
@@ -143,23 +152,34 @@ describe('cleanupOldStats', () => {
 
     await cleanupOldStats();
 
-    // cleanupOldStats sees all keys starting with "stats-" (35 daily + stats-total = 36).
-    // It removes the 6 oldest alphabetically: stats-2026-01-01 through stats-2026-01-06.
-    // stats-total sorts after stats-2... so it survives (at the end).
+    // stats-total은 날짜 키가 아니므로 보관 일수 계산에서 제외 — 35일 중 가장 오래된 5일만 삭제
     let dailyCount = 0;
     for (const [k] of store) {
       if (k.startsWith('stats-') && k !== 'stats-total') dailyCount++;
     }
-    expect(dailyCount).toBe(29);
+    expect(dailyCount).toBe(30);
 
     // Oldest should be removed
     expect(store.has('stats-2026-01-01')).toBe(false);
-    expect(store.has('stats-2026-01-06')).toBe(false);
-    // Newest should remain
+    expect(store.has('stats-2026-01-05')).toBe(false);
+    // Newest 30 days should remain
     expect(store.has('stats-2026-01-35')).toBe(true);
-    expect(store.has('stats-2026-01-07')).toBe(true);
+    expect(store.has('stats-2026-01-06')).toBe(true);
     // stats-total preserved (sorts at end)
     expect(store.has('stats-total')).toBe(true);
+  });
+
+  it('정확히 30일치 + stats-total이면 아무것도 지우지 않는다', async () => {
+    for (let i = 1; i <= 30; i++) {
+      const date = `2026-03-${String(i).padStart(2, '0')}`;
+      store.set(`stats-${date}`, { date, totalHidden: i, totalShown: 0, byCategory: {}, byPack: {} });
+    }
+    store.set('stats-total', 100);
+
+    await cleanupOldStats();
+
+    expect(store.has('stats-2026-03-01')).toBe(true);
+    expect(store.get('stats-total')).toBe(100);
   });
 
   it('does nothing when 30 or fewer entries', async () => {

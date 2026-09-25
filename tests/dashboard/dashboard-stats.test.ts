@@ -13,6 +13,11 @@ describe('formatStatCount', () => {
   it('should format large numbers', () => {
     expect(formatStatCount(1234)).toBe('1234개');
   });
+
+  it('선택한 언어의 단위로 표시한다', () => {
+    expect(formatStatCount(3, 'en')).toBe('3');
+    expect(formatStatCount(3, 'ja')).toBe('3件');
+  });
 });
 
 describe('computeCategoryBars', () => {

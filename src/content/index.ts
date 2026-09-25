@@ -7,7 +7,7 @@ import { MESSAGE_TYPES, STORAGE_KEYS, TIMINGS } from '@shared/constants';
 import { logger } from '@shared/utils/logger';
 import { showFadakProfileBanner, showFadakDetailBanner, removeFadakBanner } from './fadak-banner';
 import { listenForNavigation, setOnNavigate } from './navigation';
-import { collectFollowsFromDOM, disconnectFollowObserver, listenForFollowButtonClicks, getMyHandle, resolveAccountSwitchFollows } from './follow-collector';
+import { collectFollowsFromDOM, disconnectFollowObserver, listenForFollowButtonClicks, getMyHandle, switchFollowAccount } from './follow-collector';
 import { isProfilePage, getProfileLinkHref } from './page-utils';
 import { observeSettingsShortcut } from './settings-shortcut';
 import { setSettings, setFollowSet, setWhitelistSet, setProtectedKeywords, setCurrentUserHandle, getSettings, getFollowSet, getProtectedKeywords, getCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, profileCache, collectorBuffer } from './state';
@@ -52,32 +52,12 @@ async function detectAndHandleAccountSwitch(): Promise<boolean> {
   const currentHandle = href.slice(1).toLowerCase();
   if (!currentHandle) return false;
 
-  const stored = await browser.storage.local.get([
-    STORAGE_KEYS.CURRENT_USER_ID,
-    STORAGE_KEYS.FOLLOW_CACHE,
-    STORAGE_KEYS.FOLLOW_LIST,
-  ]);
-  const savedHandle = (stored[STORAGE_KEYS.CURRENT_USER_ID] as string | null | undefined) ?? null;
-
-  if (savedHandle !== currentHandle) {
-    const cache = (stored[STORAGE_KEYS.FOLLOW_CACHE] as Record<string, string[]> | undefined) ?? {};
-    const pendingFollows = (stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? [];
-    const cachedFollows = resolveAccountSwitchFollows(
-      cache,
-      currentHandle,
-      savedHandle,
-      pendingFollows,
-    );
-    cache[currentHandle] = cachedFollows;
-    await browser.storage.local.set({
-      [STORAGE_KEYS.CURRENT_USER_ID]: currentHandle,
-      [STORAGE_KEYS.FOLLOW_CACHE]: cache,
-      [STORAGE_KEYS.FOLLOW_LIST]: cachedFollows,
-    });
-    setFollowSet(new Set(cachedFollows));
+  const switched = await switchFollowAccount(currentHandle);
+  if (switched) {
+    setFollowSet(new Set(switched.follows));
     setCurrentUserHandle(currentHandle);
     const settings = getSettings();
-    if (settings.debugMode) logger.info('Account switched', { from: savedHandle, to: currentHandle, cachedFollows: cachedFollows.length });
+    if (settings.debugMode) logger.info('Account switched', { from: switched.from, to: currentHandle, cachedFollows: switched.follows.length });
     restoreHiddenTweets();
     reprocessExistingTweets();
   }

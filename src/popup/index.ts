@@ -1,5 +1,5 @@
 import { browser } from 'wxt/browser';
-import { getSettings, saveSettings } from '@features/settings';
+import { getSettings, updateSettings } from '@features/settings';
 import { getTodayStats, getAllTimeTotal } from '@features/stats';
 import { t } from '@shared/i18n';
 import { STORAGE_KEYS } from '@shared/constants';
@@ -131,8 +131,8 @@ function getShareUrl(): string {
 
 function bindEvents(): void {
   document.getElementById('enabled')!.addEventListener('change', async () => {
-    settings.enabled = (document.getElementById('enabled') as HTMLInputElement).checked;
-    await saveSettings(settings);
+    const enabled = (document.getElementById('enabled') as HTMLInputElement).checked;
+    settings = await updateSettings({ enabled });
   });
 
   document.getElementById('share-btn')!.addEventListener('click', () => {

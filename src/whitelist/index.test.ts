@@ -1,6 +1,6 @@
 // src/whitelist/index.test.ts
 import { describe, it, expect, beforeEach } from 'vitest';
-import { normalizeHandle, parseWhitelistInput, renderWhitelistItems } from './index';
+import { normalizeHandle, parseWhitelistInput, renderWhitelistItems, handleSubmitShortcut } from './index';
 
 describe('normalizeHandle', () => {
   it('유효한 핸들에서 @ prefix를 붙여 반환한다', () => {
@@ -95,5 +95,34 @@ describe('renderWhitelistItems', () => {
     );
     const span = container.querySelector('.whitelist-item span');
     expect(span?.textContent).toBe('@alice');
+  });
+});
+
+describe('handleSubmitShortcut', () => {
+  function press(init: KeyboardEventInit): { event: KeyboardEvent; submitted: boolean } {
+    let submitted = false;
+    const event = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true, ...init });
+    handleSubmitShortcut(event, () => { submitted = true; });
+    return { event, submitted };
+  }
+
+  it('Ctrl+Enter / ⌘+Enter는 추가를 실행하고 textarea 줄바꿈을 막는다', () => {
+    for (const init of [{ ctrlKey: true }, { metaKey: true }]) {
+      const { event, submitted } = press(init);
+      expect(submitted).toBe(true);
+      expect(event.defaultPrevented).toBe(true);
+    }
+  });
+
+  it('보조키 없는 Enter는 줄바꿈으로 두고 추가하지 않는다', () => {
+    const { event, submitted } = press({});
+    expect(submitted).toBe(false);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('IME 조합 중에는 추가하지 않는다', () => {
+    const { event, submitted } = press({ ctrlKey: true, isComposing: true });
+    expect(submitted).toBe(false);
+    expect(event.defaultPrevented).toBe(false);
   });
 });

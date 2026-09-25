@@ -312,6 +312,26 @@ input[type="checkbox"]:checked::after {
 .save-status.success { color: var(--success); }
 .save-status.error { color: var(--danger); }
 
+/* 가져오기 확인 — 내장형 옵션 페이지에서 window.confirm 대신 사용 (border 있음 → radius 0) */
+.inline-confirm {
+  margin-top: 12px;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+}
+
+.inline-confirm[hidden] { display: none; }
+
+.inline-confirm-message {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.inline-confirm .btn-row { margin-top: 12px; }
+
 /* Guide — has border, radius 0 */
 .guide {
   margin-bottom: 20px;

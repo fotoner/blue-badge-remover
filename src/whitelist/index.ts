@@ -14,6 +14,12 @@ export function parseWhitelistInput(input: string): string[] {
   return [...new Set(handles)];
 }
 
+export function handleSubmitShortcut(event: KeyboardEvent, submit: () => void): void {
+  if (event.key !== 'Enter' || event.isComposing || !(event.metaKey || event.ctrlKey)) return;
+  event.preventDefault();
+  submit();
+}
+
 export function renderWhitelistItems(
   container: HTMLElement,
   emptyEl: HTMLElement,
@@ -82,9 +88,7 @@ async function init(): Promise<void> {
     await refresh();
   });
 
-  inputEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addBtn.click();
-  });
+  inputEl.addEventListener('keydown', (e) => handleSubmitShortcut(e, () => addBtn.click()));
 
   await refresh();
 }
