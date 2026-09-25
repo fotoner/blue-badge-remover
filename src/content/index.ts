@@ -1,12 +1,12 @@
 // src/content/index.ts
 // Content script 진입점. 초기화 + 모듈 연결만 담당.
 import { browser } from 'wxt/browser';
-import { FeedObserver, setTweetHiderLanguage } from '@features/content-filter';
+import { FeedObserver, setTweetHiderLanguage, releasePreservedHeights } from '@features/content-filter';
 import { getSettings as loadSettings, getWhitelist, addToWhitelist } from '@features/settings';
 import { MESSAGE_TYPES, STORAGE_KEYS, TIMINGS } from '@shared/constants';
 import { logger } from '@shared/utils/logger';
 import { showFadakProfileBanner, showFadakDetailBanner, removeFadakBanner } from './fadak-banner';
-import { listenForNavigation, setOnNavigate } from './navigation';
+import { listenForNavigation, setOnNavigate, setOnScrollRestorationEnd } from './navigation';
 import { collectFollowsFromDOM, disconnectFollowObserver, listenForFollowButtonClicks, getMyHandle, switchFollowAccount } from './follow-collector';
 import { isProfilePage, getProfileLinkHref } from './page-utils';
 import { observeSettingsShortcut } from './settings-shortcut';
@@ -182,6 +182,8 @@ async function init(): Promise<void> {
   syncHoverCardObserver(settings);
 
   setOnNavigate(handleNavigate);
+  // 뒤로가기/모달 닫기 후 높이 보존 창이 끝나면 보존한 높이를 해제 (#43)
+  setOnScrollRestorationEnd(releasePreservedHeights);
   listenForNavigation();
   observeSettingsShortcut();
   collectFollowsFromDOM(followCollectorDeps);
