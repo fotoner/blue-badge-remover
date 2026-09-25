@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Update Card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=block" rel="stylesheet">
+<style>
+  /* docs/DESIGN.md 토큰 — border가 있으면 radius 0, 장식 없음 */
+  :root {
+    --bg: #0e1418;
+    --text-primary: #f5f9fc;
+    --text-secondary: #d7e1e8;
+    --text-muted: #8c9aa5;
+    --accent: #1d9bf0;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --font-body: "IBM Plex Sans KR", sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    word-break: keep-all;
+    -webkit-font-smoothing: antialiased;
+  }
+  .card {
+    width: 1600px;
+    height: 900px;
+    padding: 64px 88px 72px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .product { font-size: 30px; font-weight: 700; }
+  .meta { font-family: var(--font-mono); font-size: 24px; color: var(--text-muted); }
+  .url { margin-left: auto; }
+  .body {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 560px;
+    gap: 88px;
+    padding-top: 56px;
+  }
+  .text { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+  .label { font-size: 24px; font-weight: 500; color: var(--text-muted); }
+  h1 {
+    margin-top: 18px;
+    font-size: 68px;
+    font-weight: 700;
+    line-height: 1.22;
+    letter-spacing: -0.01em;
+    white-space: pre-line;
+  }
+  .desc { margin-top: 20px; font-size: 30px; line-height: 1.5; color: var(--text-secondary); }
+  .fixes { margin-top: auto; }
+  .fixes ul {
+    margin-top: 16px;
+    padding-left: 24px;
+    border-left: 3px solid var(--accent);
+    list-style: none;
+  }
+  .fixes li { font-size: 28px; line-height: 1.55; color: var(--text-secondary); }
+  .visual { min-height: 0; }
+  /* 스크린샷은 칸 높이에 맞춰 아래를 자른다 */
+  .visual img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+    border: 1px solid var(--border-subtle);
+  }
+</style>
+</head>
+<body>
+<main class="card" data-fit="card">
+  <header>
+    <span class="product" data-slot="product"></span>
+    <span class="meta" data-slot="version"></span>
+    <span class="meta" data-slot="date"></span>
+    <span class="meta url" data-slot="url"></span>
+  </header>
+  <div class="body">
+    <section class="text" data-fit="text">
+      <p class="label" data-slot="label"></p>
+      <h1 data-slot="title"></h1>
+      <p class="desc" data-slot="desc"></p>
+      <div class="fixes">
+        <p class="label" data-slot="fixesLabel"></p>
+        <ul data-slot="fixes"></ul>
+      </div>
+    </section>
+    <figure class="visual"><img data-slot="visual" alt=""></figure>
+  </div>
+</main>
+<script>
+  // render.mjs가 window.__CARD__를 넣는다. 브라우저로 직접 열면 아래 예시로 미리보기.
+  const card = window.__CARD__ ?? {
+    product: "파딱 제거기",
+    version: "v0.0.0",
+    date: "2026.01.01",
+    url: "blue-badge.fotone.moe",
+    label: "새 기능",
+    title: "대표 변경 사항을\n두 줄 안으로",
+    desc: "한 줄 보충 설명",
+    fixesLabel: "고친 것",
+    fixes: ["수정 사항 한 줄", "수정 사항 한 줄"],
+    visual: "assets/whitelist-bulk-add.png",
+  };
+
+  for (const el of document.querySelectorAll("[data-slot]")) {
+    const value = card[el.dataset.slot];
+    if (el.tagName === "IMG") el.src = value ?? "";
+    else if (Array.isArray(value)) {
+      for (const text of value) {
+        const li = document.createElement("li");
+        li.textContent = text;
+        el.append(li);
+      }
+    } else if (typeof value === "string") el.textContent = value;
+  }
+  if (!card.visual) document.querySelector(".visual").remove();
+  if (!card.fixes?.length) document.querySelector(".fixes").remove();
+</script>
+</body>
+</html>

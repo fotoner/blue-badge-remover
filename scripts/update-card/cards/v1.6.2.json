@@ -1,0 +1,16 @@
+{
+  "product": "파딱 제거기",
+  "version": "v1.6.2",
+  "date": "2026.09.25",
+  "url": "blue-badge.fotone.moe",
+  "label": "화이트리스트",
+  "title": "여러 계정을\n한 번에 추가",
+  "desc": "줄바꿈·공백·쉼표로 붙여넣고 Ctrl/⌘+Enter. 등록된 목록은 접어둘 수 있습니다.",
+  "fixesLabel": "고친 것",
+  "fixes": [
+    "뒤로가기 후 타임라인에 남던 빈 공간",
+    "대시보드를 열어둔 채 바꾼 설정이 되돌아가던 문제",
+    "필터 팩 사용 시 탭 멈춤, 통계·팔로우 목록 누락"
+  ],
+  "visual": "assets/whitelist-bulk-add.png"
+}
