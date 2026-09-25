@@ -5,6 +5,7 @@ import {
   listenForNavigation,
   onNavigate,
   setOnNavigate,
+  setOnScrollRestorationEnd,
   stopListeningForNavigation,
 } from '../../src/content/navigation';
 
@@ -139,6 +140,44 @@ describe('navigation', () => {
       expect(isScrollRestorationActive()).toBe(true);
       vi.advanceTimersByTime(1);
       expect(isScrollRestorationActive()).toBe(false);
+    });
+
+    // #43: 창이 끝나면 보존한 높이를 정리할 수 있도록 알린다
+    it('높이 보존 창이 끝나면 종료 콜백을 한 번 호출한다', () => {
+      const onEnd = vi.fn();
+      setOnScrollRestorationEnd(onEnd);
+      listenForNavigation();
+
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      vi.advanceTimersByTime(1999);
+      expect(onEnd).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(onEnd).toHaveBeenCalledTimes(1);
+    });
+
+    it('연속 popstate는 창을 연장하고 종료 콜백은 마지막 창 끝에 한 번만 호출한다', () => {
+      const onEnd = vi.fn();
+      setOnScrollRestorationEnd(onEnd);
+      listenForNavigation();
+
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      vi.advanceTimersByTime(1500);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      vi.advanceTimersByTime(1999);
+      expect(onEnd).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(onEnd).toHaveBeenCalledTimes(1);
+    });
+
+    it('리스너를 멈추면 예약된 종료 콜백도 취소한다', () => {
+      const onEnd = vi.fn();
+      setOnScrollRestorationEnd(onEnd);
+      listenForNavigation();
+
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      stopListeningForNavigation();
+      vi.advanceTimersByTime(3000);
+      expect(onEnd).not.toHaveBeenCalled();
     });
   });
 });

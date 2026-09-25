@@ -4,6 +4,8 @@ const NAVIGATION_POLL_MS = 500;
 const SCROLL_RESTORATION_WINDOW_MS = 2000;
 
 let onNavigateCallback: NavigateCallback = () => {};
+let onScrollRestorationEnd: NavigateCallback = () => {};
+let restorationEndTimer: ReturnType<typeof setTimeout> | null = null;
 let originalPushState: typeof history.pushState | null = null;
 let originalReplaceState: typeof history.replaceState | null = null;
 let navigationPollId: ReturnType<typeof setInterval> | null = null;
@@ -22,8 +24,23 @@ export function onNavigate(): void {
   onNavigateCallback();
 }
 
+/** 높이 보존 창이 끝났을 때 호출 — 보존한 높이를 해제하는 데 쓴다 (#43) */
+export function setOnScrollRestorationEnd(callback: NavigateCallback): void {
+  onScrollRestorationEnd = callback;
+}
+
+function clearRestorationEndTimer(): void {
+  if (restorationEndTimer !== null) clearTimeout(restorationEndTimer);
+  restorationEndTimer = null;
+}
+
 function handlePopState(): void {
   scrollRestorationUntil = Date.now() + SCROLL_RESTORATION_WINDOW_MS;
+  clearRestorationEndTimer();
+  restorationEndTimer = setTimeout(() => {
+    restorationEndTimer = null;
+    onScrollRestorationEnd();
+  }, SCROLL_RESTORATION_WINDOW_MS);
   onNavigate();
 }
 
@@ -59,5 +76,6 @@ export function stopListeningForNavigation(): void {
   navigationPollId = null;
   lastHandledUrl = null;
   scrollRestorationUntil = 0;
+  clearRestorationEndTimer();
   listening = false;
 }

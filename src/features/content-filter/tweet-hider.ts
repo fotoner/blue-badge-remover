@@ -1,12 +1,11 @@
 // src/features/content-filter/tweet-hider.ts
 import { t, type Language, DEFAULT_LANGUAGE } from '@shared/i18n';
+import {
+  ORIGINAL_CONTENT_KEY, HIDE_REASON_ATTR, COLLAPSED_ATTR, EXPANDED_ATTR,
+  EXPANDED_ACTIONS_ATTR, HIDDEN_QUOTE_ATTR, PRESERVED_HEIGHT_ATTR,
+} from './hide-attrs';
+import { hideKeepingHeight, markPreservedPlaceholder } from './preserved-height';
 
-const ORIGINAL_CONTENT_KEY = 'data-bbr-original';
-const HIDE_REASON_ATTR = 'data-bbr-reason';
-const COLLAPSED_ATTR = 'data-bbr-collapsed';
-const EXPANDED_ATTR = 'data-bbr-expanded';
-const EXPANDED_ACTIONS_ATTR = 'data-bbr-expanded-actions';
-const HIDDEN_QUOTE_ATTR = 'data-bbr-hidden-quote';
 const STYLE_INJECTED_ATTR = 'data-bbr-styles';
 
 let currentLanguage: Language = DEFAULT_LANGUAGE;
@@ -171,9 +170,7 @@ export function hideTweet(
 
   if (mode === 'remove') {
     if (preservedHeight > 0) {
-      element.style.visibility = 'hidden';
-      element.style.pointerEvents = 'none';
-      element.style.minHeight = `${preservedHeight}px`;
+      hideKeepingHeight(element, preservedHeight);
     } else {
       element.style.display = 'none';
     }
@@ -197,7 +194,7 @@ export function hideTweet(
   placeholder.setAttribute(COLLAPSED_ATTR, 'true');
   placeholder.className = 'bbr-placeholder';
   placeholder.innerHTML = SHIELD_ICON;
-  if (preservedHeight > 0) placeholder.style.minHeight = `${preservedHeight}px`;
+  if (preservedHeight > 0) markPreservedPlaceholder(element, placeholder, preservedHeight);
 
   const textSpan = document.createElement('span');
   textSpan.textContent = label;
@@ -249,6 +246,7 @@ export function showTweet(element: HTMLElement): void {
   element.removeAttribute(ORIGINAL_CONTENT_KEY);
   element.removeAttribute(HIDE_REASON_ATTR);
   element.removeAttribute(EXPANDED_ATTR);
+  element.removeAttribute(PRESERVED_HEIGHT_ATTR);
   element.querySelector(`[${EXPANDED_ACTIONS_ATTR}]`)?.remove();
 
   // 직접 자식 placeholder만 제거 — 인용 블록 안의 placeholder는 유지
