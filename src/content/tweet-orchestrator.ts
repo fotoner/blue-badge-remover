@@ -1,7 +1,7 @@
 // src/content/tweet-orchestrator.ts
 // 트윗 처리 오케스트레이터: DOM에서 트윗 정보를 추출하고, classifier로 판정하고, DOM을 조작.
 import { detectBadgeSvg, isBlueBadgeElement } from '@features/badge-detection/svg-fallback';
-import { hideTweet, hideQuoteBlock, showExpandedTweet, showTweet, showQuoteBlock, releasePreservedHeights } from '@features/content-filter';
+import { hideTweet, hideQuoteBlock, showExpandedTweet, showTweet, showQuoteBlock, releasePreservedHeights, PRESERVED_HEIGHT_ATTR } from '@features/content-filter';
 import { extractTweetAuthor, extractRetweeterName, extractRetweeterHandle, extractTweetStatusPath, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, formatUserLabel, addDebugLabel, findAuthorBadge } from './tweet-processing';
 import { isProfilePage, isDetailPage, getPageType } from './page-utils';
 import { profileCache, getSettings, getWhitelistSet, getActiveFilterRules, getProtectedKeywords, getCurrentUserHandle, setCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, getExpandedSet } from './state';
@@ -121,7 +121,7 @@ function applyTweetResult(
 
 export function processTweet(tweetEl: HTMLElement): void {
   // 창 종료 타이머를 놓쳐도(백그라운드 탭 타이머 지연 등) 보존 높이 여백이 남지 않게 한다 (#43)
-  if (tweetEl.hasAttribute('data-bbr-preserved-height') && !isScrollRestorationActive()) releasePreservedHeights();
+  if (tweetEl.hasAttribute(PRESERVED_HEIGHT_ATTR) && !isScrollRestorationActive()) releasePreservedHeights();
   if (isProfilePage()) return;
   const author = extractTweetAuthor(tweetEl);
   if (!author) return;

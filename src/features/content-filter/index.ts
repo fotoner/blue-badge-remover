@@ -3,3 +3,4 @@ export { shouldHideTweet, type TweetContext, type PageType, shouldHideRetweet, t
 export { hideTweet, hideQuoteBlock, showExpandedTweet, showTweet, showQuoteBlock, setTweetHiderLanguage, type HideContext, type HideQuoteContext } from './tweet-hider';
 export { FeedObserver } from './observer';
 export { releasePreservedHeights } from './preserved-height';
+export { PRESERVED_HEIGHT_ATTR } from './hide-attrs';

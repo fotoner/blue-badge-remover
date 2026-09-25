@@ -35,6 +35,7 @@ vi.mock('@features/content-filter', () => ({
   showTweet: (...args: unknown[]) => mockShowTweet(...args),
   showQuoteBlock: (...args: unknown[]) => mockShowQuoteBlock(...args),
   releasePreservedHeights: (...args: unknown[]) => mockReleasePreservedHeights(...args),
+  PRESERVED_HEIGHT_ATTR: 'data-bbr-preserved-height',
   setTweetHiderLanguage: vi.fn(),
   FeedObserver: class { observe() {} disconnect() {} },
 }));
