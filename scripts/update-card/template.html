@@ -3,175 +3,136 @@
 <head>
 <meta charset="utf-8">
 <title>Update Card</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=block" rel="stylesheet">
 <style>
+  /* docs/DESIGN.md 토큰 — border가 있으면 radius 0, 장식 없음 */
   :root {
-    --bg: #000000;
-    --card: #16181c;
-    --text: #e7e9ea;
-    --sub: #8b9096;
-    --dim: #71767b;
-    --blue: #1d9bf0;
-    --green: #00ba7c;
-    --border: #2f3336;
+    --bg: #0e1418;
+    --text-primary: #f5f9fc;
+    --text-secondary: #d7e1e8;
+    --text-muted: #8c9aa5;
+    --accent: #1d9bf0;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --font-body: "IBM Plex Sans KR", sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
   }
-  * { box-sizing: border-box; margin: 0; }
-  html, body { background: var(--bg); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: Pretendard, "Noto Sans CJK KR", "Apple SD Gothic Neo", system-ui, sans-serif;
-    color: var(--text);
-    -webkit-font-smoothing: antialiased;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--font-body);
     word-break: keep-all;
+    -webkit-font-smoothing: antialiased;
   }
   .card {
-    position: relative;
     width: 1600px;
     height: 900px;
-    padding: 56px 88px 48px;
-    overflow: hidden;
+    padding: 64px 88px 72px;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
   }
-  .card::before {
-    content: "";
-    position: absolute;
-    top: -360px;
-    right: -260px;
-    width: 1000px;
-    height: 1000px;
-    background: radial-gradient(circle, rgba(29, 155, 240, 0.16), transparent 62%);
-    pointer-events: none;
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border-subtle);
   }
-  .card > * { position: relative; }
-  header { display: flex; align-items: center; justify-content: space-between; }
-  .brand { display: flex; align-items: center; gap: 16px; font-size: 34px; font-weight: 700; }
-  .brand img { width: 56px; height: 56px; }
-  .brand small { font-size: 26px; font-weight: 500; color: var(--dim); }
-  .badge {
-    font-size: 26px;
-    font-weight: 600;
-    color: var(--blue);
-    padding: 10px 26px;
-    border: 1.5px solid rgba(29, 155, 240, 0.45);
-    border-radius: 999px;
-    background: rgba(29, 155, 240, 0.08);
-  }
-  h1 { margin-top: 36px; font-size: 96px; line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; }
-  .subtitle { margin-top: 12px; font-size: 38px; font-weight: 500; color: var(--sub); }
-  .grid {
+  .product { font-size: 30px; font-weight: 700; }
+  .meta { font-family: var(--font-mono); font-size: 24px; color: var(--text-muted); }
+  .url { margin-left: auto; }
+  .body {
     flex: 1;
     min-height: 0;
-    margin-top: 36px;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-auto-rows: 1fr;
-    gap: 20px;
+    grid-template-columns: 1fr 560px;
+    gap: 88px;
+    padding-top: 56px;
   }
-  .item {
-    position: relative;
-    display: flex;
-    gap: 20px;
-    padding: 26px 32px;
-    overflow: hidden;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 24px;
+  .text { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+  .label { font-size: 24px; font-weight: 500; color: var(--text-muted); }
+  h1 {
+    margin-top: 18px;
+    font-size: 68px;
+    font-weight: 700;
+    line-height: 1.22;
+    letter-spacing: -0.01em;
+    white-space: pre-line;
   }
-  .icon {
-    flex: none;
-    display: grid;
-    place-items: center;
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
-    color: var(--blue);
-    background: rgba(29, 155, 240, 0.12);
+  .desc { margin-top: 20px; font-size: 30px; line-height: 1.5; color: var(--text-secondary); }
+  .fixes { margin-top: auto; }
+  .fixes ul {
+    margin-top: 16px;
+    padding-left: 24px;
+    border-left: 3px solid var(--accent);
+    list-style: none;
   }
-  .icon svg {
-    width: 30px;
-    height: 30px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
+  .fixes li { font-size: 28px; line-height: 1.55; color: var(--text-secondary); }
+  .visual { min-height: 0; }
+  /* 스크린샷은 칸 높이에 맞춰 아래를 자른다 */
+  .visual img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+    border: 1px solid var(--border-subtle);
   }
-  .item h2 { padding-right: 120px; font-size: 42px; font-weight: 700; line-height: 1.25; }
-  .item p { margin-top: 8px; font-size: 30px; line-height: 1.4; color: var(--sub); }
-  .kind { position: absolute; top: 28px; right: 28px; font-size: 22px; font-weight: 700; padding: 5px 14px; border-radius: 999px; }
-  .kind.new { color: var(--blue); background: rgba(29, 155, 240, 0.14); }
-  .kind.fix { color: var(--green); background: rgba(0, 186, 124, 0.14); }
-  footer { margin-top: 28px; display: flex; align-items: center; justify-content: space-between; font-size: 28px; color: var(--dim); }
-  footer strong { font-weight: 600; color: var(--text); }
 </style>
 </head>
 <body>
 <main class="card" data-fit="card">
   <header>
-    <div class="brand">
-      <img src="../../public/icons/icon.svg" alt="">
-      <span data-slot="brand"></span>
-      <small data-slot="brandSub"></small>
-    </div>
-    <div class="badge" data-slot="badge"></div>
+    <span class="product" data-slot="product"></span>
+    <span class="meta" data-slot="version"></span>
+    <span class="meta" data-slot="date"></span>
+    <span class="meta url" data-slot="url"></span>
   </header>
-  <h1 data-slot="title"></h1>
-  <p class="subtitle" data-slot="subtitle"></p>
-  <section class="grid" data-slot="items"></section>
-  <footer>
-    <span data-slot="note"></span>
-    <strong data-slot="url"></strong>
-  </footer>
+  <div class="body">
+    <section class="text" data-fit="text">
+      <p class="label" data-slot="label"></p>
+      <h1 data-slot="title"></h1>
+      <p class="desc" data-slot="desc"></p>
+      <div class="fixes">
+        <p class="label" data-slot="fixesLabel"></p>
+        <ul data-slot="fixes"></ul>
+      </div>
+    </section>
+    <figure class="visual"><img data-slot="visual" alt=""></figure>
+  </div>
 </main>
 <script>
-  // lucide 아이콘 (https://lucide.dev, ISC) — 카드 JSON의 items[].icon 값
-  const ICONS = {
-    "user-plus": '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>',
-    "fold-vertical": '<path d="M12 22v-6"/><path d="M12 8V2"/><path d="M4 12H2"/><path d="M10 12H8"/><path d="M16 12h-2"/><path d="M22 12h-2"/><path d="m15 19-3-3-3 3"/><path d="m15 5-3 3-3-3"/>',
-    "settings": '<path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>',
-    "zap": '<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
-    "languages": '<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
-    "shield-check": '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
-    "filter": '<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
-    "eye-off": '<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/>',
-  };
-  const KIND_LABELS = { new: "새 기능", fix: "수정" };
-
   // render.mjs가 window.__CARD__를 넣는다. 브라우저로 직접 열면 아래 예시로 미리보기.
   const card = window.__CARD__ ?? {
-    brand: "파딱 제거기",
-    brandSub: "Blue Badge Remover",
-    badge: "Chrome · Firefox · Edge",
-    title: "v0.0.0 업데이트",
-    subtitle: "카드 JSON을 render.mjs로 넘기면 이 자리에 들어갑니다",
-    items: [
-      { icon: "user-plus", kind: "new", title: "새 기능 제목", desc: "한두 줄 설명" },
-      { icon: "zap", kind: "fix", title: "수정 제목", desc: "한두 줄 설명" },
-    ],
-    note: "스토어 심사가 끝나는 대로 자동으로 업데이트됩니다",
+    product: "파딱 제거기",
+    version: "v0.0.0",
+    date: "2026.01.01",
     url: "blue-badge.fotone.moe",
+    label: "새 기능",
+    title: "대표 변경 사항을\n두 줄 안으로",
+    desc: "한 줄 보충 설명",
+    fixesLabel: "고친 것",
+    fixes: ["수정 사항 한 줄", "수정 사항 한 줄"],
+    visual: "assets/whitelist-bulk-add.png",
   };
 
   for (const el of document.querySelectorAll("[data-slot]")) {
     const value = card[el.dataset.slot];
-    if (typeof value === "string") el.textContent = value;
+    if (el.tagName === "IMG") el.src = value ?? "";
+    else if (Array.isArray(value)) {
+      for (const text of value) {
+        const li = document.createElement("li");
+        li.textContent = text;
+        el.append(li);
+      }
+    } else if (typeof value === "string") el.textContent = value;
   }
-
-  const grid = document.querySelector('[data-slot="items"]');
-  for (const item of card.items) {
-    const el = document.createElement("article");
-    el.className = "item";
-    el.dataset.fit = `item: ${item.title}`;
-    el.innerHTML = `<div class="icon"><svg viewBox="0 0 24 24">${ICONS[item.icon] ?? ""}</svg></div>
-      <div><h2></h2><p></p></div><span class="kind"></span>`;
-    el.querySelector("h2").textContent = item.title;
-    const kind = el.querySelector(".kind");
-    kind.textContent = KIND_LABELS[item.kind] ?? "";
-    kind.classList.add(item.kind);
-    if (!KIND_LABELS[item.kind]) kind.remove();
-    el.querySelector("p").textContent = item.desc;
-    grid.append(el);
-  }
+  if (!card.visual) document.querySelector(".visual").remove();
+  if (!card.fixes?.length) document.querySelector(".fixes").remove();
 </script>
 </body>
 </html>
