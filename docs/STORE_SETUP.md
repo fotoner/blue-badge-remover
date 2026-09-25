@@ -1,19 +1,21 @@
 # 스토어 배포 자동화 설정 가이드
 
 릴리스 워크플로우(`release.yml`)가 태그 push 시 Chrome, Firefox, Edge 3개 스토어에 자동 제출합니다.
-각 스토어의 API 키를 GitHub Secrets에 등록하면 활성화됩니다.
+스토어 제출은 스토어별 독립 잡(`submit-store.yml`)이라 한 스토어가 실패해도 나머지는 계속 진행됩니다.
 
 ## 배포 흐름
 
 ```
 정식 릴리스: git tag v1.x.x → push → GitHub Actions
-  ├─ 빌드 (Chrome + Firefox + Edge)
-  ├─ GitHub Release 생성 (3개 ZIP 첨부)
-  └─ 스토어 자동 제출 (secrets 등록된 스토어만)
+  ├─ test + e2e
+  ├─ build: 태그 = package.json 버전 확인 → ZIP 4개 (Chrome, Edge, Firefox, Firefox 소스)
+  ├─ release: GitHub Release 생성 (ZIP 첨부)
+  └─ submit: chrome / firefox / edge 독립 잡 (submit-store.yml)
+       └─ 시크릿이 없으면 해당 스토어 잡이 명확한 오류로 실패 (조용히 건너뛰지 않음)
 
 테스트 릴리스: git tag v1.x.x-test → push → GitHub Actions
-  ├─ 빌드 (Chrome + Firefox + Edge)
-  ├─ GitHub Release 생성 (prerelease, 3개 ZIP 첨부)
+  ├─ test + e2e + build
+  ├─ GitHub Release 생성 (prerelease)
   └─ 스토어 제출 건너뜀
 ```
 
@@ -137,33 +139,29 @@ Chrome Web Store 개발자 대시보드 → 내 확장 프로그램 → **항목
 3. 스토어 목록 정보 입력 (이름, 설명, 스크린샷, Privacy Policy URL)
 4. 제출 → 리뷰 대기
 
-### 3-3. API 키 발급 (Azure AD)
+### 3-3. API 키 발급 (Publish API v1.1)
 
-1. https://portal.azure.com → **Azure Active Directory** → 앱 등록
-2. **새 등록**:
-   - 이름: "BBR Edge Publish"
-   - 리디렉션 URI: `https://login.microsoftonline.com/common/oauth2/nativeclient`
-3. 등록 후:
-   - **애플리케이션(클라이언트) ID** 복사 → `EDGE_CLIENT_ID`
-   - **인증서 및 비밀** → 새 클라이언트 비밀 → **값** 복사 → `EDGE_CLIENT_SECRET`
-   - **토큰 엔드포인트** 복사 → `EDGE_ACCESS_TOKEN_URL`
-     - 형식: `https://login.microsoftonline.com/{tenant-id}/oauth2/v2.0/token`
-4. Partner Center에서 이 앱에 **"Microsoft Edge 확장 게시자"** 역할 부여
+> 2025-01-01에 폐기된 v1.0(Azure AD 클라이언트 비밀 + 토큰 URL) 방식은 더 이상 동작하지 않습니다.
+> `EDGE_CLIENT_SECRET`, `EDGE_ACCESS_TOKEN_URL`은 사용하지 않습니다.
+
+1. https://partner.microsoft.com/dashboard/microsoftedge/publishapi 접속
+2. **Turn on API** (계정당 1회)
+3. **Create API credentials** → 표시되는 **Client ID**와 **API key** 복사
+   - API key는 만료일이 있습니다. 만료되면 Edge 제출 잡이 `Edge API 인증 실패 (HTTP 401/403)`로 실패하니, 이 페이지에서 새로 발급해 시크릿을 갱신하세요
 
 ### 3-4. Product ID
 
-Partner Center → Edge → 확장 프로그램 → 해당 확장 → URL에서 `productId` 복사
-
-→ `EDGE_PRODUCT_ID`
+Partner Center → Edge → Overview → 해당 확장 → **Extension identity**의 `Product ID`
 
 ### GitHub Secrets
 
 | Secret | 값 |
 |---|---|
-| `EDGE_PRODUCT_ID` | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
-| `EDGE_CLIENT_ID` | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
-| `EDGE_CLIENT_SECRET` | Azure AD 비밀 값 |
-| `EDGE_ACCESS_TOKEN_URL` | `https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token` |
+| `EDGE_PRODUCT_ID` | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` (Product ID) |
+| `EDGE_CLIENT_ID` | Publish API 페이지의 Client ID |
+| `EDGE_API_KEY` | Publish API 페이지의 API key |
+
+> Edge Publish API는 이미 게시된 확장의 **업데이트** 전용입니다. 최초 등록은 3-2처럼 Partner Center에서 직접 합니다.
 
 ---
 
@@ -171,9 +169,13 @@ Partner Center → Edge → 확장 프로그램 → 해당 확장 → URL에서 
 
 1. https://github.com/fotoner/blue-badge-remover/settings/secrets/actions 접속
 2. **New repository secret** 클릭
-3. 위 11개 시크릿을 하나씩 등록
+3. 아래 10개 시크릿을 하나씩 등록
 
-등록된 스토어만 자동 제출됩니다. 등록하지 않은 스토어는 스킵 (에러 없음).
+터미널에서는 값이 화면에 남지 않도록 클립보드로 등록할 수 있습니다:
+
+```bash
+pbpaste | tr -d '\r\n' | gh secret set EDGE_API_KEY -R fotoner/blue-badge-remover
+```
 
 ---
 
@@ -191,26 +193,41 @@ FIREFOX_EXTENSION_ID=
 FIREFOX_JWT_ISSUER=
 FIREFOX_JWT_SECRET=
 
-# Edge Add-ons (4개)
+# Edge Add-ons (3개, Publish API v1.1)
 EDGE_PRODUCT_ID=
 EDGE_CLIENT_ID=
-EDGE_CLIENT_SECRET=
-EDGE_ACCESS_TOKEN_URL=
+EDGE_API_KEY=
 ```
 
-## 검증
+## 검증 (태그 전 인증 점검)
 
-시크릿 등록 후 테스트:
+`-test` 태그는 스토어 제출을 건너뛰므로 인증 확인이 되지 않습니다. 대신 **Submit to Store**를 dry-run으로 실행합니다.
+기존 Release의 ZIP으로 인증만 확인하고 업로드/제출은 하지 않습니다.
 
 ```bash
-git tag v1.x.x-test
-git push origin v1.x.x-test
+for store in chrome firefox edge; do
+  gh workflow run submit-store.yml -R fotoner/blue-badge-remover -f store=$store -f tag=v1.6.0 -f dry-run=true
+done
+gh run list -R fotoner/blue-badge-remover --workflow submit-store.yml --limit 3
 ```
 
-GitHub Actions → Release Extension 워크플로우에서 각 스토어 제출 스텝 확인.
-테스트 후 태그 삭제:
+| 스토어 | dry-run이 확인하는 것 |
+|---|---|
+| Chrome | OAuth refresh token으로 access token 발급 |
+| Firefox | JWT로 애드온 상세 조회 |
+| Edge | 존재하지 않는 작업 조회로 API key 인증 (401/403이면 실패) — `wxt submit --dry-run`은 Edge 키를 검증하지 않음 |
+
+## 실패한 스토어만 다시 제출
+
+릴리스 후 특정 스토어 잡만 실패했다면 태그를 다시 만들지 말고 해당 스토어만 재제출합니다.
+재빌드하지 않고 Release에 첨부된 ZIP을 그대로 씁니다.
 
 ```bash
-git tag -d v1.x.x-test
-git push origin :refs/tags/v1.x.x-test
+gh workflow run submit-store.yml -R fotoner/blue-badge-remover -f store=firefox -f tag=v1.x.x -f dry-run=false
 ```
+
+### Firefox AMO 주의사항
+
+- AMO가 `POST /versions/` 응답 전에 10분에서 연결을 끊는 경우가 있습니다(v1.4.1, v1.6.0). 서버에서는 버전이 생성됐을 수 있어(v1.4.1이 그랬음), 제출 스크립트가 3분 뒤 1회 재시도하고 `409 / already exists`면 성공으로 처리합니다
+- 재제출 전에 개발자 허브(Manage Status & Versions)에서 해당 버전이 이미 있는지 확인하세요
+- Firefox 번들은 minify되어 있어 소스 ZIP(`blue-badge-remover-firefox-sources-<tag>.zip`)을 함께 제출합니다

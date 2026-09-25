@@ -35,6 +35,10 @@ export default defineConfig({
       },
     },
   },
+  zip: {
+    // AMO 소스 ZIP에서 로컬 전용 산출물 제외 (숨김 파일·node_modules·테스트·outDir은 WXT 기본 제외)
+    excludeSources: ['dist-firefox/**', 'graphify-out/**', 'test-results/**', 'release/**'],
+  },
   vite: () => ({
     resolve: {
       alias: {
