@@ -14,7 +14,8 @@
 - [x] Chrome Web Store: 완료
 - [x] Firefox AMO: 완료
 - [x] Edge Add-ons: 완료
-- [ ] GitHub Secrets에 Edge 키 등록 — `release.yml`의 Edge 제출 스텝은 준비됨 (`EDGE_PRODUCT_ID` 설정 시 자동 활성화)
+- [x] Edge Publish API v1.1 키 등록 (2026-09-25, `EDGE_API_KEY`/`EDGE_CLIENT_ID`/`EDGE_PRODUCT_ID`) — 기존 v1.0 방식(`EDGE_CLIENT_SECRET`/`EDGE_ACCESS_TOKEN_URL`)은 2025-01 폐기되어 미사용
+- [ ] 릴리스 파이프라인 정비 — 스토어 제출이 순차 스텝이라 Firefox AMO 실패(10분 서버측 끊김) 시 Edge가 건너뛰어짐. 2026-09-24 기준 스토어 버전: Chrome 1.6.0 · AMO 1.4.1 · Edge 1.3.6
 
 ### 웹스토어 페이지 개선
 - [x] 영문 설명 작성 — `docs/store/listing-en.md` (스토어 콘솔 반영은 수동)
