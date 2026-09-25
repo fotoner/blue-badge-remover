@@ -1,30 +1,29 @@
-# Blue Badge Remover v1.6.0 Patch Notes
+# Blue Badge Remover v1.6.1 Patch Notes
 
-This update improves protection for accounts that should stay visible and makes it easier to add exceptions when you need them.
+This update fixes the whitelist features announced in v1.6.0 that did not actually ship, and resolves several stability issues in settings, statistics, and filters.
 
-## More accurate hiding
+## Whitelist
 
-- Check only the post author's blue badge, reducing cases where a regular account was hidden because of a quoted post
-- Improve exceptions for followed accounts, your own posts, reposts, quoted posts, and whitelisted accounts
-- Improve follow detection on list timelines so followed accounts remain visible there as well
-- After expanding a collapsed post, whitelist its author or collapse the post again from inside the post
+- Add multiple handles at once on the whitelist page, separated by line breaks, spaces, or commas. This was announced in v1.6.0 but was not applied to the actual page
+- In the input field, Enter adds a new line and `Ctrl+Enter` (`⌘+Enter` on Mac) adds the handles
+- Collapse the list of saved accounts
+- Fix the "Collapse again" button remaining after whitelisting an author from an expanded post, which hid the post again when clicked
 
-## New filter settings
+## Settings and backup
 
-- Turn on **Hide new high-reach accounts** separately under `Dashboard → Filters`. It hides blue-badge accounts created within six months that have at least 1,000 followers and a following-to-follower ratio of 10% or less
-- This setting works independently from the keyword filter. When both are enabled, an account is hidden when either filter matches
-- A new **Protection Keywords** field is available under `Dashboard → Filters → Advanced Filter Settings`. Enter one keyword per line to keep accounts visible when their handle, display name, or bio contains that word
-- Protection keywords are a separate protection list, not new custom-filter syntax
+- Fix settings changed in Advanced Filter Settings reverting while the dashboard or popup was open
+- Importing filter lists now shows how many items will be replaced, asks for confirmation, and displays the result
+- Fix some headings and buttons staying in Korean when the dashboard is set to English or Japanese
+- Follow sync status now updates while the dashboard is open
 
-## Whitelist and backup
+## Stability
 
-- Add multiple handles at once from the whitelist page, separated by line breaks, spaces, or commas
-- Collapse the saved whitelist when the list gets long
-- Export and import your whitelist, custom filters, and protection keywords in one JSON file
-- Existing whitelist entries are cleaned up automatically, while your search scope, custom filters, and other saved settings remain unchanged
+- Fix the X tab freezing for several seconds with filter packs that contain many wildcards (`*`)
+- Wildcard rules now also match across multi-line profile bios
+- Fix some hidden-post statistics being dropped, and statistics being kept for 29 days instead of 30
+- Fix follow-list entries that could be lost when saves overlapped
 
-## Other improvements
+## Other
 
-- Reduce large scroll jumps when returning to the timeline with the browser's Back button
-- Prevent the same hidden post from being counted more than once in statistics
-- Milestone celebration banners are now off by default and can be enabled in settings
+- Update the default filter list. Thanks to our contributor
+- Improve the release process so Firefox and Edge receive the latest version as well
