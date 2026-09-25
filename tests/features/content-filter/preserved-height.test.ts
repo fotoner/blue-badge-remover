@@ -68,12 +68,10 @@ describe('보존 높이 표시와 해제', () => {
   it('해제는 스크롤을 직접 조작하지 않는다', () => {
     const hidden = makeTweet(662);
     hideTweet(hidden, 'remove', { reason: 'retweet', preserveHeight: true });
-    const visible = makeTweet(300);
-    // 위쪽 숨김 트윗이 접히면(display:none) 보이는 트윗이 662px 당겨지는 상황.
-    // 위치 변화로 스크롤을 보정하는 구현이 다시 들어오면 scrollBy가 호출되어 이 테스트가 실패한다 (판별 조건)
-    visible.getBoundingClientRect = () => {
+    const below = makeTweet(300);
+    below.getBoundingClientRect = () => {
       const top = hidden.style.display === 'none' ? 138 : 800;
-      return { top, bottom: top + 300, height: 300 } as DOMRect;
+      return { top, bottom: top + 300 } as DOMRect;
     };
     const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {});
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});

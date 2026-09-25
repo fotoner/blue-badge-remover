@@ -35,7 +35,7 @@ function releaseOne(element: HTMLElement): void {
 /**
  * 보존한 높이를 모두 해제하고 원래 숨김 방식으로 되돌린다.
  * 스크롤은 직접 보정하지 않는다 — X 타임라인이 셀 크기 변화에 맞춰 스스로 스크롤을 조정하므로,
- * 여기서 scrollBy로 한 번 더 보정하면 이중 보정으로 화면이 맨 위까지 튄다(실브라우저 확인).
+ * 여기서 scrollBy로 한 번 더 보정하면 이중 보정으로 화면이 맨 위까지 튄다.
  */
 export function releasePreservedHeights(): void {
   const targets = document.querySelectorAll<HTMLElement>(`[${PRESERVED_HEIGHT_ATTR}]`);
