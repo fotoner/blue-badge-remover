@@ -1,0 +1,115 @@
+name: Submit to Store
+
+# 스토어 1곳에 GitHub Release의 ZIP을 제출한다.
+# - release.yml이 태그 릴리스 때 스토어별로 호출 (workflow_call)
+# - 실패한 스토어 재제출 / 태그 전 인증 점검(dry-run)은 Actions 탭에서 수동 실행 (workflow_dispatch)
+#   재빌드하지 않고 Release에 첨부된 ZIP을 그대로 쓴다 — 스토어 심사 대상과 배포 파일을 일치시키기 위함
+
+on:
+  workflow_call:
+    inputs:
+      store:
+        type: string
+        required: true
+      tag:
+        type: string
+        required: true
+      dry-run:
+        type: boolean
+        default: false
+    # secrets: inherit 대신 명시 전달 — 호출부(release.yml)가 스토어별로 해당 시크릿만 넘긴다
+    secrets:
+      CHROME_EXTENSION_ID:
+        required: false
+      CHROME_CLIENT_ID:
+        required: false
+      CHROME_CLIENT_SECRET:
+        required: false
+      CHROME_REFRESH_TOKEN:
+        required: false
+      FIREFOX_EXTENSION_ID:
+        required: false
+      FIREFOX_JWT_ISSUER:
+        required: false
+      FIREFOX_JWT_SECRET:
+        required: false
+      EDGE_PRODUCT_ID:
+        required: false
+      EDGE_CLIENT_ID:
+        required: false
+      EDGE_API_KEY:
+        required: false
+  workflow_dispatch:
+    inputs:
+      store:
+        description: '제출할 스토어'
+        type: choice
+        options: [chrome, firefox, edge]
+        required: true
+      tag:
+        description: 'GitHub Release가 있는 태그 (예: v1.6.1)'
+        type: string
+        required: true
+      dry-run:
+        description: '인증만 확인하고 업로드/제출은 하지 않음'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: submit-${{ inputs.store }}-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  submit:
+    name: ${{ inputs.store }} (${{ inputs.tag }}${{ inputs.dry-run && ', dry-run' || '' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Download release ZIPs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STORE: ${{ inputs.store }}
+          TAG_NAME: ${{ inputs.tag }}
+        # firefox 패턴은 본체 ZIP과 -sources- ZIP을 함께 매치한다 (store-submit.sh가 둘 다 사용)
+        run: |
+          mkdir -p release
+          gh release download "$TAG_NAME" --dir release --pattern "blue-badge-remover-${STORE}-*${TAG_NAME}.zip"
+          ls -la release
+
+      # 해당 스토어 시크릿만 노출한다
+      - name: Submit
+        env:
+          STORE: ${{ inputs.store }}
+          TAG_NAME: ${{ inputs.tag }}
+          DRY_RUN: ${{ inputs.dry-run }}
+          CHROME_EXTENSION_ID: ${{ inputs.store == 'chrome' && secrets.CHROME_EXTENSION_ID || '' }}
+          CHROME_CLIENT_ID: ${{ inputs.store == 'chrome' && secrets.CHROME_CLIENT_ID || '' }}
+          CHROME_CLIENT_SECRET: ${{ inputs.store == 'chrome' && secrets.CHROME_CLIENT_SECRET || '' }}
+          CHROME_REFRESH_TOKEN: ${{ inputs.store == 'chrome' && secrets.CHROME_REFRESH_TOKEN || '' }}
+          FIREFOX_EXTENSION_ID: ${{ inputs.store == 'firefox' && secrets.FIREFOX_EXTENSION_ID || '' }}
+          FIREFOX_JWT_ISSUER: ${{ inputs.store == 'firefox' && secrets.FIREFOX_JWT_ISSUER || '' }}
+          FIREFOX_JWT_SECRET: ${{ inputs.store == 'firefox' && secrets.FIREFOX_JWT_SECRET || '' }}
+          EDGE_PRODUCT_ID: ${{ inputs.store == 'edge' && secrets.EDGE_PRODUCT_ID || '' }}
+          EDGE_CLIENT_ID: ${{ inputs.store == 'edge' && secrets.EDGE_CLIENT_ID || '' }}
+          EDGE_API_KEY: ${{ inputs.store == 'edge' && secrets.EDGE_API_KEY || '' }}
+        run: bash scripts/store-submit.sh "$STORE"
+
+      - name: Upload AMO logs
+        if: failure() && inputs.store == 'firefox'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: amo-submit-logs
+          path: amo-attempt-*.log
+          if-no-files-found: ignore

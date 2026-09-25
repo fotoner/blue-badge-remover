@@ -54,6 +54,25 @@ describe('handleWhitelistRequest', () => {
     expect(mockStorage['whitelist']).toEqual(['@alice', '@bob']);
   });
 
+  // 백업 가져오기가 큐를 우회해 storage를 직접 덮어쓰던 문제 — replace도 같은 큐로 처리
+  it('replace는 같은 큐에서 목록 전체를 정규화해 교체한다', async () => {
+    mockStorage['whitelist'] = ['@old'];
+    await Promise.all([
+      handleWhitelistRequest({ type: 'BBR_WHITELIST', operation: 'add', handles: ['@before'] }),
+      handleWhitelistRequest({ type: 'BBR_WHITELIST', operation: 'replace', handles: ['@Alice', 'alice', '@bob'] }),
+      handleWhitelistRequest({ type: 'BBR_WHITELIST', operation: 'add', handles: ['@after'] }),
+    ]);
+    expect(mockStorage['whitelist']).toEqual(['@alice', '@bob', '@after']);
+  });
+
+  it('replace는 백업 상한(10,000개)까지 허용하고 초과하면 거부한다', async () => {
+    const many = Array.from({ length: 10_000 }, (_, i) => `@user${i}`);
+    const ok = await handleWhitelistRequest({ type: 'BBR_WHITELIST', operation: 'replace', handles: many });
+    expect(ok?.whitelist).toHaveLength(10_000);
+    const tooMany = await handleWhitelistRequest({ type: 'BBR_WHITELIST', operation: 'replace', handles: [...many, '@extra'] });
+    expect(tooMany).toBeUndefined();
+  });
+
   it('잘못된 요청은 저장소를 변경하지 않는다', async () => {
     mockStorage['whitelist'] = ['@alice'];
 

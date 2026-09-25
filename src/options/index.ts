@@ -5,7 +5,7 @@ import {
   parseCategories,
   saveCustomFilterList,
 } from '@features/keyword-filter';
-import { getSettings, saveSettings } from '@features/settings';
+import { getSettings, updateSettings } from '@features/settings';
 import { STORAGE_KEYS } from '@shared/constants';
 import { renderCategories, updateStats } from './categories';
 import { bindPackEvents, renderFilterPacks } from './filter-packs';
@@ -33,8 +33,7 @@ async function init(): Promise<void> {
   void updateStats(settings.defaultFilterEnabled, disabledCategories, customText);
 
   defaultFilterToggle.addEventListener('change', async () => {
-    const current = await getSettings();
-    await saveSettings({ ...current, defaultFilterEnabled: defaultFilterToggle.checked });
+    await updateSettings({ defaultFilterEnabled: defaultFilterToggle.checked });
     renderCategories(categoryListEl, categories, disabledCategories, defaultFilterToggle.checked);
     void updateStats(defaultFilterToggle.checked, disabledCategories, customEl.value);
   });
@@ -49,7 +48,9 @@ async function init(): Promise<void> {
   });
   await renderFilterPacks();
   bindPackEvents(customEl);
-  bindSettingsTransferEvents(customEl);
+  bindSettingsTransferEvents(customEl, () => {
+    void updateStats(defaultFilterToggle.checked, disabledCategories, customEl.value);
+  });
   await initProtectionSettings();
 }
 

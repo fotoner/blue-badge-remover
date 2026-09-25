@@ -512,4 +512,16 @@ describe('restoreHiddenTweets', () => {
 
     expect(mockShowTweet).toHaveBeenCalledWith(tweet);
   });
+
+  it('펼쳐진 트윗도 showTweet으로 정리해 펼침 액션 버튼이 남지 않게 한다', () => {
+    const main = doc.querySelector('main')!;
+    const tweet = doc.createElement('article');
+    tweet.setAttribute('data-testid', 'tweet');
+    tweet.setAttribute('data-bbr-expanded', '1');
+    main.appendChild(tweet);
+
+    restoreHiddenTweets();
+
+    expect(mockShowTweet).toHaveBeenCalledWith(tweet);
+  });
 });

@@ -37,12 +37,19 @@ export function resolveAccountSwitchFollows(
   return [...new Set(candidates.map((handle) => handle.toLowerCase()))];
 }
 
-// saveFollowHandles의 모든 실행을 직렬화하는 큐 (Defect 2 수정).
-// 호출부들이 전부 fire-and-forget이라 거의 동시에 여러 번 호출될 수 있는데,
-// 기존의 비원자적 read-modify-write(await get → merge → await set)는
-// 두 호출이 같은 스냅샷을 읽고 나중 쓰기가 먼저 쓰기를 덮어써 핸들을 잃어버렸다.
-// 이 큐는 각 저장 작업을 이전 작업이 끝난 뒤에만 시작하도록 강제한다.
-let saveQueue: Promise<void> = Promise.resolve();
+// FOLLOW_CACHE/FOLLOW_LIST read-modify-write를 탭 안에서 직렬화하는 큐.
+// 저장·언팔로우 삭제·계정 전환이 같은 스냅샷을 읽으면 나중 쓰기가 앞선 변경을 덮어써 핸들을 잃는다.
+// 모든 팔로우 storage 쓰기는 이 큐를 거쳐야 한다.
+// 주의: 큐 작업 안에서 runFollowStorageTask(및 saveFollowHandles/removeFollowHandle/
+// switchFollowAccount)를 다시 호출해 await하면 자기 자신의 완료를 기다리는 교착 상태가 된다.
+let followStorageQueue: Promise<void> = Promise.resolve();
+
+export function runFollowStorageTask<T>(task: () => Promise<T>): Promise<T> {
+  const run = followStorageQueue.then(task);
+  // 작업이 실패해도 큐 자체는 오염되지 않도록 — 다음 작업은 계속 진행되어야 한다.
+  followStorageQueue = run.then(() => undefined, () => undefined);
+  return run;
+}
 
 export function saveFollowHandles(
   handles: string[],
@@ -50,10 +57,40 @@ export function saveFollowHandles(
   expectedAccount?: string,
 ): Promise<void> {
   if (!handles.length) return Promise.resolve();
-  const run = saveQueue.then(() => doSaveFollowHandles(handles, deps, expectedAccount));
-  // 이 작업이 실패해도 큐 자체는 오염되지 않도록 별도로 캐치 — 다음 호출은 계속 진행되어야 한다.
-  saveQueue = run.catch(() => {});
-  return run;
+  return runFollowStorageTask(() => doSaveFollowHandles(handles, deps, expectedAccount));
+}
+
+export function removeFollowHandle(handle: string, deps: FollowCollectorDeps): Promise<void> {
+  return runFollowStorageTask(() => doRemoveFollowHandle(handle, deps));
+}
+
+export interface AccountSwitchResult {
+  from: string | null;
+  follows: string[];
+}
+
+/** 저장된 계정과 다르면 계정별 팔로우 캐시로 전환한다. 같은 계정이면 null. */
+export function switchFollowAccount(currentHandle: string): Promise<AccountSwitchResult | null> {
+  return runFollowStorageTask(async () => {
+    const stored = await browser.storage.local.get([
+      STORAGE_KEYS.CURRENT_USER_ID,
+      STORAGE_KEYS.FOLLOW_CACHE,
+      STORAGE_KEYS.FOLLOW_LIST,
+    ]);
+    const savedHandle = (stored[STORAGE_KEYS.CURRENT_USER_ID] as string | null | undefined) ?? null;
+    if (savedHandle === currentHandle) return null;
+
+    const cache = (stored[STORAGE_KEYS.FOLLOW_CACHE] as Record<string, string[]> | undefined) ?? {};
+    const pendingFollows = (stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? [];
+    const follows = resolveAccountSwitchFollows(cache, currentHandle, savedHandle, pendingFollows);
+    cache[currentHandle] = follows;
+    await browser.storage.local.set({
+      [STORAGE_KEYS.CURRENT_USER_ID]: currentHandle,
+      [STORAGE_KEYS.FOLLOW_CACHE]: cache,
+      [STORAGE_KEYS.FOLLOW_LIST]: follows,
+    });
+    return { from: savedHandle, follows };
+  });
 }
 
 async function doSaveFollowHandles(
@@ -84,7 +121,7 @@ async function doSaveFollowHandles(
   if (settings.debugMode) logger.info('Follow handles saved', { account: currentAccount, newCount: handles.length, totalCount: merged.length });
 }
 
-async function removeFollowHandle(
+async function doRemoveFollowHandle(
   handle: string,
   deps: FollowCollectorDeps,
 ): Promise<void> {

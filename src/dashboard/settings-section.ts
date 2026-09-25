@@ -68,14 +68,29 @@ export async function renderSyncStatus(lang: Language): Promise<void> {
   }
 }
 
-export function bindSettingsEvents(settings: Settings): void {
+const SYNC_STATUS_KEYS: readonly string[] = [
+  STORAGE_KEYS.LAST_SYNC_AT,
+  STORAGE_KEYS.FOLLOW_LIST,
+  STORAGE_KEYS.CURRENT_USER_ID,
+];
+
+/** 다른 탭에서 팔로우 동기화/계정 전환이 일어나면 대시보드를 열어둔 채로도 현황을 갱신한다 */
+export function watchSyncStatus(getLanguage: () => Language): void {
+  browser.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'local') return;
+    if (!Object.keys(changes).some((key) => SYNC_STATUS_KEYS.includes(key))) return;
+    void renderSyncStatus(getLanguage());
+  });
+}
+
+export function bindSettingsEvents(getLanguage: () => Language): void {
   // Sync button
   document.getElementById('sync-btn')?.addEventListener('click', () => {
     void browser.tabs.create({ url: 'https://x.com/following' });
     const btn = document.getElementById('sync-btn') as HTMLButtonElement;
-    btn.textContent = t('scrollOnFollowingPage', settings.language);
+    btn.textContent = t('scrollOnFollowingPage', getLanguage());
     setTimeout(() => {
-      btn.textContent = t('openFollowingPage', settings.language);
+      btn.textContent = t('openFollowingPage', getLanguage());
     }, 3000);
   });
 

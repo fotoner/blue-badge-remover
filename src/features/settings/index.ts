@@ -1,1 +1,2 @@
-export { getSettings, saveSettings, getWhitelist, addToWhitelist, addManyToWhitelist, removeFromWhitelist } from './storage';
+export { getSettings, updateSettings, getWhitelist, addToWhitelist, addManyToWhitelist, removeFromWhitelist, replaceWhitelist } from './storage';
+export type { SettingsPatch } from './storage';

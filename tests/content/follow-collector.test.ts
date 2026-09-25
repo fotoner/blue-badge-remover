@@ -30,8 +30,11 @@ const {
   collectFollowsFromDOM,
   disconnectFollowObserver,
   getMyHandle,
+  removeFollowHandle,
   resolveAccountSwitchFollows,
+  runFollowStorageTask,
   saveFollowHandles,
+  switchFollowAccount,
 } = await import('../../src/content/follow-collector');
 type FollowCollectorDeps = import('../../src/content/follow-collector').FollowCollectorDeps;
 
@@ -264,6 +267,88 @@ describe('saveFollowHandles concurrency (Defect 2)', () => {
     const finalList = mockChromeStorage[STORAGE_KEYS.FOLLOW_LIST] as string[];
     expect(finalList).toEqual(expect.arrayContaining(['alice', 'bob']));
     expect(finalList).toHaveLength(2);
+  });
+
+  function deferFirstGet(): { calls: () => number; releaseFirst: () => void } {
+    let callCount = 0;
+    let release: (() => void) | null = null;
+    getMock.mockImplementation((keys: string[]) => {
+      callCount++;
+      const snapshot: Record<string, unknown> = {};
+      for (const key of keys) {
+        if (key in mockChromeStorage) snapshot[key] = mockChromeStorage[key];
+      }
+      if (callCount === 1) {
+        return new Promise<Record<string, unknown>>((resolve) => { release = () => resolve(snapshot); });
+      }
+      return Promise.resolve(snapshot);
+    });
+    return { calls: () => callCount, releaseFirst: () => release!() };
+  }
+
+  // 언팔로우 처리가 저장 큐를 우회해 동시에 들어온 팔로우 추가를 덮어쓰던 문제
+  it('겹쳐서 실행된 팔로우 저장과 언팔로우 삭제가 서로를 덮어쓰지 않는다', async () => {
+    mockChromeStorage[STORAGE_KEYS.FOLLOW_CACHE] = { testuser: ['old'] };
+    mockChromeStorage[STORAGE_KEYS.FOLLOW_LIST] = ['old'];
+    const gate = deferFirstGet();
+    const deps = makeDeps();
+
+    const saving = saveFollowHandles(['alice'], deps);
+    const removing = removeFollowHandle('old', deps);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(gate.calls()).toBe(1);
+
+    gate.releaseFirst();
+    await Promise.all([saving, removing]);
+
+    const cache = mockChromeStorage[STORAGE_KEYS.FOLLOW_CACHE] as Record<string, string[]>;
+    expect(cache['testuser']).toEqual(['alice']);
+    expect(mockChromeStorage[STORAGE_KEYS.FOLLOW_LIST]).toEqual(['alice']);
+  });
+
+  it('runFollowStorageTask는 진행 중인 팔로우 저장이 끝난 뒤에 실행된다 (계정 전환용)', async () => {
+    const gate = deferFirstGet();
+    const order: string[] = [];
+    const saving = saveFollowHandles(['alice'], makeDeps()).then(() => { order.push('save'); });
+    const task = runFollowStorageTask(async () => { order.push('task'); });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(order).toEqual([]);
+
+    gate.releaseFirst();
+    await Promise.all([saving, task]);
+    expect(order).toEqual(['save', 'task']);
+  });
+
+  it('switchFollowAccount는 계정별 캐시로 전환하고 결과를 반환한다', async () => {
+    mockChromeStorage[STORAGE_KEYS.FOLLOW_CACHE] = { testuser: ['x'], other: ['y'] };
+    mockChromeStorage[STORAGE_KEYS.FOLLOW_LIST] = ['x'];
+
+    const result = await switchFollowAccount('other');
+
+    expect(result).toEqual({ from: 'testuser', follows: ['y'] });
+    expect(mockChromeStorage[STORAGE_KEYS.CURRENT_USER_ID]).toBe('other');
+    expect(mockChromeStorage[STORAGE_KEYS.FOLLOW_LIST]).toEqual(['y']);
+  });
+
+  it('switchFollowAccount는 같은 계정이면 아무것도 쓰지 않고 null을 반환한다', async () => {
+    const setMock = browser.storage.local.set as unknown as ReturnType<typeof vi.fn>;
+    expect(await switchFollowAccount('testuser')).toBeNull();
+    expect(setMock).not.toHaveBeenCalled();
+  });
+
+  // 계정 전환 read-modify-write가 큐를 우회해 진행 중인 팔로우 저장을 덮어쓰던 문제
+  it('계정 전환은 진행 중인 팔로우 저장이 끝난 뒤 그 결과를 포함해 전환한다', async () => {
+    mockChromeStorage[STORAGE_KEYS.FOLLOW_CACHE] = { testuser: [], other: ['y'] };
+    const gate = deferFirstGet();
+    const saving = saveFollowHandles(['alice'], makeDeps());
+    const switching = switchFollowAccount('other');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    gate.releaseFirst();
+    await Promise.all([saving, switching]);
+
+    const cache = mockChromeStorage[STORAGE_KEYS.FOLLOW_CACHE] as Record<string, string[]>;
+    expect(cache['testuser']).toEqual(['alice']);
+    expect(mockChromeStorage[STORAGE_KEYS.FOLLOW_LIST]).toEqual(['y']);
   });
 
   it('여러 번의 saveFollowHandles 호출 뒤 storage에는 모든 배치의 핸들이 누적된다', async () => {

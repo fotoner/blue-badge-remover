@@ -189,6 +189,83 @@ describe('flushStats', () => {
     expect(mockIncrementTotal).toHaveBeenCalledWith(1);
   });
 
+  // flush의 storage 왕복 중 recordHide된 건이 buffer 리셋으로 사라지거나 일별/누계가 어긋나던 문제
+  it('flush 도중 기록된 숨김은 유실되지 않고 일별·누계에 같은 수로 반영된다', async () => {
+    const savedDays: number[] = [];
+    const increments: number[] = [];
+    let dayTotal = 0;
+    mockGetTodayStats.mockImplementation(async () => {
+      await Promise.resolve();
+      recordHide(makeElement()); // 읽기 대기 중 기록
+      return { date: '2026-04-05', totalHidden: dayTotal, totalShown: 0, byCategory: {}, byPack: {} };
+    });
+    mockSaveDayStats.mockImplementation(async (day: { totalHidden: number }) => {
+      recordHide(makeElement()); // 저장 대기 중 기록
+      dayTotal = day.totalHidden;
+      savedDays.push(day.totalHidden);
+    });
+    mockIncrementTotal.mockImplementation(async (count: number) => { increments.push(count); });
+
+    recordHide(makeElement());
+    await flushStats();
+    mockGetTodayStats.mockImplementation(async () => (
+      { date: '2026-04-05', totalHidden: dayTotal, totalShown: 0, byCategory: {}, byPack: {} }
+    ));
+    mockSaveDayStats.mockImplementation(async (day: { totalHidden: number }) => {
+      dayTotal = day.totalHidden;
+      savedDays.push(day.totalHidden);
+    });
+    await flushStats();
+
+    expect(dayTotal).toBe(3);
+    expect(increments.reduce((sum, n) => sum + n, 0)).toBe(3);
+  });
+
+  it('동시에 호출된 flush는 직렬화되어 서로의 저장을 덮어쓰지 않는다', async () => {
+    let dayTotal = 0;
+    mockGetTodayStats.mockImplementation(async () => {
+      const snapshot = dayTotal; // 읽기 시점 값 — 느린 storage 왕복 재현
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return { date: '2026-04-05', totalHidden: snapshot, totalShown: 0, byCategory: {}, byPack: {} };
+    });
+    mockSaveDayStats.mockImplementation(async (day: { totalHidden: number }) => { dayTotal = day.totalHidden; });
+
+    recordHide(makeElement());
+    const first = flushStats();
+    recordHide(makeElement());
+    const second = flushStats();
+    await Promise.all([first, second]);
+
+    expect(dayTotal).toBe(2);
+  });
+
+  it('저장이 실패하면 기록을 버퍼로 되돌려 다음 flush에서 다시 저장한다', async () => {
+    mockGetTodayStats.mockImplementation(async () => (
+      { date: '2026-04-05', totalHidden: 0, totalShown: 0, byCategory: {}, byPack: {} }
+    ));
+    mockSaveDayStats.mockRejectedValueOnce(new Error('quota'));
+    recordHide(makeElement(), 'spam');
+    await flushStats(); // 호출부가 fire-and-forget이므로 reject하지 않는다
+    expect(mockIncrementTotal).not.toHaveBeenCalled();
+
+    await flushStats();
+    expect(mockSaveDayStats).toHaveBeenLastCalledWith(
+      expect.objectContaining({ totalHidden: 1, byCategory: expect.objectContaining({ spam: 1 }) }),
+    );
+    expect(mockIncrementTotal).toHaveBeenCalledWith(1);
+  });
+
+  it('누계 조회/콜백이 실패해도 flush는 reject하지 않는다 (fire-and-forget 호출부)', async () => {
+    const onFlush = vi.fn();
+    setOnFlush(onFlush);
+    mockGetAllTimeTotal.mockRejectedValueOnce(new Error('storage unavailable'));
+    recordHide(makeElement());
+
+    await expect(flushStats()).resolves.toBeUndefined();
+    expect(onFlush).not.toHaveBeenCalled();
+    setOnFlush(() => {});
+  });
+
   it('calls onFlush callback with all-time total', async () => {
     const onFlush = vi.fn();
     setOnFlush(onFlush);

@@ -2,6 +2,7 @@
 // 메모리 버퍼 + 주기적 flush 패턴 (collector-buffer와 동일).
 import type { DailyStats } from './types';
 import { getTodayStats, saveDayStats, getAllTimeTotal, incrementTotal } from './stats-storage';
+import { logger } from '@shared/utils/logger';
 
 // 마일스톤 콜백 — content script에서 설정
 let onFlushCallback: ((totalHidden: number) => void) | null = null;
@@ -65,29 +66,58 @@ export function recordShow(): void {
   buffer.totalShown++;
 }
 
-/** 메모리 버퍼를 storage에 병합 */
-export async function flushStats(): Promise<void> {
-  if (buffer.totalHidden === 0 && buffer.totalShown === 0) return;
+function addCounts(target: Record<string, number>, source: Record<string, number>): void {
+  for (const [key, count] of Object.entries(source)) {
+    target[key] = (target[key] ?? 0) + count;
+  }
+}
 
-  const hiddenCount = buffer.totalHidden;
-  // buffer.date 기준으로 저장 — 자정 경계에서도 올바른 날짜에 귀속
-  const today = await getTodayStats(buffer.date);
-  today.totalHidden += buffer.totalHidden;
-  today.totalShown += buffer.totalShown;
-  for (const [cat, count] of Object.entries(buffer.byCategory)) {
-    today.byCategory[cat] = (today.byCategory[cat] ?? 0) + count;
-  }
-  for (const [pack, count] of Object.entries(buffer.byPack)) {
-    today.byPack[pack] = (today.byPack[pack] ?? 0) + count;
-  }
-  await saveDayStats(today);
-  if (hiddenCount > 0) {
-    await incrementTotal(hiddenCount);
-  }
+function mergeInto(target: DailyStats, source: DailyStats): void {
+  target.totalHidden += source.totalHidden;
+  target.totalShown += source.totalShown;
+  addCounts(target.byCategory, source.byCategory);
+  addCounts(target.byPack, source.byPack);
+}
+
+// flush 직렬화 — 타이머/네비게이션/visibilitychange가 동시에 flush해도 storage 쓰기가 겹치지 않게 한다
+let flushChain: Promise<void> = Promise.resolve();
+
+/** 메모리 버퍼를 storage에 병합 */
+export function flushStats(): Promise<void> {
+  const run = flushChain.then(flushPending);
+  flushChain = run.catch(() => {});
+  return run;
+}
+
+async function flushPending(): Promise<void> {
+  if (buffer.totalHidden === 0 && buffer.totalShown === 0) return;
+  // 시작 시점에 버퍼를 넘겨받는다 — 이후 storage 왕복 중 기록은 새 버퍼에 쌓여 유실되지 않는다
+  const pending = buffer;
   buffer = emptyBuffer();
+  try {
+    // pending.date 기준으로 저장 — 자정 경계에서도 올바른 날짜에 귀속
+    const today = await getTodayStats(pending.date);
+    mergeInto(today, pending);
+    await saveDayStats(today);
+  } catch (error) {
+    // 일별 저장 실패 시 다음 flush에서 재시도하도록 버퍼로 되돌린다 (날짜는 기록 시점 유지)
+    mergeInto(pending, buffer);
+    buffer = pending;
+    logger.warn('Stats flush failed', { error: String(error) });
+    return;
+  }
+  // 일별 저장 이후 실패는 되돌리지 않는다 — 재시도하면 일별 통계가 이중 집계된다
+  if (pending.totalHidden > 0) {
+    await incrementTotal(pending.totalHidden).catch((error: unknown) => {
+      logger.warn('Stats total increment failed', { error: String(error) });
+    });
+  }
   if (onFlushCallback) {
-    const allTime = await getAllTimeTotal();
-    onFlushCallback(allTime);
+    try {
+      onFlushCallback(await getAllTimeTotal());
+    } catch (error) {
+      logger.warn('Stats milestone check failed', { error: String(error) });
+    }
   }
 }
 

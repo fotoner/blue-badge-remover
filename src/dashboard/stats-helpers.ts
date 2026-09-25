@@ -1,11 +1,13 @@
+import { t, type Language } from '@shared/i18n';
+
 export interface CategoryBar {
   name: string;
   count: number;
   percent: number;
 }
 
-export function formatStatCount(count: number): string {
-  return `${count}개`;
+export function formatStatCount(count: number, lang: Language = 'ko'): string {
+  return t('statCount', lang, { count: String(count) });
 }
 
 export function computeCategoryBars(

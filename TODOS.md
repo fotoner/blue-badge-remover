@@ -14,12 +14,13 @@
 - [x] Chrome Web Store: 완료
 - [x] Firefox AMO: 완료
 - [x] Edge Add-ons: 완료
-- [ ] GitHub Secrets에 Edge 키 등록 후 release.yml의 자동 제출 활성화
+- [x] Edge Publish API v1.1 키 등록 (2026-09-25, `EDGE_API_KEY`/`EDGE_CLIENT_ID`/`EDGE_PRODUCT_ID`) — 기존 v1.0 방식(`EDGE_CLIENT_SECRET`/`EDGE_ACCESS_TOKEN_URL`)은 2025-01 폐기되어 미사용
+- [ ] 릴리스 파이프라인 정비 — 스토어 제출이 순차 스텝이라 Firefox AMO 실패(10분 서버측 끊김) 시 Edge가 건너뛰어짐. 2026-09-24 기준 스토어 버전: Chrome 1.6.0 · AMO 1.4.1 · Edge 1.3.6
 
 ### 웹스토어 페이지 개선
-- [ ] 영문 설명 작성/개선
-- [ ] before/after 스크린샷 제작
-- [ ] Privacy Policy URL 등록 (docs/PRIVACY.md → GitHub Pages 또는 raw URL)
+- [x] 영문 설명 작성 — `docs/store/listing-en.md` (스토어 콘솔 반영은 수동)
+- [ ] before/after 스크린샷 제작 — `docs/store/screenshots.html`로 생성 (v1.6.0 작업 중 PNG는 삭제됨)
+- [ ] Privacy Policy URL 등록 — 현재 `listing-en.md`는 GitHub blob 링크 사용, Pages 승격 여부 결정
 
 ## 완료 (v1.3.6)
 
@@ -82,7 +83,40 @@
 ### ~~기본 필터 팩 제거~~
 - 번들 팩 삭제, 사용자 가져오기/내보내기로 관리
 
+## 완료 (v1.4.1 ~ v1.6.1)
+
+### ~~인용 트윗 오탐 (#35)~~ (v1.6.0)
+- 뱃지 판정을 작성자 영역으로 스코핑, 상세 배너도 동일 헬퍼 사용
+
+### ~~팔로우/화이트리스트 예외 신뢰성~~ (v1.6.0)
+- 화이트리스트 대소문자 정규화 + 마이그레이션, 리스트 타임라인 API 팔로우 감지, 인용/리포스트/본인 예외 강화
+
+### ~~성능·안정성~~ (v1.6.0)
+- follow-data 스톰 완화, fiber 스캔 배칭, 뒤로가기 스크롤 보정, 통계 중복 집계 수정
+
+### ~~화이트리스트 일괄 등록 UI 미배포~~ (v1.6.1)
+- v1.6.0 마크업이 빌드되지 않는 `src/` 사본에만 적용됨 → `entrypoints/`에 반영, 사본 삭제 + 가드 테스트
+
+### ~~dev 의존성 취약점~~ (v1.6.1)
+- `npm audit` 0건 (undici, adm-zip, vitest, postcss 등)
+
+### ~~잠재 버그 감사 8건~~ (v1.6.1)
+- 펼친 트윗 액션 버튼 잔존, 와일드카드 ReDoS, 설정 스냅샷 덮어쓰기, 통계 flush 유실·29일 보관, 팔로우 저장 큐 우회, 목록 가져오기 피드백/큐 우회, 대시보드 동기화 현황 미갱신
+
 ## 향후
+
+### 팔로우 감지 실환경 검증
+- [ ] 타임라인 GraphQL 응답의 `following` 플래그 실제 위치 확인 (`data-extractors.ts`가 3개 후보 경로를 관용적으로 검사 중) — 실계정 + debugMode로 리스트 타임라인 확인
+
+### 신뢰성 후속
+- [ ] 팔로우 캐시 쓰기를 background로 이전 — 현재 탭마다 content script 큐라 두 탭이 동시에 FOLLOW_CACHE를 쓰면 한쪽 추가가 유실될 수 있음 (화이트리스트는 background 큐로 해결됨)
+- [ ] MAIN→ISOLATED postMessage 발신자 인증 검토 — x.com 페이지 스크립트가 `BBR_PROFILE_DATA`를 위조하면 키워드 판정이 바뀔 수 있음 (페이지 스크립트 실행이 전제라 위험 수용 중)
+
+### 선택 개선
+- [ ] 국기 이모지 키워드 경계 매칭 — 현재 substring 매칭이라 `🇸🇮🇱🇻`(슬로베니아+라트비아)가 `🇮🇱`에 걸림. 🇰🇷·🇺🇸도 같은 한계 (`keyword-matcher.ts`)
+- [ ] 인용 작성자 추출을 링크 기반 우선으로 전환 (`extractQuoteAuthor`)
+- [ ] API 팔로우 감지 안정화 후 fiber 채널 강등
+- [ ] 기부 버튼
 
 ### 모바일 QA
 - [ ] Firefox Android 실기기 수동 QA (설정 저장, 팔로우 동기화, 필터링 동작)

@@ -29,19 +29,19 @@
 
     <!-- Section 1: Stats -->
     <section class="section" id="section-stats">
-      <h2>통계</h2>
+      <h2 data-i18n="statsTitle">통계</h2>
       <div class="hero-stat">
-        <span class="hero-number" id="hero-count">0개</span>
-        <span class="hero-subtitle">오늘 숨긴 파딱 트윗</span>
+        <span class="hero-number" id="hero-count">0</span>
+        <span class="hero-subtitle" data-i18n="todayHiddenLabel">오늘 숨긴 파딱 트윗</span>
         <div class="total-stat">
-          <span>지금까지 숨긴 총 파딱 트윗</span>
-          <span class="total-count" id="total-count">0개</span>
+          <span data-i18n="totalHiddenLabel">지금까지 숨긴 총 파딱 트윗</span>
+          <span class="total-count" id="total-count">0</span>
         </div>
       </div>
-      <button type="button" id="share-btn" class="btn-share">X에 공유하기</button>
+      <button type="button" id="share-btn" class="btn-share" data-i18n="shareOnX">X에 공유하기</button>
       <div id="category-bars" class="category-bars"></div>
-      <p id="stats-empty" class="empty-state" style="display:none">아직 통계가 없습니다. X를 사용하면 자동으로 수집됩니다.</p>
-      <button type="button" id="reset-stats-btn" class="btn-reset">통계 초기화</button>
+      <p id="stats-empty" class="empty-state" style="display:none" data-i18n="statsEmpty">아직 통계가 없습니다. X를 사용하면 자동으로 수집됩니다.</p>
+      <button type="button" id="reset-stats-btn" class="btn-reset" data-i18n="resetStats">통계 초기화</button>
     </section>
 
     <!-- Section 2: Filter Settings -->
@@ -101,7 +101,7 @@
 
     <!-- Section 3: Filter Settings (link) -->
     <section class="section" id="section-filter-link">
-      <h2>필터</h2>
+      <h2 data-i18n="filterTitle">필터</h2>
       <label class="toggle-row">
         <span data-i18n="keywordFilterBeta">키워드 필터</span>
         <input type="checkbox" id="keywordFilterEnabled">
@@ -142,10 +142,10 @@
       <label class="toggle-row"><span data-i18n="milestoneBannerLabel">마일스톤 알림</span><input type="checkbox" id="milestoneBannerEnabled"></label>
       <p class="hint" data-i18n="milestoneBannerHint">100개, 500개 등 목표 달성 시 타임라인 상단에 축하 배너를 표시합니다 (기본 꺼짐)</p>
       <label class="toggle-row">
-        <span>키워드 수집</span>
+        <span data-i18n="keywordCollector">키워드 수집</span>
         <input type="checkbox" id="keywordCollectorEnabled">
       </label>
-      <p class="hint">필터링되지 않은 파딱의 텍스트를 수집합니다</p>
+      <p class="hint" data-i18n="keywordCollectorDesc">필터링되지 않은 파딱의 텍스트를 수집합니다</p>
       <a href="https://forms.gle/F1hyx1uo8yaFE3Tt6" target="_blank" class="btn-feedback" data-i18n="feedback">피드백 보내기</a>
       <p class="credit">v<span id="ext-version"></span> &middot; made by <a href="https://x.com/fotoner_p" target="_blank" rel="noopener">@fotoner_p</a></p>
     </section>
