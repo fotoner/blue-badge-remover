@@ -1,0 +1,35 @@
+{
+  "brand": "파딱 제거기",
+  "brandSub": "Blue Badge Remover",
+  "badge": "Chrome · Firefox · Edge",
+  "title": "v1.6.2 업데이트",
+  "subtitle": "v1.6.1 변경 사항까지 한 번에 정리했어요",
+  "items": [
+    {
+      "icon": "user-plus",
+      "kind": "new",
+      "title": "화이트리스트 한 번에",
+      "desc": "여러 아이디를 붙여넣고 Ctrl/⌘+Enter로 추가해요"
+    },
+    {
+      "icon": "fold-vertical",
+      "kind": "fix",
+      "title": "빈 공간 문제 해결",
+      "desc": "뒤로가기 후 숨긴 게시물 자리에 남던 큰 여백을 없앴어요"
+    },
+    {
+      "icon": "settings",
+      "kind": "fix",
+      "title": "설정이 그대로 유지",
+      "desc": "대시보드·팝업을 열어둬도 바꾼 설정이 되돌아가지 않아요"
+    },
+    {
+      "icon": "zap",
+      "kind": "fix",
+      "title": "더 가볍고 안정적으로",
+      "desc": "탭 멈춤, 숨김 통계·팔로우 목록 누락을 고쳤어요"
+    }
+  ],
+  "note": "스토어 심사가 끝나는 대로 자동으로 업데이트됩니다",
+  "url": "blue-badge.fotone.moe"
+}

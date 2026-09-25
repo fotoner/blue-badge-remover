@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Update Card</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --bg: #000000;
+    --card: #16181c;
+    --text: #e7e9ea;
+    --sub: #8b9096;
+    --dim: #71767b;
+    --blue: #1d9bf0;
+    --green: #00ba7c;
+    --border: #2f3336;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { background: var(--bg); }
+  body {
+    font-family: Pretendard, "Noto Sans CJK KR", "Apple SD Gothic Neo", system-ui, sans-serif;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    word-break: keep-all;
+  }
+  .card {
+    position: relative;
+    width: 1600px;
+    height: 900px;
+    padding: 56px 88px 48px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    top: -360px;
+    right: -260px;
+    width: 1000px;
+    height: 1000px;
+    background: radial-gradient(circle, rgba(29, 155, 240, 0.16), transparent 62%);
+    pointer-events: none;
+  }
+  .card > * { position: relative; }
+  header { display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 16px; font-size: 34px; font-weight: 700; }
+  .brand img { width: 56px; height: 56px; }
+  .brand small { font-size: 26px; font-weight: 500; color: var(--dim); }
+  .badge {
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--blue);
+    padding: 10px 26px;
+    border: 1.5px solid rgba(29, 155, 240, 0.45);
+    border-radius: 999px;
+    background: rgba(29, 155, 240, 0.08);
+  }
+  h1 { margin-top: 36px; font-size: 96px; line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; }
+  .subtitle { margin-top: 12px; font-size: 38px; font-weight: 500; color: var(--sub); }
+  .grid {
+    flex: 1;
+    min-height: 0;
+    margin-top: 36px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: 1fr;
+    gap: 20px;
+  }
+  .item {
+    position: relative;
+    display: flex;
+    gap: 20px;
+    padding: 26px 32px;
+    overflow: hidden;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+  }
+  .icon {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    color: var(--blue);
+    background: rgba(29, 155, 240, 0.12);
+  }
+  .icon svg {
+    width: 30px;
+    height: 30px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .item h2 { padding-right: 120px; font-size: 42px; font-weight: 700; line-height: 1.25; }
+  .item p { margin-top: 8px; font-size: 30px; line-height: 1.4; color: var(--sub); }
+  .kind { position: absolute; top: 28px; right: 28px; font-size: 22px; font-weight: 700; padding: 5px 14px; border-radius: 999px; }
+  .kind.new { color: var(--blue); background: rgba(29, 155, 240, 0.14); }
+  .kind.fix { color: var(--green); background: rgba(0, 186, 124, 0.14); }
+  footer { margin-top: 28px; display: flex; align-items: center; justify-content: space-between; font-size: 28px; color: var(--dim); }
+  footer strong { font-weight: 600; color: var(--text); }
+</style>
+</head>
+<body>
+<main class="card" data-fit="card">
+  <header>
+    <div class="brand">
+      <img src="../../public/icons/icon.svg" alt="">
+      <span data-slot="brand"></span>
+      <small data-slot="brandSub"></small>
+    </div>
+    <div class="badge" data-slot="badge"></div>
+  </header>
+  <h1 data-slot="title"></h1>
+  <p class="subtitle" data-slot="subtitle"></p>
+  <section class="grid" data-slot="items"></section>
+  <footer>
+    <span data-slot="note"></span>
+    <strong data-slot="url"></strong>
+  </footer>
+</main>
+<script>
+  // lucide 아이콘 (https://lucide.dev, ISC) — 카드 JSON의 items[].icon 값
+  const ICONS = {
+    "user-plus": '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>',
+    "fold-vertical": '<path d="M12 22v-6"/><path d="M12 8V2"/><path d="M4 12H2"/><path d="M10 12H8"/><path d="M16 12h-2"/><path d="M22 12h-2"/><path d="m15 19-3-3-3 3"/><path d="m15 5-3 3-3-3"/>',
+    "settings": '<path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>',
+    "zap": '<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
+    "languages": '<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
+    "shield-check": '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+    "filter": '<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
+    "eye-off": '<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/>',
+  };
+  const KIND_LABELS = { new: "새 기능", fix: "수정" };
+
+  // render.mjs가 window.__CARD__를 넣는다. 브라우저로 직접 열면 아래 예시로 미리보기.
+  const card = window.__CARD__ ?? {
+    brand: "파딱 제거기",
+    brandSub: "Blue Badge Remover",
+    badge: "Chrome · Firefox · Edge",
+    title: "v0.0.0 업데이트",
+    subtitle: "카드 JSON을 render.mjs로 넘기면 이 자리에 들어갑니다",
+    items: [
+      { icon: "user-plus", kind: "new", title: "새 기능 제목", desc: "한두 줄 설명" },
+      { icon: "zap", kind: "fix", title: "수정 제목", desc: "한두 줄 설명" },
+    ],
+    note: "스토어 심사가 끝나는 대로 자동으로 업데이트됩니다",
+    url: "blue-badge.fotone.moe",
+  };
+
+  for (const el of document.querySelectorAll("[data-slot]")) {
+    const value = card[el.dataset.slot];
+    if (typeof value === "string") el.textContent = value;
+  }
+
+  const grid = document.querySelector('[data-slot="items"]');
+  for (const item of card.items) {
+    const el = document.createElement("article");
+    el.className = "item";
+    el.dataset.fit = `item: ${item.title}`;
+    el.innerHTML = `<div class="icon"><svg viewBox="0 0 24 24">${ICONS[item.icon] ?? ""}</svg></div>
+      <div><h2></h2><p></p></div><span class="kind"></span>`;
+    el.querySelector("h2").textContent = item.title;
+    const kind = el.querySelector(".kind");
+    kind.textContent = KIND_LABELS[item.kind] ?? "";
+    kind.classList.add(item.kind);
+    if (!KIND_LABELS[item.kind]) kind.remove();
+    el.querySelector("p").textContent = item.desc;
+    grid.append(el);
+  }
+</script>
+</body>
+</html>
