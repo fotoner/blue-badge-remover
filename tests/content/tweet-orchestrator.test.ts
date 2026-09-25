@@ -24,6 +24,7 @@ const mockShowExpandedTweet = vi.fn();
 const mockShowTweet = vi.fn();
 const mockHideQuoteBlock = vi.fn();
 const mockShowQuoteBlock = vi.fn();
+const mockReleasePreservedHeights = vi.fn();
 vi.mock('@features/content-filter', () => ({
   shouldHideTweet: vi.fn().mockReturnValue(true),
   shouldHideRetweet: vi.fn().mockReturnValue(true),
@@ -33,6 +34,8 @@ vi.mock('@features/content-filter', () => ({
   hideQuoteBlock: (...args: unknown[]) => mockHideQuoteBlock(...args),
   showTweet: (...args: unknown[]) => mockShowTweet(...args),
   showQuoteBlock: (...args: unknown[]) => mockShowQuoteBlock(...args),
+  releasePreservedHeights: (...args: unknown[]) => mockReleasePreservedHeights(...args),
+  PRESERVED_HEIGHT_ATTR: 'data-bbr-preserved-height',
   setTweetHiderLanguage: vi.fn(),
   FeedObserver: class { observe() {} disconnect() {} },
 }));
@@ -498,6 +501,30 @@ describe('applyCurrentUserFallback', () => {
   });
 });
 
+
+// #43: 창 종료 타이머를 놓쳐도 보존 높이가 남지 않게 하는 안전장치
+describe('processTweet — 보존 높이 안전장치', () => {
+  it('복원 창 밖에서 보존 표시가 남은 트윗을 만나면 보존 높이를 해제한다', () => {
+    const tweet = createTweetEl('someone');
+    tweet.setAttribute('data-bbr-original', 'hidden');
+    tweet.setAttribute('data-bbr-preserved-height', '662');
+    doc.querySelector('main')!.appendChild(tweet);
+
+    processTweet(tweet);
+
+    expect(mockReleasePreservedHeights).toHaveBeenCalledTimes(1);
+  });
+
+  it('보존 표시가 없으면 해제하지 않는다', () => {
+    const tweet = createTweetEl('someone');
+    doc.querySelector('main')!.appendChild(tweet);
+    mockReleasePreservedHeights.mockClear();
+
+    processTweet(tweet);
+
+    expect(mockReleasePreservedHeights).not.toHaveBeenCalled();
+  });
+});
 
 describe('restoreHiddenTweets', () => {
   it('data-bbr-original 속성이 있는 트윗을 복원한다', () => {
