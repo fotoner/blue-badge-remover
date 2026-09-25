@@ -5,7 +5,8 @@
 set -euo pipefail
 
 TAG="${1:?태그 이름이 필요합니다 (예: v1.6.1)}"
-NAME="blue-badge-remover"
+# wxt의 {{name}} 템플릿과 같은 값 (package.json name)
+NAME="$(node -p "require('./package.json').name")"
 VERSION="$(node -p "require('./package.json').version")"
 OUT_DIR="release"
 

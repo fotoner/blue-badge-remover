@@ -108,4 +108,15 @@ jobs:
       store: ${{ matrix.store }}
       tag: ${{ github.ref_name }}
       dry-run: false
-    secrets: inherit
+    # 스토어별로 해당 시크릿만 전달 (secrets: inherit는 모든 저장소 시크릿을 넘긴다)
+    secrets:
+      CHROME_EXTENSION_ID: ${{ matrix.store == 'chrome' && secrets.CHROME_EXTENSION_ID || '' }}
+      CHROME_CLIENT_ID: ${{ matrix.store == 'chrome' && secrets.CHROME_CLIENT_ID || '' }}
+      CHROME_CLIENT_SECRET: ${{ matrix.store == 'chrome' && secrets.CHROME_CLIENT_SECRET || '' }}
+      CHROME_REFRESH_TOKEN: ${{ matrix.store == 'chrome' && secrets.CHROME_REFRESH_TOKEN || '' }}
+      FIREFOX_EXTENSION_ID: ${{ matrix.store == 'firefox' && secrets.FIREFOX_EXTENSION_ID || '' }}
+      FIREFOX_JWT_ISSUER: ${{ matrix.store == 'firefox' && secrets.FIREFOX_JWT_ISSUER || '' }}
+      FIREFOX_JWT_SECRET: ${{ matrix.store == 'firefox' && secrets.FIREFOX_JWT_SECRET || '' }}
+      EDGE_PRODUCT_ID: ${{ matrix.store == 'edge' && secrets.EDGE_PRODUCT_ID || '' }}
+      EDGE_CLIENT_ID: ${{ matrix.store == 'edge' && secrets.EDGE_CLIENT_ID || '' }}
+      EDGE_API_KEY: ${{ matrix.store == 'edge' && secrets.EDGE_API_KEY || '' }}

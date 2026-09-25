@@ -2,6 +2,8 @@
 .env
 .env.local
 .env.*.local
+# wxt submit init이 만드는 스토어 자격증명 파일
+.env.submit*
 
 # Dependencies
 node_modules/

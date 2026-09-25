@@ -54,6 +54,7 @@ run_amo_submit() {
 # AMO는 POST /versions/ 응답 전에 10분에서 연결을 끊은 적이 있다(v1.4.1, v1.6.0).
 # 이때 서버에서는 버전이 생성됐을 수 있으므로(v1.4.1이 그랬음), 기다렸다가 1회 재시도하고
 # "이미 존재함(409)"이면 첫 시도가 처리된 것으로 보고 성공 처리한다.
+# 재시도는 업로드·검증부터 다시 하므로 최악의 경우 약 33분(15분 + 3분 + 15분)이 걸린다.
 submit_firefox() {
   local sources="release/blue-badge-remover-firefox-sources-${TAG_NAME}.zip"
   local args=(--firefox-zip "$ZIP")

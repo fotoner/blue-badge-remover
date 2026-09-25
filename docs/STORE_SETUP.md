@@ -202,6 +202,7 @@ EDGE_API_KEY=
 ## 검증 (태그 전 인증 점검)
 
 `-test` 태그는 스토어 제출을 건너뛰므로 인증 확인이 되지 않습니다. 대신 **Submit to Store**를 dry-run으로 실행합니다.
+(`workflow_dispatch`라 `submit-store.yml`이 기본 브랜치(dev)에 있어야 실행됩니다.)
 기존 Release의 ZIP으로 인증만 확인하고 업로드/제출은 하지 않습니다.
 
 ```bash
@@ -230,4 +231,5 @@ gh workflow run submit-store.yml -R fotoner/blue-badge-remover -f store=firefox 
 
 - AMO가 `POST /versions/` 응답 전에 10분에서 연결을 끊는 경우가 있습니다(v1.4.1, v1.6.0). 서버에서는 버전이 생성됐을 수 있어(v1.4.1이 그랬음), 제출 스크립트가 3분 뒤 1회 재시도하고 `409 / already exists`면 성공으로 처리합니다
 - 재제출 전에 개발자 허브(Manage Status & Versions)에서 해당 버전이 이미 있는지 확인하세요
+- 재시도는 업로드·검증부터 다시 하므로 Firefox 잡은 최악의 경우 약 33분 걸립니다
 - Firefox 번들은 minify되어 있어 소스 ZIP(`blue-badge-remover-firefox-sources-<tag>.zip`)을 함께 제출합니다

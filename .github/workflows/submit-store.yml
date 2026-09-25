@@ -17,6 +17,28 @@ on:
       dry-run:
         type: boolean
         default: false
+    # secrets: inherit 대신 명시 전달 — 호출부(release.yml)가 스토어별로 해당 시크릿만 넘긴다
+    secrets:
+      CHROME_EXTENSION_ID:
+        required: false
+      CHROME_CLIENT_ID:
+        required: false
+      CHROME_CLIENT_SECRET:
+        required: false
+      CHROME_REFRESH_TOKEN:
+        required: false
+      FIREFOX_EXTENSION_ID:
+        required: false
+      FIREFOX_JWT_ISSUER:
+        required: false
+      FIREFOX_JWT_SECRET:
+        required: false
+      EDGE_PRODUCT_ID:
+        required: false
+      EDGE_CLIENT_ID:
+        required: false
+      EDGE_API_KEY:
+        required: false
   workflow_dispatch:
     inputs:
       store:
@@ -60,6 +82,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           STORE: ${{ inputs.store }}
           TAG_NAME: ${{ inputs.tag }}
+        # firefox 패턴은 본체 ZIP과 -sources- ZIP을 함께 매치한다 (store-submit.sh가 둘 다 사용)
         run: |
           mkdir -p release
           gh release download "$TAG_NAME" --dir release --pattern "blue-badge-remover-${STORE}-*${TAG_NAME}.zip"
