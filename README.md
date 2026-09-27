@@ -1,157 +1,71 @@
 # Blue Badge Remover
 
-<p align="center">
-  <img src="public/icons/icon.svg" alt="Blue Badge Remover" width="96">
-</p>
+X(트위터)에서 유료 파란 뱃지 계정의 글을 숨기는 브라우저 확장 프로그램입니다.
+팔로우 중인 계정과 화이트리스트에 등록한 계정은 예외로 둡니다.
 
-<p align="center">
-  <strong>X(Twitter)에서 수익성 파란 뱃지(Premium) 계정을 숨기는 브라우저 확장</strong><br>
-  팔로우 중인 계정과 화이트리스트는 예외 처리됩니다
-</p>
+[Chrome 웹 스토어](https://chromewebstore.google.com/detail/blue-badge-remover/cjhmbgfnddpcdfmoicfcocekmainhhdm) · [Firefox 부가 기능](https://addons.mozilla.org/ko/firefox/addon/blue-badge-remover/) · [릴리스](https://github.com/fotoner/blue-badge-remover/releases)
 
-<p align="center">
-  <a href="https://chromewebstore.google.com/detail/cjhmbgfnddpcdfmoicfcocekmainhhdm?utm_source=item-share-cb"><img alt="Chrome Web Store" src="https://img.shields.io/badge/Chrome_Web_Store-v1.3.6-4285F4?logo=googlechrome&logoColor=white"></a>
-  <img alt="Manifest V3" src="https://img.shields.io/badge/Manifest-V3-blue">
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178c6">
-  <img alt="License" src="https://img.shields.io/badge/License-MIT-green">
-  <a href="https://x.com/Fotoner_P/status/2037977299191251444"><img alt="Featured on X" src="https://img.shields.io/badge/Featured_on_X-10K+_retweets-000000?logo=x&logoColor=white"></a>
-</p>
+## 화면
 
-## Screenshots
+<img src="docs/img/screen.png" alt="필터링 토글, 숨김 통계와 설정 열기 버튼이 있는 팝업" width="340">
 
-<p align="center">
-  <img src="docs/img/screen.png" alt="Popup UI" width="340">
-</p>
+<details>
+<summary>설정 화면 보기</summary>
 
-## Features
+<img src="docs/img/dashboard.png" alt="통계와 필터링 범위, 숨김 방식, 리트윗·인용 설정을 보여주는 대시보드 상단" width="600">
 
-| 기능 | 설명 |
-|------|------|
-| **파딱 감지** | SVG 뱃지 구조 분석으로 판별 (금딱/기관 계정 제외) |
-| **숨김 범위** | 타임라인, 트윗 상세(답글), 검색 결과, 북마크 (각각 토글) |
-| **숨김 방식** | 완전 제거 또는 접힌 상태로 표시 (방패 아이콘 + 클릭하여 펼치기) |
-| **리트윗 필터** | 팔로우가 파딱 트윗을 리트윗한 경우 숨김 (토글) |
-| **인용 필터** | 필터링 안 함 / 인용 부분만 숨기기 / 트윗 전체 숨기기 |
-| **키워드 필터** | 특정 키워드를 포함하는 파딱만 선별 숨김 (AdGuard식 문법) |
-| **카테고리 필터** | 내장 키워드를 카테고리별(정치, 경제, 욕설 등) 개별 토글 |
-| **팔로우 예외** | 타임라인 fiber/API 자동 감지 + Following 페이지 수동 동기화, 계정별 캐시 |
-| **화이트리스트** | 별도 관리 페이지에서 @아이디 추가, 프로필 배너에서 원클릭 추가 |
-| **계정 전환** | 계정별 팔로우 캐시 자동 전환, 즉시 재필터링 |
-| **다국어** | 한국어 / English / 日本語 |
-| **멀티 브라우저** | Chrome + Firefox + Edge (WXT 기반 빌드) |
-| **모바일 지원** | Firefox Android (설정 바로가기, 탭 내 페이지 이동) |
-| **필터 팩** | 커스텀 키워드 필터를 팩으로 내보내기/가져오기 |
-| **통계 대시보드** | 오늘/전체 숨김 수, 카테고리별 통계, X 공유 |
-| **디버그 모드** | 트윗별 처리 라벨 + 콘솔 로그 |
+</details>
 
-## Install
+현재 빌드의 한국어 화면입니다. 통계와 팔로우 수는 예시 데이터입니다.
 
-### Chrome Web Store
+## 주요 기능
 
-[**Chrome Web Store에서 설치**](https://chromewebstore.google.com/detail/cjhmbgfnddpcdfmoicfcocekmainhhdm?utm_source=item-share-cb)
+- **범위와 방식 선택**: 타임라인·답글·검색·북마크·리스트에서 글을 숨기거나 접어서 표시합니다. 리트윗과 인용 처리도 설정할 수 있습니다.
+- **예외 계정 유지**: 본인, 팔로우 계정, 화이트리스트 계정의 글과 리트윗을 유지합니다. 금색·회색 인증 뱃지는 숨김 대상에서 제외합니다.
+- **선택 필터**: 키워드 필터를 켜면 내장 카테고리·커스텀 규칙·필터 팩에 맞는 파란 뱃지 계정만 숨깁니다. 별도로 [신규 고확산 계정 필터](docs/AGGRESSOR_FILTER.md)도 제공합니다.
+- **보호 키워드**: 아이디·이름·프로필 소개에 지정한 단어가 있는 계정을 예외로 둡니다.
+- **목록 관리**: 화이트리스트 일괄 추가, 필터 팩 가져오기·내보내기, 화이트리스트·커스텀 필터·보호 키워드의 JSON 백업을 지원합니다.
+- **통계와 언어**: 오늘·전체 숨김 수와 키워드 카테고리별 통계를 확인할 수 있습니다. 한국어·영어·일본어를 지원합니다.
 
-### Firefox / Edge
+## 설치와 사용
 
-[GitHub Releases](https://github.com/fotoner/blue-badge-remover/releases)에서 ZIP 다운로드 후 수동 설치.
-Firefox AMO 등록 완료. Edge는 준비 중.
+Chrome은 [웹 스토어](https://chromewebstore.google.com/detail/blue-badge-remover/cjhmbgfnddpcdfmoicfcocekmainhhdm), Firefox는 [부가 기능 페이지](https://addons.mozilla.org/ko/firefox/addon/blue-badge-remover/)에서 설치합니다.
+Edge는 [릴리스](https://github.com/fotoner/blue-badge-remover/releases)의 Edge ZIP을 압축 해제한 뒤, `edge://extensions`에서 **개발자 모드 → 압축 해제된 확장 로드**로 폴더를 선택합니다.
 
-### 개발 빌드
+1. X에 로그인하고, 이미 열려 있던 페이지는 새로고침합니다.
+2. 확장 아이콘을 눌러 필터링을 켜거나 끕니다. 세부 옵션은 **설정 열기**에서 변경합니다.
+3. 팔로우 정보는 사용 중 자동으로 감지합니다. 누락된 계정이 있다면 설정의 **팔로잉 페이지 열기**를 누르고 스크롤하여 수집합니다.
+4. 예외 계정은 **화이트리스트 관리**, 키워드·보호 키워드·목록 백업은 **고급 필터 설정**에서 관리합니다.
+
+기본값은 타임라인·답글·검색에서 완전 숨김입니다. 북마크·리스트·인용·선택 필터는 기본적으로 꺼져 있습니다.
+
+## 개발
+
+TypeScript, WXT, Vitest, Playwright를 사용합니다. Node.js 22와 npm 기준입니다.
 
 ```bash
-npm install
-npm run build          # Chrome
-npm run build:firefox  # Firefox
-npm run build:edge     # Edge
-npm test               # 330 tests
+npm ci
+npm run dev            # 개발 서버
+npm run build          # Chrome → dist/chrome-mv3/
+npm run build:firefox  # Firefox → dist/firefox-mv2/
+npm run build:edge     # Edge → dist/edge-mv3/
+npm test
+npx tsc --noEmit --skipLibCheck
 ```
 
-1. `chrome://extensions` 접속 (Edge: `edge://extensions`)
-2. **개발자 모드** 활성화
-3. **압축 해제된 확장 프로그램을 로드합니다** 클릭
-4. `dist/chrome-mv3/` 또는 `dist/firefox-mv2/` 또는 `dist/edge-mv3/` 폴더 선택
+- **Chrome / Edge**: `chrome://extensions` 또는 `edge://extensions`에서 개발자 모드를 켜고, 해당 빌드 폴더를 **압축 해제된 확장 로드**로 선택합니다.
+- **Firefox 개발 빌드**: `about:debugging#/runtime/this-firefox` → **임시 부가 기능 로드**에서 `dist/firefox-mv2/manifest.json`을 선택합니다. 임시 설치는 브라우저를 종료하면 해제됩니다.
 
-## Usage
+코드 구조는 [아키텍처](docs/ARCHITECTURE.md), 작업 규칙은 [컨벤션](docs/CONVENTIONS.md)을 참고하세요.
 
-1. **x.com 또는 twitter.com에 로그인**
-2. 익스텐션 아이콘 클릭 -> Popup에서 설정
-3. **팔로우 동기화**: 타임라인에서 자동 감지 + "팔로잉 페이지 열기"로 전체 수집
-4. **화이트리스트**: 별도 관리 페이지에서 @아이디 추가, 또는 파딱 프로필 배너에서 바로 추가
-5. **키워드 필터**: 팝업에서 키워드 필터 활성화 -> 고급 필터 설정에서 카테고리별 토글/커스텀 규칙 편집
+## 데이터 처리
 
-### 숨김 동작
+X 페이지와 브라우저가 수신한 API 응답에서 뱃지·프로필·팔로우 정보를 읽어 필터링합니다.
+설정·목록·통계는 브라우저에 저장하며, 인증 토큰을 저장하거나 X에 글·좋아요·팔로우 요청을 보내지 않습니다.
+설정 화면의 웹 폰트 로딩 등 외부 리소스 요청은 발생할 수 있습니다.
 
-| 상황 | 동작 |
-|------|------|
-| 파딱의 직접 트윗 | 숨김 (팔로우/화이트리스트 제외) |
-| 팔로우가 파딱을 리트윗 | retweetFilter ON이면 숨김 |
-| 누군가 파딱을 인용 | quoteMode 설정에 따라 처리 |
-| 팔로우의 직접 트윗 | 파딱이어도 표시 |
-| 북마크 페이지 | 기본적으로 표시 (설정에서 변경 가능) |
-| 본인 트윗 | 본인이 파딱이어도 항상 표시 |
+권한은 `storage`, `unlimitedStorage`와 X·Twitter 및 API 도메인 접근입니다. 자세한 데이터 처리 내용은 [개인정보 처리방침](docs/PRIVACY.md)을 참고하세요.
 
-## Tech Stack
+## 라이선스와 문의
 
-- **TypeScript** (strict mode)
-- **Chrome Extension** Manifest V3
-- **WXT** (Next-gen Web Extension Framework, Chrome + Firefox + Edge)
-- **Vitest** (330 tests) + **Playwright** (E2E)
-
-## Project Structure
-
-```
-entrypoints/                  # WXT 진입점
-├── background.ts             # Service Worker
-├── content.ts                # Content Script (ISOLATED world)
-├── injected.content.ts       # fetch/XHR 인터셉터 (MAIN world)
-├── popup/                    # Popup UI
-├── dashboard/                # Dashboard (설정 + 통계)
-├── options/                  # 고급 필터 설정
-├── whitelist/                # 화이트리스트 관리
-└── collector/                # 키워드 수집 분석
-
-src/
-├── content/                  # Content Script 로직 (8개 모듈)
-├── injected/                 # MAIN world 스크립트
-├── features/
-│   ├── badge-detection/      # 뱃지 감지 (SVG 구조 분석)
-│   ├── content-filter/       # 트윗 필터링 (Observer + Hider)
-│   ├── keyword-filter/       # 키워드 필터 (파서 + 매처 + 카테고리)
-│   ├── keyword-collector/    # 키워드 수집 (토크나이저 + 통계)
-│   ├── filter-pack/          # 필터 팩 관리 (스토리지)
-│   ├── stats/                # 숨김 통계 수집/저장
-│   ├── follow-list/          # 팔로우 동기화
-│   └── settings/             # Storage 래퍼 (wxt/browser)
-├── shared/
-│   ├── types/                # Settings, BadgeInfo, FilterRule
-│   ├── constants/            # 기본값, 스토리지 키
-│   ├── utils/                # 구조화 로거
-│   └── i18n.ts               # 다국어 번역 (ko/en/ja)
-├── popup/                    # Popup 로직
-├── options/                  # Options 로직
-├── whitelist/                # 화이트리스트 로직
-└── collector/                # 수집기 로직
-
-public/
-├── icons/                    # 익스텐션 아이콘
-└── _locales/                 # Chrome i18n (ko, en, ja)
-```
-
-## Privacy
-
-- 수집하는 데이터: 없음
-- 외부 서버 통신: 없음 (모든 처리가 로컬)
-- 인증 토큰 저장: 안 함
-- 권한: `storage` + `x.com`/`twitter.com` host permission만 사용
-- 상세: [docs/PRIVACY.md](docs/PRIVACY.md)
-
-## Disclaimer
-
-> This extension modifies the user's local browser display only. It does not access, modify, or interfere with X's servers or API.
-
-## License
-
-[MIT](LICENSE)
-
-## Author
-
-[@fotoner_p](https://x.com/fotoner_p)
+[MIT](LICENSE) · [문제 제보](https://github.com/fotoner/blue-badge-remover/issues) · [@fotoner_p](https://x.com/fotoner_p)
