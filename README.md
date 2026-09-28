@@ -1,22 +1,45 @@
-# Blue Badge Remover
+<h1 align="center">Blue Badge Remover</h1>
 
-X(트위터)에서 유료 파란 뱃지 계정의 글을 숨기는 브라우저 확장 프로그램입니다.
-팔로우 중인 계정과 화이트리스트에 등록한 계정은 예외로 둡니다.
+<p align="center">
+  <img src="public/icons/icon.svg" alt="Blue Badge Remover" width="96">
+</p>
 
-[Chrome 웹 스토어](https://chromewebstore.google.com/detail/blue-badge-remover/cjhmbgfnddpcdfmoicfcocekmainhhdm) · [Firefox 부가 기능](https://addons.mozilla.org/ko/firefox/addon/blue-badge-remover/) · [릴리스](https://github.com/fotoner/blue-badge-remover/releases)
+<p align="center">
+  <strong>X(트위터)에서 유료 파란 뱃지 계정의 글을 숨기는 브라우저 확장</strong><br>
+  팔로우 중인 계정과 화이트리스트에 등록한 계정은 예외로 둡니다.
+</p>
+
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/blue-badge-remover/cjhmbgfnddpcdfmoicfcocekmainhhdm"><img alt="Chrome Web Store에서 설치" src="https://img.shields.io/badge/Chrome_Web_Store-설치-4285F4?logo=googlechrome&amp;logoColor=white"></a>
+  <a href="https://addons.mozilla.org/ko/firefox/addon/blue-badge-remover/"><img alt="Firefox 부가 기능에서 설치" src="https://img.shields.io/badge/Firefox-설치-FF7139?logo=firefoxbrowser&amp;logoColor=white"></a>
+  <img alt="Chrome·Edge Manifest V3" src="https://img.shields.io/badge/Manifest-V3-blue">
+  <img alt="TypeScript strict" src="https://img.shields.io/badge/TypeScript-strict-3178c6">
+  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/License-MIT-green"></a>
+  <a href="https://x.com/Fotoner_P/status/2037977299191251444"><img alt="X 소개 글" src="https://img.shields.io/badge/Featured_on-X-000000?logo=x&amp;logoColor=white"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/fotoner/blue-badge-remover/releases">릴리스 다운로드</a>
+</p>
 
 ## 화면
 
-<img src="docs/img/screen.png" alt="필터링 토글, 숨김 통계와 설정 열기 버튼이 있는 팝업" width="340">
+<p align="center">
+  <img src="docs/img/screen.png" alt="필터링 토글, 숨김 통계와 설정 열기 버튼이 있는 팝업" width="340">
+</p>
 
 <details>
 <summary>설정 화면 보기</summary>
 
-<img src="docs/img/dashboard.png" alt="통계와 필터링 범위, 숨김 방식, 리트윗·인용 설정을 보여주는 대시보드 상단" width="600">
+<p align="center">
+  <img src="docs/img/dashboard.png" alt="통계와 필터링 범위, 숨김 방식, 리트윗·인용 설정을 보여주는 대시보드 상단" width="600">
+</p>
 
 </details>
 
-현재 빌드의 한국어 화면입니다. 통계와 팔로우 수는 예시 데이터입니다.
+<p align="center">
+  <sub>현재 빌드의 한국어 화면입니다. 통계와 팔로우 수는 예시 데이터입니다.</sub>
+</p>
 
 ## 주요 기능
 
