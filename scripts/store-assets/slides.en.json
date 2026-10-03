@@ -43,7 +43,17 @@
       }
     },
     {
-      "id": "02-settings",
+      "id": "02-privacy",
+      "label": "Privacy",
+      "title": "Runs entirely\nin your browser",
+      "desc": "No server, no analytics, no tokens.",
+      "visual": {
+        "src": "popup.png",
+        "scale": 1.85
+      }
+    },
+    {
+      "id": "03-settings",
       "label": "Settings",
       "title": "Choose where\nto filter",
       "desc": "Timeline, replies, search, bookmarks, and lists.",
@@ -53,7 +63,7 @@
       }
     },
     {
-      "id": "03-exceptions",
+      "id": "04-exceptions",
       "label": "Exceptions",
       "title": "Keep the people\nyou follow",
       "desc": "Follows are detected as you browse. Add anyone else to the whitelist.",
@@ -63,23 +73,13 @@
       }
     },
     {
-      "id": "04-keywords",
+      "id": "05-keywords",
       "label": "Keyword filter",
       "title": "Hide only what\nmatches your rules",
       "desc": "Wildcards and per-account exceptions.",
       "visual": {
         "src": "options-custom.png",
         "scale": 1.96
-      }
-    },
-    {
-      "id": "05-privacy",
-      "label": "Privacy",
-      "title": "Runs entirely\nin your browser",
-      "desc": "No server, no analytics, no tokens.",
-      "visual": {
-        "src": "popup.png",
-        "scale": 1.85
       }
     }
   ],

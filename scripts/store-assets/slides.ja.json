@@ -43,7 +43,17 @@
       }
     },
     {
-      "id": "02-settings",
+      "id": "02-privacy",
+      "label": "プライバシー",
+      "title": "すべての処理は\nブラウザの中で",
+      "desc": "外部サーバー・分析ツール・トークンなし",
+      "visual": {
+        "src": "popup.png",
+        "scale": 1.85
+      }
+    },
+    {
+      "id": "03-settings",
       "label": "設定",
       "title": "どこで隠すか\n選べます",
       "desc": "タイムライン・リプライ・検索・ブックマーク・リスト",
@@ -53,7 +63,7 @@
       }
     },
     {
-      "id": "03-exceptions",
+      "id": "04-exceptions",
       "label": "例外",
       "title": "フォロー中は\nそのまま表示",
       "desc": "フォローは自動で記憶。\nホワイトリストで追加も。",
@@ -63,23 +73,13 @@
       }
     },
     {
-      "id": "04-keywords",
+      "id": "05-keywords",
       "label": "キーワードフィルター",
       "title": "ルールに合う\n投稿だけ非表示",
       "desc": "ワイルドカードとアカウント単位の除外に対応。",
       "visual": {
         "src": "options-custom.png",
         "scale": 1.96
-      }
-    },
-    {
-      "id": "05-privacy",
-      "label": "プライバシー",
-      "title": "すべての処理は\nブラウザの中で",
-      "desc": "外部サーバー・分析ツール・トークンなし",
-      "visual": {
-        "src": "popup.png",
-        "scale": 1.85
       }
     }
   ],

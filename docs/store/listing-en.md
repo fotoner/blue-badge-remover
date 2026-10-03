@@ -40,10 +40,10 @@ Generate with `npm run store-assets` (see `scripts/store-assets/README.md`), the
 | Slot | File | Size |
 |------|------|------|
 | Screenshot 1 | `01-timeline.png` | 1280×800 |
-| Screenshot 2 | `02-settings.png` | 1280×800 |
-| Screenshot 3 | `03-exceptions.png` | 1280×800 |
-| Screenshot 4 | `04-keywords.png` | 1280×800 |
-| Screenshot 5 | `05-privacy.png` | 1280×800 |
+| Screenshot 2 | `02-privacy.png` | 1280×800 |
+| Screenshot 3 | `03-settings.png` | 1280×800 |
+| Screenshot 4 | `04-exceptions.png` | 1280×800 |
+| Screenshot 5 | `05-keywords.png` | 1280×800 |
 | Small promo tile (required) | `promo-small-440x280.png` | 440×280 |
 | Marquee promo tile (optional) | `promo-marquee-1400x560.png` | 1400×560 |
 
