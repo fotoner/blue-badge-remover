@@ -1,17 +1,33 @@
+/* docs/DESIGN.md 토큰 — 옵션 페이지와 같은 규칙 (border가 있으면 radius 0) */
+:root {
+  --bg: #0E1418;
+  --surface-1: #131B21;
+  --surface-2: #18232B;
+  --text-primary: #F5F9FC;
+  --text-secondary: #D7E1E8;
+  --text-muted: #8C9AA5;
+  --accent: #1d9bf0;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --danger: #FF7B72;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'IBM Plex Sans KR', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 14px;
-  color: #e7e9ea;
-  background: #15202b;
-  line-height: 1.6;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg);
+  line-height: 1.5;
 }
 
 .container {
-  max-width: 560px;
+  max-width: 600px;
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: 32px 24px 48px;
 }
 
 header {
@@ -19,20 +35,22 @@ header {
 }
 
 header h1 {
+  font-family: var(--font-display);
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: -0.3px;
 }
 
 .subtitle {
-  color: #71767b;
+  color: var(--text-muted);
   font-size: 13px;
   margin-top: 4px;
 }
 
 .section {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   padding-bottom: 20px;
-  border-bottom: 1px solid rgba(56, 68, 77, 0.5);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .section:last-child {
@@ -42,57 +60,64 @@ header h1 {
 }
 
 h2 {
-  font-size: 13px;
-  font-weight: 600;
-  color: #71767b;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 12px;
 }
 
 /* 입력 행 */
 .add-row {
   display: flex;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 12px;
 }
 
 textarea {
   flex: 1;
-  background: #273340;
-  border: 1px solid #38444d;
-  color: #e7e9ea;
-  padding: 9px 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
+  min-height: 92px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0;
+  color: var(--text-primary);
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
   outline: none;
   transition: border-color 0.15s;
   resize: vertical;
 }
 
 textarea:focus {
-  border-color: #1d9bf0;
+  border-color: var(--accent);
 }
 
 textarea::placeholder {
-  color: #536471;
+  color: var(--text-muted);
+  font-family: var(--font-body);
 }
 
 .whitelist-list summary {
   cursor: pointer;
   list-style-position: outside;
+  color: var(--text-muted);
+  margin-bottom: 8px;
 }
 
 .whitelist-list summary h2 {
   display: inline-block;
 }
 
+/* Primary button — border 없음 → radius 4px */
 .btn-primary {
-  background: #1d9bf0;
+  background: var(--accent);
   color: #fff;
   border: none;
-  padding: 9px 18px;
-  border-radius: 8px;
+  padding: 9px 24px;
+  border-radius: 4px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -105,32 +130,33 @@ textarea::placeholder {
   background: #1a8cd8;
 }
 
-/* 목록 아이템 */
+/* 목록 아이템 — 좌측 신호선으로 호버 표시 */
 .whitelist-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 9px 10px;
-  margin: 2px 0;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: background 0.1s;
+  padding: 8px 12px;
+  border-left: 3px solid transparent;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  transition: background 0.1s, border-color 0.1s;
 }
 
 .whitelist-item:hover {
-  background: rgba(56, 68, 77, 0.3);
+  background: var(--surface-1);
+  border-left-color: var(--accent);
 }
 
 .whitelist-item span {
-  color: #e7e9ea;
+  color: var(--text-secondary);
 }
 
 .whitelist-item button {
   background: none;
   border: none;
-  color: #536471;
+  color: var(--text-muted);
   padding: 2px 8px;
-  font-size: 16px;
+  font-size: 14px;
   border-radius: 4px;
   cursor: pointer;
   font-family: inherit;
@@ -138,20 +164,20 @@ textarea::placeholder {
 }
 
 .whitelist-item button:hover {
-  color: #f4212e;
-  background: rgba(244, 33, 46, 0.1);
+  color: var(--danger);
+  background: rgba(255, 123, 114, 0.1);
 }
 
 /* 빈 상태 */
 .empty-hint {
-  color: #536471;
+  color: var(--text-muted);
   font-size: 13px;
   padding: 12px 0;
 }
 
 /* 힌트 */
 .hint {
-  color: #536471;
+  color: var(--text-muted);
   font-size: 12px;
 }
 

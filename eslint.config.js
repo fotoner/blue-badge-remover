@@ -32,12 +32,6 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/shared/i18n.ts'],
-    rules: {
-      'max-lines': 'off',
-    },
-  },
-  {
     files: ['src/injected/**/*.ts', 'src/shared/utils/logger.ts'],
     rules: {
       'no-console': 'off',
