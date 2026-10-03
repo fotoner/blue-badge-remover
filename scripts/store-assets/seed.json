@@ -29,17 +29,17 @@
       "milestoneBannerEnabled": false,
       "aggressorFilterEnabled": false
     },
-    "currentUserId": "nightowl_reads",
+    "currentUserId": "sample_my_account",
     "stats-total": 1284,
     "whitelist": [
-      "@aurora_sketches",
-      "@devnotes_kim",
-      "@mochi_bakery",
-      "@rin_photolog",
-      "@studio_hanami",
-      "@weekly_synth"
+      "@sample_sketchbook",
+      "@sample_dev_notebook",
+      "@sample_bakery_shop",
+      "@sample_photo_diary",
+      "@sample_zine_studio",
+      "@sample_synth_weekly"
     ],
-    "customFilterList": "! My filters\ncrypto giveaway\n*airdrop*\nfollow for follow\n@@trusted_newsdesk",
+    "customFilterList": "! My filters\ncrypto giveaway\n*airdrop*\nfollow for follow\n@@sample_news_desk",
     "protectedKeywords": [
       "genshin",
       "vtuber",

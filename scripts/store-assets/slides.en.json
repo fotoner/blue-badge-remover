@@ -16,13 +16,13 @@
         "type": "timeline",
         "heading": "Following",
         "rows": [
-          { "name": "Mochi Bakery", "handle": "mochi_bakery", "time": "12m", "color": "#c98f4a", "text": "Fresh batch of yuzu madeleines just came out of the oven. Last tray this week." },
-          { "hidden": "Tweet by paid badge @moonshot_signals hidden (click to expand)" },
-          { "name": "Rin", "handle": "rin_photolog", "time": "38m", "color": "#5f8fb4", "text": "Morning fog over the river. Shot on 35mm, no edits." },
-          { "hidden": "Retweeted by @devnotes_kim from paid badge @thread_maximizer (click to expand)" },
-          { "name": "Studio Hanami", "handle": "studio_hanami", "time": "1h", "color": "#a07cb0", "text": "Our spring zine is back from the printer. Shipping starts Monday." },
-          { "hidden": "Tweet by paid badge @alpha_giveaways hidden (click to expand)" },
-          { "name": "Devnotes", "handle": "devnotes_kim", "time": "2h", "color": "#4f9a7a", "text": "Moved the whole build to a single config file. Everything is faster now." }
+          { "name": "Mochi Bakery", "handle": "sample_bakery_shop", "time": "12m", "color": "#c98f4a", "text": "Fresh batch of yuzu madeleines just came out of the oven. Last tray this week." },
+          { "hidden": "Tweet by paid badge @sample_paid_badge_a hidden (click to expand)" },
+          { "name": "Rin", "handle": "sample_photo_diary", "time": "38m", "color": "#5f8fb4", "text": "Morning fog over the river. Shot on 35mm, no edits." },
+          { "hidden": "Retweeted by @sample_dev_notebook from paid badge @sample_paid_badge_b (click to expand)" },
+          { "name": "Studio Hanami", "handle": "sample_zine_studio", "time": "1h", "color": "#a07cb0", "text": "Our spring zine is back from the printer. Shipping starts Monday." },
+          { "hidden": "Tweet by paid badge @sample_paid_badge_c hidden (click to expand)" },
+          { "name": "Devnotes", "handle": "sample_dev_notebook", "time": "2h", "color": "#4f9a7a", "text": "Moved the whole build to a single config file. Everything is faster now." }
         ]
       }
     },

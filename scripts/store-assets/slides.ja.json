@@ -18,37 +18,37 @@
         "rows": [
           {
             "name": "Mochi Bakery",
-            "handle": "mochi_bakery",
+            "handle": "sample_bakery_shop",
             "time": "12分",
             "color": "#c98f4a",
             "text": "柚子のマドレーヌが焼き上がりました。今週最後の一枚です。"
           },
           {
-            "hidden": "課金バッジ @moonshot_signalsのツイートが非表示になりました (クリックで展開)"
+            "hidden": "課金バッジ @sample_paid_badge_aのツイートが非表示になりました (クリックで展開)"
           },
           {
             "name": "Rin",
-            "handle": "rin_photolog",
+            "handle": "sample_photo_diary",
             "time": "38分",
             "color": "#5f8fb4",
             "text": "川に霧がかかる朝。35mm、無加工。"
           },
           {
-            "hidden": "@devnotes_kimが課金バッジ @thread_maximizerのツイートをリツイートしました (クリックで展開)"
+            "hidden": "@sample_dev_notebookが課金バッジ @sample_paid_badge_bのツイートをリツイートしました (クリックで展開)"
           },
           {
             "name": "Studio Hanami",
-            "handle": "studio_hanami",
+            "handle": "sample_zine_studio",
             "time": "1時間",
             "color": "#a07cb0",
             "text": "春のZINEが印刷所から届きました。月曜日から発送します。"
           },
           {
-            "hidden": "課金バッジ @alpha_giveawaysのツイートが非表示になりました (クリックで展開)"
+            "hidden": "課金バッジ @sample_paid_badge_cのツイートが非表示になりました (クリックで展開)"
           },
           {
             "name": "Devnotes",
-            "handle": "devnotes_kim",
+            "handle": "sample_dev_notebook",
             "time": "2時間",
             "color": "#4f9a7a",
             "text": "ビルド設定を1ファイルにまとめたら全部速くなった。"
