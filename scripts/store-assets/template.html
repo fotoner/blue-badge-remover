@@ -5,7 +5,7 @@
 <title>Store Asset</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=block" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=block" rel="stylesheet">
 <style>
   /* docs/DESIGN.md 토큰 — border가 있으면 radius 0, 장식 없음, 좌측 정렬 */
   :root {
@@ -18,6 +18,8 @@
     --border-subtle: rgba(255, 255, 255, 0.08);
     --font-body: "IBM Plex Sans KR", "IBM Plex Sans JP", sans-serif;
     --font-mono: "JetBrains Mono", monospace;
+    /* 제품명은 확장 UI와 같은 Display 글꼴 (한·일 글자가 없어 제목 문구에는 쓰지 않음) */
+    --font-display: "Space Grotesk", var(--font-body);
   }
   :lang(ja) { --font-body: "IBM Plex Sans JP", "IBM Plex Sans KR", sans-serif; }
   /* 일본어는 띄어쓰기가 없어 keep-all이면 줄이 안 바뀌고 잘린다 */
@@ -39,7 +41,7 @@
     padding-bottom: 20px; border-bottom: 1px solid var(--border-subtle);
   }
   header img { width: 28px; height: 28px; }
-  .product { font-size: 22px; font-weight: 700; }
+  .product { font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
   .meta { font-family: var(--font-mono); font-size: 17px; color: var(--text-muted); }
   .url { margin-left: auto; }
   .body {
@@ -88,7 +90,7 @@
   .promo .mark { display: flex; align-items: center; gap: 10px; }
   .promo .mark img { width: 34px; height: 34px; }
   .promo .mark span { font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); }
-  .promo h1 { margin-top: auto; font-size: 38px; line-height: 1.12; }
+  .promo h1 { margin-top: auto; font-family: var(--font-display); font-size: 40px; line-height: 1.08; letter-spacing: -0.02em; }
   .promo .desc { margin-top: 12px; padding-left: 14px; border-left: 3px solid var(--accent); font-size: 17px; line-height: 1.4; }
 
   /* ── 마키 1400×560 ── */

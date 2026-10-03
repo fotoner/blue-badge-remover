@@ -19,7 +19,7 @@
 
 ### 웹스토어 페이지 개선
 - [x] 영문 설명 작성 — `docs/store/listing-en.md` (스토어 콘솔 반영은 수동)
-- [ ] before/after 스크린샷 제작 — `docs/store/screenshots.html`로 생성 (v1.6.0 작업 중 PNG는 삭제됨)
+- [ ] 스토어 스크린샷·프로모 타일 업로드 — `npm run store-assets`로 생성 (`scripts/store-assets/README.md`)
 - [ ] Privacy Policy URL 등록 — 현재 `listing-en.md`는 GitHub blob 링크 사용, Pages 승격 여부 결정
 
 ## 완료 (v1.3.6)
