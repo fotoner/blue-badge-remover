@@ -11,9 +11,7 @@ export default defineConfig({
     permissions: ['storage', 'unlimitedStorage'],
     host_permissions: [
       'https://x.com/*',
-      'https://api.x.com/*',
       'https://twitter.com/*',
-      'https://api.twitter.com/*',
     ],
     icons: {
       16: 'icons/icon16.png',
