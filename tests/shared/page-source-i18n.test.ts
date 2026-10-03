@@ -14,7 +14,8 @@ function stripComments(source: string): string {
 
 function hangulLines(dir: string): string[] {
   const root = resolve(process.cwd(), dir);
-  return readdirSync(root)
+  // 하위 폴더로 옮긴 파일도 검사에서 빠지지 않도록 재귀로 읽는다
+  return readdirSync(root, { recursive: true, encoding: 'utf8' })
     .filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts'))
     .flatMap((file) => stripComments(readFileSync(join(root, file), 'utf8'))
       .split('\n')

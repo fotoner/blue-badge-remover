@@ -15,13 +15,14 @@ export function getTranslations(lang: Language): Translations {
   return translations[lang];
 }
 
+/** {이름} 자리표시자를 한 번에 치환한다 — 같은 이름이 여러 번 나와도 모두 바꾸고, 값 안의 {이름}은 다시 바꾸지 않는다 */
+export function interpolate(message: string, params: Record<string, string>): string {
+  return message.replace(/\{(\w+)\}/g, (match, name: string) => params[name] ?? match);
+}
+
 export function t(key: TranslationKey, lang: Language = DEFAULT_LANGUAGE, params?: Record<string, string>): string {
   const message = translations[lang]?.[key] ?? translations[DEFAULT_LANGUAGE][key] ?? key;
-  if (!params) return message;
-  return Object.entries(params).reduce<string>(
-    (result, [paramKey, value]) => result.replace(`{${paramKey}}`, value),
-    message,
-  );
+  return params ? interpolate(message, params) : message;
 }
 
 /** 브라우저 UI 언어(BCP 47) → 지원 언어. 한국어/일본어가 아니면 영어 */

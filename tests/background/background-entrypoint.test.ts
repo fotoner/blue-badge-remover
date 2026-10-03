@@ -11,10 +11,11 @@ describe('background whitelist wiring', () => {
   });
 });
 
-describe('background language migration wiring', () => {
-  it('업데이트 설치 시 기존 사용자의 언어(한국어)를 고정한다', () => {
+describe('background language wiring', () => {
+  it('새로 설치할 때만 브라우저 언어를 저장한다', () => {
     const source = readFileSync(resolve(process.cwd(), 'entrypoints/background.ts'), 'utf8');
 
-    expect(source).toContain("if (details.reason === 'update') void keepLegacyLanguageOnUpdate()");
+    expect(source).toContain("if (details.reason === 'install') void initLanguageOnInstall()");
+    expect(source).not.toContain('keepLegacyLanguageOnUpdate');
   });
 });

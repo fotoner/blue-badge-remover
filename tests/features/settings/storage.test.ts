@@ -38,7 +38,7 @@ mockSendMessage.mockImplementation((request: unknown) => handleWhitelistRequest(
 const {
   getSettings,
   updateSettings,
-  keepLegacyLanguageOnUpdate,
+  initLanguageOnInstall,
   getWhitelist,
   addToWhitelist,
   addManyToWhitelist,
@@ -98,56 +98,39 @@ describe('getSettings', () => {
   });
 });
 
-// 기본 언어가 브라우저와 무관하게 한국어여서 영어권 사용자도 한국어 UI로 시작하던 문제
-describe('언어 기본값', () => {
+// 기본 언어가 브라우저와 무관하게 한국어여서 영어권 사용자도 한국어 UI로 시작하던 문제.
+// 기존 사용자의 화면은 바꾸지 않도록, 저장값이 없을 때의 기본값은 한국어로 두고 새 설치 때만 브라우저 언어를 저장한다.
+describe('initLanguageOnInstall', () => {
+  it('저장된 언어가 없으면 기본값은 기존과 같은 한국어다', async () => {
+    mockGetUILanguage.mockReturnValue('en-US');
+    expect((await getSettings()).language).toBe('ko');
+  });
+
   it.each([
     ['en-US', 'en'],
     ['ja', 'ja'],
     ['ko-KR', 'ko'],
     ['fr-FR', 'en'],
-  ] as const)('저장된 언어가 없으면 브라우저 언어 %s → %s로 시작한다', async (uiLanguage, expected) => {
+  ] as const)('새 설치 시 브라우저 언어 %s → %s를 저장한다', async (uiLanguage, expected) => {
     mockGetUILanguage.mockReturnValue(uiLanguage);
+    await initLanguageOnInstall();
+    expect((mockStorage['settings'] as { language: string }).language).toBe(expected);
     expect((await getSettings()).language).toBe(expected);
   });
 
-  it('저장된 언어는 브라우저 언어보다 우선한다', async () => {
-    mockGetUILanguage.mockReturnValue('en-US');
-    mockStorage['settings'] = { ...DEFAULT_SETTINGS, language: 'ja' };
-    expect((await getSettings()).language).toBe('ja');
-  });
-
-  it('브라우저 언어를 읽을 수 없으면 영어로 시작한다', async () => {
+  it('브라우저 언어를 읽을 수 없으면 영어를 저장한다', async () => {
     mockGetUILanguage.mockImplementation(() => { throw new Error('not implemented'); });
-    expect((await getSettings()).language).toBe('en');
-  });
-
-  it('설정을 처음 저장할 때 감지한 언어가 함께 저장된다', async () => {
-    mockGetUILanguage.mockReturnValue('en-US');
-    await updateSettings({ enabled: false });
+    await initLanguageOnInstall();
     expect((mockStorage['settings'] as { language: string }).language).toBe('en');
   });
-});
 
-// 업데이트 전에는 언어를 저장하지 않은 사용자도 한국어로 보고 있었다 — 업데이트만으로 언어가 바뀌면 안 된다
-describe('keepLegacyLanguageOnUpdate', () => {
-  it('저장된 설정이 없으면 기존 기본값인 한국어를 저장한다', async () => {
+  it('이미 저장된 언어는 바꾸지 않고, 다른 설정은 유지한다', async () => {
     mockGetUILanguage.mockReturnValue('en-US');
-    await keepLegacyLanguageOnUpdate();
-    expect((mockStorage['settings'] as { language: string }).language).toBe('ko');
-  });
-
-  it('저장된 설정에 언어가 없으면 한국어를 채우고 다른 값은 유지한다', async () => {
-    mockStorage['settings'] = { enabled: false };
-    await keepLegacyLanguageOnUpdate();
+    mockStorage['settings'] = { ...DEFAULT_SETTINGS, language: 'ja', enabled: false };
+    await initLanguageOnInstall();
     const stored = mockStorage['settings'] as { language: string; enabled: boolean };
-    expect(stored.language).toBe('ko');
+    expect(stored.language).toBe('ja');
     expect(stored.enabled).toBe(false);
-  });
-
-  it('이미 저장된 언어는 바꾸지 않는다', async () => {
-    mockStorage['settings'] = { ...DEFAULT_SETTINGS, language: 'en' };
-    await keepLegacyLanguageOnUpdate();
-    expect((mockStorage['settings'] as { language: string }).language).toBe('en');
   });
 });
 

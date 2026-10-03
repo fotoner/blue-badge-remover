@@ -6,7 +6,6 @@ import type { WhitelistRequest, WhitelistResponse } from './whitelist-storage';
 
 export type SettingsPatch = Partial<Omit<Settings, 'filter'>> & { filter?: Partial<Settings['filter']> };
 
-/** 언어를 저장한 적이 없으면 브라우저 UI 언어로 시작한다 */
 function browserLanguage(): Language {
   try {
     return detectLanguage(browser.i18n.getUILanguage());
@@ -18,7 +17,6 @@ function browserLanguage(): Language {
 function mergeSettings(base: Partial<Settings> | undefined, patch: SettingsPatch = {}): Settings {
   return {
     ...DEFAULT_SETTINGS,
-    language: browserLanguage(),
     ...base,
     ...patch,
     filter: { ...DEFAULT_SETTINGS.filter, ...base?.filter, ...patch.filter },
@@ -41,15 +39,15 @@ export async function updateSettings(patch: SettingsPatch): Promise<Settings> {
   return merged;
 }
 
-// 브라우저 언어 감지 전에는 저장값이 없으면 모두 한국어였다
-const LEGACY_DEFAULT_LANGUAGE: Language = 'ko';
-
-/** 업데이트 설치 시: 언어를 저장한 적 없는 기존 사용자는 보던 한국어 화면을 유지한다 */
-export async function keepLegacyLanguageOnUpdate(): Promise<void> {
+/**
+ * 새로 설치할 때만 브라우저 UI 언어를 저장한다.
+ * 저장값이 없을 때의 기본값(한국어)은 그대로 두어, 기존 사용자의 화면이 업데이트로 바뀌지 않게 한다.
+ */
+export async function initLanguageOnInstall(): Promise<void> {
   const result = await browser.storage.local.get([STORAGE_KEYS.SETTINGS]);
   const stored = result[STORAGE_KEYS.SETTINGS] as Partial<Settings> | undefined;
   if (stored?.language) return;
-  await updateSettings({ language: LEGACY_DEFAULT_LANGUAGE });
+  await updateSettings({ language: browserLanguage() });
 }
 
 async function sendWhitelistRequest(request: WhitelistRequest): Promise<WhitelistResponse> {

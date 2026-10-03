@@ -3,6 +3,7 @@ import {
   applyTranslations,
   detectLanguage,
   getTranslations,
+  interpolate,
   setPageLanguage,
   t,
   tp,
@@ -89,5 +90,19 @@ describe('translateCategoryName', () => {
   it('한국어는 원래 이름을, 모르는 이름은 그대로 보여준다', () => {
     expect(translateCategoryName(names[0]!, 'ko')).toBe(names[0]);
     expect(translateCategoryName('사용자 정의', 'en')).toBe('사용자 정의');
+  });
+});
+
+describe('interpolate', () => {
+  it('같은 자리표시자가 여러 번 나와도 모두 바꾼다', () => {
+    expect(interpolate('{count} / {count}', { count: '3' })).toBe('3 / 3');
+  });
+
+  it('값 안의 {이름}은 다시 치환하지 않는다', () => {
+    expect(interpolate('"{keyword}" · {count}', { keyword: '{count}', count: '5' })).toBe('"{count}" · 5');
+  });
+
+  it('값이 없는 자리표시자는 그대로 둔다', () => {
+    expect(interpolate('{a} {b}', { a: '1' })).toBe('1 {b}');
   });
 });
