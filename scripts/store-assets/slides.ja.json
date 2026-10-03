@@ -1,0 +1,132 @@
+{
+  "product": "Blue Badge Remover",
+  "url": "blue-badge.fotone.moe",
+  "screenshots": [
+    {
+      "id": "01-timeline",
+      "label": "Xのタイムラインで",
+      "title": "課金バッジの投稿を\n非表示に",
+      "desc": "フォロー中のアカウントとホワイトリストのアカウントはそのまま表示されます。",
+      "points": [
+        "金色・灰色の認証バッジは非表示にしない",
+        "完全に削除、または折りたたんでクリックで展開",
+        "タイムライン・リプライ・検索・ブックマーク・リスト"
+      ],
+      "visual": {
+        "type": "timeline",
+        "heading": "フォロー中",
+        "rows": [
+          {
+            "name": "Mochi Bakery",
+            "handle": "mochi_bakery",
+            "time": "12分",
+            "color": "#c98f4a",
+            "text": "柚子のマドレーヌが焼き上がりました。今週最後の一枚です。"
+          },
+          {
+            "hidden": "課金バッジ @moonshot_signalsのツイートが非表示になりました (クリックで展開)"
+          },
+          {
+            "name": "Rin",
+            "handle": "rin_photolog",
+            "time": "38分",
+            "color": "#5f8fb4",
+            "text": "川に霧がかかる朝。35mm、無加工。"
+          },
+          {
+            "hidden": "@devnotes_kimが課金バッジ @thread_maximizerのツイートをリツイートしました (クリックで展開)"
+          },
+          {
+            "name": "Studio Hanami",
+            "handle": "studio_hanami",
+            "time": "1時間",
+            "color": "#a07cb0",
+            "text": "春のZINEが印刷所から届きました。月曜日から発送します。"
+          },
+          {
+            "hidden": "課金バッジ @alpha_giveawaysのツイートが非表示になりました (クリックで展開)"
+          },
+          {
+            "name": "Devnotes",
+            "handle": "devnotes_kim",
+            "time": "2時間",
+            "color": "#4f9a7a",
+            "text": "ビルド設定を1ファイルにまとめたら全部速くなった。"
+          }
+        ]
+      }
+    },
+    {
+      "id": "02-settings",
+      "label": "設定",
+      "title": "どこで、どう\n非表示にするか",
+      "desc": "エリアごとにフィルタリングをオンにし、リツイートと引用ツイートの扱いを決められます。",
+      "points": [
+        "リツイート・引用ツイートは別ルール",
+        "今日と累計の非表示件数",
+        "日本語・English・한국어"
+      ],
+      "visual": {
+        "src": "dashboard.png",
+        "width": 560
+      }
+    },
+    {
+      "id": "03-exceptions",
+      "label": "例外",
+      "title": "フォロー中の人は\nそのまま表示",
+      "desc": "フォロー中のアカウントは閲覧中に自動で記憶し、フォローページから一括取得もできます。",
+      "points": [
+        "ホワイトリストに複数アカウントを一括追加",
+        "展開した投稿からそのままホワイトリストへ",
+        "リストをJSONでバックアップ・復元"
+      ],
+      "visual": {
+        "src": "whitelist.png",
+        "width": 560
+      }
+    },
+    {
+      "id": "04-keywords",
+      "label": "高度なフィルター",
+      "title": "キーワードで隠し、\nキーワードで守る",
+      "desc": "ルールに一致する課金バッジの投稿だけを非表示にしたり、関心の近いアカウントを表示したままにできます。",
+      "points": [
+        "ワイルドカードとアカウント単位の除外",
+        "ID・名前・プロフィールの保護キーワード",
+        "フィルターパックの読み込み・書き出し"
+      ],
+      "visual": {
+        "src": "options-custom.png",
+        "width": 560
+      }
+    },
+    {
+      "id": "05-privacy",
+      "label": "プライバシー",
+      "title": "すべての処理は\nブラウザの中で",
+      "desc": "外部サーバー、分析ツール、アカウントトークンは使いません。設定とリストはブラウザのローカルストレージにだけ保存されます。",
+      "points": [
+        "x.com と twitter.com でのみ動作",
+        "ブラウザの表示だけを変更",
+        "GitHubでソースを公開"
+      ],
+      "visual": {
+        "src": "popup.png",
+        "width": 400
+      }
+    }
+  ],
+  "promo": {
+    "title": "Blue Badge\nRemover",
+    "desc": "Xの課金バッジ投稿を非表示に"
+  },
+  "marquee": {
+    "title": "Xの課金バッジ投稿を\n非表示に",
+    "desc": "フォロー中・ホワイトリストのアカウントはそのまま表示。",
+    "visual": {
+      "src": "popup.png",
+      "width": 370
+    }
+  }
+}

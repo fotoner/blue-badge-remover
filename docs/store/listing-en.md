@@ -35,14 +35,19 @@ Source code and support: https://github.com/fotoner/blue-badge-remover
 
 ## Graphic assets
 
-Upload in this order after generating from `docs/store/screenshots.html`:
+Generate with `npm run store-assets` (see `scripts/store-assets/README.md`), then upload from `out/store-assets/en/`:
 
-1. `screenshots/en/01-hero.png`
-2. `screenshots/en/02-before-after.png`
-3. `screenshots/en/03-features.png`
-4. `screenshots/en/04-privacy.png`
+| Slot | File | Size |
+|------|------|------|
+| Screenshot 1 | `01-timeline.png` | 1280×800 |
+| Screenshot 2 | `02-settings.png` | 1280×800 |
+| Screenshot 3 | `03-exceptions.png` | 1280×800 |
+| Screenshot 4 | `04-keywords.png` | 1280×800 |
+| Screenshot 5 | `05-privacy.png` | 1280×800 |
+| Small promo tile (required) | `promo-small-440x280.png` | 440×280 |
+| Marquee promo tile (optional) | `promo-marquee-1400x560.png` | 1400×560 |
 
-Each image is 1280x800 PNG with square corners and no outer padding.
+Korean and Japanese listings use the same file names under `out/store-assets/ko/` and `out/store-assets/ja/`.
 
 ## Privacy fields
 
@@ -59,7 +64,7 @@ Permission justifications:
 ## Submission status
 
 - [x] English summary and detailed description prepared
-- [x] Four 1280x800 screenshot sources prepared
+- [x] Five 1280x800 screenshots and both promo tiles generated (en/ko/ja)
 - [x] Privacy policy updated locally and the `dev` branch URL resolves publicly
 - [ ] Commit and push the updated privacy policy so the public URL matches this release
 - [ ] Upload text/assets and save the Web Store dashboard listing

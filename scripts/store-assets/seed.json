@@ -1,0 +1,51 @@
+{
+  "followCount": 248,
+  "today": {
+    "totalHidden": 37,
+    "byCategory": {
+      "정치 및 테슬라": 12,
+      "경제": 9,
+      "호들갑": 7,
+      "기타": 3
+    }
+  },
+  "storage": {
+    "settings": {
+      "enabled": true,
+      "filter": {
+        "timeline": true,
+        "replies": true,
+        "search": true,
+        "bookmarks": false,
+        "lists": false
+      },
+      "hideMode": "collapse",
+      "retweetFilter": true,
+      "quoteMode": "quote-only",
+      "debugMode": false,
+      "keywordFilterEnabled": false,
+      "keywordCollectorEnabled": false,
+      "defaultFilterEnabled": true,
+      "milestoneBannerEnabled": false,
+      "aggressorFilterEnabled": false
+    },
+    "currentUserId": "nightowl_reads",
+    "stats-total": 1284,
+    "whitelist": [
+      "@aurora_sketches",
+      "@devnotes_kim",
+      "@mochi_bakery",
+      "@rin_photolog",
+      "@studio_hanami",
+      "@weekly_synth"
+    ],
+    "customFilterList": "! My filters\ncrypto giveaway\n*airdrop*\nfollow for follow\n@@trusted_newsdesk",
+    "protectedKeywords": [
+      "genshin",
+      "vtuber",
+      "indie game"
+    ],
+    "disabledFilterCategories": [],
+    "filterPacks": []
+  }
+}

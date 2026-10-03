@@ -1,0 +1,87 @@
+{
+  "product": "Blue Badge Remover",
+  "url": "blue-badge.fotone.moe",
+  "screenshots": [
+    {
+      "id": "01-timeline",
+      "label": "On your X timeline",
+      "title": "Hide paid blue\nbadge posts on X",
+      "desc": "Accounts you follow and accounts on your whitelist stay visible.",
+      "points": [
+        "Gold and gray checkmarks are never hidden",
+        "Remove posts, or collapse them to expand later",
+        "Timeline, replies, search, bookmarks, and lists"
+      ],
+      "visual": {
+        "type": "timeline",
+        "heading": "Following",
+        "rows": [
+          { "name": "Mochi Bakery", "handle": "mochi_bakery", "time": "12m", "color": "#c98f4a", "text": "Fresh batch of yuzu madeleines just came out of the oven. Last tray this week." },
+          { "hidden": "Tweet by paid badge @moonshot_signals hidden (click to expand)" },
+          { "name": "Rin", "handle": "rin_photolog", "time": "38m", "color": "#5f8fb4", "text": "Morning fog over the river. Shot on 35mm, no edits." },
+          { "hidden": "Retweeted by @devnotes_kim from paid badge @thread_maximizer (click to expand)" },
+          { "name": "Studio Hanami", "handle": "studio_hanami", "time": "1h", "color": "#a07cb0", "text": "Our spring zine is back from the printer. Shipping starts Monday." },
+          { "hidden": "Tweet by paid badge @alpha_giveaways hidden (click to expand)" },
+          { "name": "Devnotes", "handle": "devnotes_kim", "time": "2h", "color": "#4f9a7a", "text": "Moved the whole build to a single config file. Everything is faster now." }
+        ]
+      }
+    },
+    {
+      "id": "02-settings",
+      "label": "Settings",
+      "title": "Choose where and\nhow to filter",
+      "desc": "Turn filtering on per area and decide what happens to retweets and quote tweets.",
+      "points": [
+        "Separate rules for retweets and quotes",
+        "Posts hidden today and in total",
+        "English, Korean, and Japanese"
+      ],
+      "visual": { "src": "dashboard.png", "width": 560 }
+    },
+    {
+      "id": "03-exceptions",
+      "label": "Exceptions",
+      "title": "Keep the people\nyou follow",
+      "desc": "Followed accounts are detected as you browse. Import your full following list from the Following page.",
+      "points": [
+        "Add many handles to the whitelist at once",
+        "Whitelist an account right after expanding its post",
+        "Back up and restore your lists as JSON"
+      ],
+      "visual": { "src": "whitelist.png", "width": 560 }
+    },
+    {
+      "id": "04-keywords",
+      "label": "Advanced filters",
+      "title": "Filter by keyword,\nprotect by keyword",
+      "desc": "Hide only paid badge posts that match your rules, or keep accounts that share your interests visible.",
+      "points": [
+        "Wildcards and per-account exceptions",
+        "Protection keywords for names, handles, and bios",
+        "Import and export filter packs"
+      ],
+      "visual": { "src": "options-custom.png", "width": 560 }
+    },
+    {
+      "id": "05-privacy",
+      "label": "Privacy",
+      "title": "Runs entirely\nin your browser",
+      "desc": "No external server, no analytics, no account tokens. Settings and lists stay in your browser's local storage.",
+      "points": [
+        "Runs only on x.com and twitter.com",
+        "Changes only what your browser displays",
+        "Open source on GitHub"
+      ],
+      "visual": { "src": "popup.png", "width": 400 }
+    }
+  ],
+  "promo": {
+    "title": "Blue Badge\nRemover",
+    "desc": "Hide paid blue badges on X"
+  },
+  "marquee": {
+    "title": "Hide paid blue\nbadges on X",
+    "desc": "Followed and whitelisted accounts stay visible.",
+    "visual": { "src": "popup.png", "width": 370 }
+  }
+}

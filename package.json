@@ -17,7 +17,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "store-assets": "wxt build && for l in en ko ja; do node scripts/store-assets/capture.mjs $l && node scripts/store-assets/render.mjs $l || exit 1; done"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

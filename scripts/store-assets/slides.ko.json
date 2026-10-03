@@ -1,0 +1,132 @@
+{
+  "product": "Blue Badge Remover",
+  "url": "blue-badge.fotone.moe",
+  "screenshots": [
+    {
+      "id": "01-timeline",
+      "label": "X 타임라인에서",
+      "title": "파딱 트윗을\n타임라인에서 치웁니다",
+      "desc": "팔로우한 계정과 화이트리스트 계정은 그대로 보입니다.",
+      "points": [
+        "금색(기관)·회색(정부) 인증은 숨기지 않음",
+        "완전히 지우거나, 접어 두고 클릭해서 펼치기",
+        "타임라인·답글·검색·북마크·리스트"
+      ],
+      "visual": {
+        "type": "timeline",
+        "heading": "팔로잉",
+        "rows": [
+          {
+            "name": "모찌 베이커리",
+            "handle": "mochi_bakery",
+            "time": "12분",
+            "color": "#c98f4a",
+            "text": "유자 마들렌 새로 구웠어요. 이번 주 마지막 판입니다."
+          },
+          {
+            "hidden": "파딱 @moonshot_signals의 트윗이 숨겨졌습니다 (클릭하여 펼치기)"
+          },
+          {
+            "name": "린",
+            "handle": "rin_photolog",
+            "time": "38분",
+            "color": "#5f8fb4",
+            "text": "강 위로 안개 낀 아침. 35mm, 보정 없음."
+          },
+          {
+            "hidden": "@devnotes_kim님이 파딱 @thread_maximizer의 트윗을 리트윗했습니다 (클릭하여 펼치기)"
+          },
+          {
+            "name": "스튜디오 하나미",
+            "handle": "studio_hanami",
+            "time": "1시간",
+            "color": "#a07cb0",
+            "text": "봄 진이 인쇄소에서 도착했어요. 월요일부터 발송합니다."
+          },
+          {
+            "hidden": "파딱 @alpha_giveaways의 트윗이 숨겨졌습니다 (클릭하여 펼치기)"
+          },
+          {
+            "name": "데브노트",
+            "handle": "devnotes_kim",
+            "time": "2시간",
+            "color": "#4f9a7a",
+            "text": "빌드 설정을 파일 하나로 합쳤더니 전부 빨라졌다."
+          }
+        ]
+      }
+    },
+    {
+      "id": "02-settings",
+      "label": "설정",
+      "title": "어디서, 어떻게\n숨길지 고릅니다",
+      "desc": "영역별로 필터링을 켜고, 리트윗과 인용 트윗을 어떻게 처리할지 정합니다.",
+      "points": [
+        "리트윗·인용 트윗 규칙을 따로 설정",
+        "오늘·누적 숨김 수 표시",
+        "한국어·English·日本語"
+      ],
+      "visual": {
+        "src": "dashboard.png",
+        "width": 560
+      }
+    },
+    {
+      "id": "03-exceptions",
+      "label": "예외",
+      "title": "팔로우한 사람은\n그대로 보입니다",
+      "desc": "타임라인에서 본 팔로우 계정은 자동으로 기억하고, 팔로잉 페이지에서 전체 목록을 한 번에 가져옵니다.",
+      "points": [
+        "화이트리스트에 여러 계정을 한 번에 추가",
+        "펼친 트윗에서 바로 화이트리스트 추가",
+        "목록을 JSON으로 백업·복원"
+      ],
+      "visual": {
+        "src": "whitelist.png",
+        "width": 560
+      }
+    },
+    {
+      "id": "04-keywords",
+      "label": "고급 필터",
+      "title": "키워드로 숨기고,\n키워드로 지킵니다",
+      "desc": "규칙에 맞는 파딱 트윗만 숨기거나, 관심사가 같은 계정은 계속 보이게 합니다.",
+      "points": [
+        "와일드카드와 계정별 예외",
+        "아이디·이름·소개의 보호 키워드",
+        "필터 팩 가져오기·내보내기"
+      ],
+      "visual": {
+        "src": "options-custom.png",
+        "width": 560
+      }
+    },
+    {
+      "id": "05-privacy",
+      "label": "개인정보",
+      "title": "모든 처리는\n브라우저 안에서",
+      "desc": "외부 서버, 분석 도구, 계정 토큰 없이 동작합니다. 설정과 목록은 브라우저 로컬 저장소에만 남습니다.",
+      "points": [
+        "x.com과 twitter.com에서만 동작",
+        "브라우저에 보이는 화면만 바꿈",
+        "GitHub에 소스 공개"
+      ],
+      "visual": {
+        "src": "popup.png",
+        "width": 400
+      }
+    }
+  ],
+  "promo": {
+    "title": "Blue Badge\nRemover",
+    "desc": "X의 파딱 트윗을 숨깁니다"
+  },
+  "marquee": {
+    "title": "X의 파딱 트윗을\n숨깁니다",
+    "desc": "팔로우·화이트리스트 계정은 그대로 보입니다.",
+    "visual": {
+      "src": "popup.png",
+      "width": 370
+    }
+  }
+}

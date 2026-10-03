@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Store Asset</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=block" rel="stylesheet">
+<style>
+  /* docs/DESIGN.md 토큰 — border가 있으면 radius 0, 장식 없음, 좌측 정렬 */
+  :root {
+    --bg: #0e1418;
+    --surface-1: #131b21;
+    --text-primary: #f5f9fc;
+    --text-secondary: #d7e1e8;
+    --text-muted: #8c9aa5;
+    --accent: #1d9bf0;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --font-body: "IBM Plex Sans KR", "IBM Plex Sans JP", sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+  }
+  :lang(ja) { --font-body: "IBM Plex Sans JP", "IBM Plex Sans KR", sans-serif; }
+  /* 일본어는 띄어쓰기가 없어 keep-all이면 줄이 안 바뀌고 잘린다 */
+  :lang(ja) body { word-break: normal; line-break: strict; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    word-break: keep-all;
+    -webkit-font-smoothing: antialiased;
+  }
+  .frame { overflow: hidden; background: var(--bg); display: flex; flex-direction: column; }
+
+  /* ── 스크린샷 1280×800 ── */
+  .shot { width: 1280px; height: 800px; padding: 48px 64px 56px; }
+  header {
+    display: flex; align-items: center; gap: 14px;
+    padding-bottom: 20px; border-bottom: 1px solid var(--border-subtle);
+  }
+  header img { width: 28px; height: 28px; }
+  .product { font-size: 22px; font-weight: 700; }
+  .meta { font-family: var(--font-mono); font-size: 17px; color: var(--text-muted); }
+  .url { margin-left: auto; }
+  .body {
+    flex: 1; min-height: 0;
+    display: grid; grid-template-columns: 1fr 560px; gap: 64px;
+    padding-top: 44px;
+  }
+  .text { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+  .label { font-size: 18px; font-weight: 500; color: var(--text-muted); }
+  h1 {
+    margin-top: 14px; font-size: 50px; font-weight: 700;
+    line-height: 1.2; letter-spacing: -0.01em; white-space: pre-line;
+  }
+  .desc { margin-top: 18px; font-size: 21px; line-height: 1.55; color: var(--text-secondary); }
+  .points {
+    margin-top: auto; padding-left: 20px;
+    border-left: 3px solid var(--accent); list-style: none;
+  }
+  .points li { font-size: 19px; line-height: 1.6; color: var(--text-secondary); }
+  .visual { min-height: 0; overflow: hidden; }
+  .visual img {
+    display: block; max-width: 100%;
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* ── X 타임라인 재현 (확장이 그리는 숨김 표시와 같은 스타일·문구) ── */
+  .timeline {
+    background: #000; border: 1px solid #2f3336; height: 100%;
+    font-family: -apple-system, "Segoe UI", Roboto, var(--font-body);
+  }
+  .tl-head { padding: 16px 20px; font-size: 19px; font-weight: 700; color: #e7e9ea; border-bottom: 1px solid #2f3336; }
+  .tweet { display: flex; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #2f3336; }
+  .avatar { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; }
+  .tw-meta { font-size: 15px; color: #71767b; }
+  .tw-meta b { color: #e7e9ea; font-weight: 700; margin-right: 4px; }
+  .tw-text { margin-top: 3px; font-size: 15px; line-height: 1.4; color: #e7e9ea; }
+  .hidden-row {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 48px; padding: 0 16px; border-bottom: 1px solid #2f3336;
+    color: #536471; font-size: 13px;
+  }
+  .hidden-row svg { flex-shrink: 0; width: 16px; height: 16px; opacity: 0.6; }
+
+  /* ── 작은 프로모 타일 440×280 ── */
+  .promo { width: 440px; height: 280px; padding: 30px 32px; }
+  .promo .mark { display: flex; align-items: center; gap: 10px; }
+  .promo .mark img { width: 34px; height: 34px; }
+  .promo .mark span { font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); }
+  .promo h1 { margin-top: auto; font-size: 38px; line-height: 1.12; }
+  .promo .desc { margin-top: 12px; padding-left: 14px; border-left: 3px solid var(--accent); font-size: 17px; line-height: 1.4; }
+
+  /* ── 마키 1400×560 ── */
+  .marquee { width: 1400px; height: 560px; padding: 56px 72px; }
+  .marquee .body { padding-top: 0; grid-template-columns: 1fr 470px; gap: 72px; }
+  .marquee .mark { display: flex; align-items: center; gap: 14px; }
+  .marquee .mark img { width: 44px; height: 44px; }
+  .marquee .mark span { font-family: var(--font-mono); font-size: 18px; color: var(--text-muted); }
+  .marquee h1 { margin-top: auto; font-size: 64px; line-height: 1.1; }
+  .marquee .desc { margin-top: 20px; padding-left: 20px; border-left: 3px solid var(--accent); font-size: 24px; }
+</style>
+</head>
+<body>
+<main id="frame" class="frame" data-fit="frame"></main>
+<script>
+  // render.mjs가 window.__ASSET__을 넣는다
+  const asset = window.__ASSET__;
+  document.documentElement.lang = asset.lang;
+  const frame = document.getElementById('frame');
+  const SHIELD = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1L2 3.5v4c0 3.5 2.6 6.4 6 7.5 3.4-1.1 6-4 6-7.5v-4L8 1zm0 2.2l4 1.7v2.6c0 2.6-1.9 4.8-4 5.7-2.1-.9-4-3.1-4-5.7V4.9l4-1.7z"/></svg>';
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+
+  function timeline(spec) {
+    const box = el('div', 'timeline');
+    box.append(el('div', 'tl-head', spec.heading));
+    for (const row of spec.rows) {
+      if (row.hidden) {
+        const hidden = el('div', 'hidden-row');
+        hidden.innerHTML = SHIELD;
+        hidden.append(row.hidden);
+        box.append(hidden);
+        continue;
+      }
+      const tweet = el('div', 'tweet');
+      const avatar = el('div', 'avatar');
+      avatar.style.background = row.color;
+      const content = el('div');
+      const meta = el('div', 'tw-meta');
+      meta.append(el('b', '', row.name), `@${row.handle} · ${row.time}`);
+      content.append(meta, el('div', 'tw-text', row.text));
+      tweet.append(avatar, content);
+      box.append(tweet);
+    }
+    return box;
+  }
+
+  function visual(spec) {
+    const figure = el('figure', 'visual');
+    if (spec.type === 'timeline') figure.append(timeline(spec));
+    else {
+      const img = el('img');
+      img.src = spec.src;
+      if (spec.width) img.style.width = `${spec.width}px`;
+      figure.append(img);
+    }
+    return figure;
+  }
+
+  function mark() {
+    const box = el('div', 'mark');
+    const icon = el('img');
+    icon.src = asset.icon;
+    box.append(icon, el('span', '', asset.url));
+    return box;
+  }
+
+  if (asset.kind === 'screenshot') {
+    frame.classList.add('shot');
+    const header = el('header');
+    const icon = el('img');
+    icon.src = asset.icon;
+    header.append(icon, el('span', 'product', asset.product), el('span', 'meta url', asset.url));
+    const text = el('section', 'text');
+    text.dataset.fit = 'text';
+    text.append(el('p', 'label', asset.label), el('h1', '', asset.title), el('p', 'desc', asset.desc));
+    const points = el('ul', 'points');
+    for (const point of asset.points) points.append(el('li', '', point));
+    text.append(points);
+    const body = el('div', 'body');
+    body.append(text, visual(asset.visual));
+    frame.append(header, body);
+  } else if (asset.kind === 'promo') {
+    frame.classList.add('promo');
+    frame.append(mark(), el('h1', '', asset.title), el('p', 'desc', asset.desc));
+  } else {
+    frame.classList.add('marquee');
+    const text = el('section', 'text');
+    text.dataset.fit = 'text';
+    text.append(mark(), el('h1', '', asset.title), el('p', 'desc', asset.desc));
+    const body = el('div', 'body');
+    body.append(text, visual(asset.visual));
+    frame.append(body);
+  }
+</script>
+</body>
+</html>
