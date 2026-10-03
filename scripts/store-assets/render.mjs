@@ -47,6 +47,17 @@ try {
     await page.addInitScript({ content: `window.__ASSET__ = ${JSON.stringify(data)};` });
     await page.goto(pathToFileURL(join(here, 'template.html')).href, { waitUntil: 'networkidle' });
     await page.evaluate('document.fonts.ready');
+    // 캡처 이미지는 load 때 크기를 정한다 — 모든 이미지 로드를 기다리고, 크기가 안 정해졌으면 실패로 알린다
+    const unsized = await page.evaluate(async () => {
+      await Promise.all([...document.images].map((img) => (img.complete ? null : new Promise((done) => {
+        img.addEventListener('load', done);
+        img.addEventListener('error', done);
+      }))));
+      return [...document.querySelectorAll('.visual img')]
+        .filter((img) => img.naturalWidth === 0 || !img.style.width)
+        .map((img) => img.getAttribute('src'));
+    });
+    if (unsized.length > 0) throw new Error(`${asset.id}: 캡처 이미지를 불러오지 못했습니다 (${unsized.join(', ')})`);
     // 웹폰트를 못 받으면 시스템 글꼴로 조용히 찍히므로 실패로 알린다 (쓰지 않는 글꼴은 로드되지 않으므로 검사하지 않음)
     const missingFonts = await page.evaluate(
       (names) => {
