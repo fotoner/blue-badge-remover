@@ -63,3 +63,11 @@ describe.each(PAGES)('%s 화면 i18n', (page) => {
     }
   });
 });
+
+describe.each(PAGES)('%s 화면 번역 전 깜빡임', (page) => {
+  it('번역 전에는 본문을 감추고, 스크립트가 실패해도 잠시 뒤 보여준다', () => {
+    const css = readFileSync(resolve(process.cwd(), `src/${page}/style.css`), 'utf8');
+    expect(css).toMatch(/html:not\(\[data-i18n-ready\]\) body\s*\{[^}]*visibility:\s*hidden/);
+    expect(css).toMatch(/@keyframes bbr-i18n-reveal/);
+  });
+});

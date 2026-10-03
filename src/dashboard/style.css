@@ -755,3 +755,14 @@ input[type="text"]::placeholder {
   margin-top: 16px;
   justify-content: flex-end;
 }
+
+/* 번역 전 한국어 원문이 깜빡이지 않게 — applyTranslations가 data-i18n-ready를 붙이면 보인다.
+   스크립트가 실패해도 0.5초 뒤에는 보이도록 애니메이션으로 되돌린다 */
+html:not([data-i18n-ready]) body {
+  visibility: hidden;
+  animation: bbr-i18n-reveal 0s 0.5s forwards;
+}
+
+@keyframes bbr-i18n-reveal {
+  to { visibility: visible; }
+}

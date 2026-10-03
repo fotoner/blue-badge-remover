@@ -63,6 +63,13 @@ describe('applyTranslations', () => {
     expect(document.title).toBe(t('optionsPageTitle', 'en'));
     expect(document.documentElement.lang).toBe('en');
   });
+
+  // 번역 전 한국어 원문이 잠깐 보였다가 바뀌던 문제 — 페이지 CSS가 이 표시를 기다렸다가 보여준다
+  it('번역을 마치면 문서에 data-i18n-ready를 붙인다', () => {
+    delete document.documentElement.dataset['i18nReady'];
+    applyTranslations('ja');
+    expect(document.documentElement.dataset['i18nReady']).toBe('true');
+  });
 });
 
 describe('tp (페이지 언어 번역)', () => {
