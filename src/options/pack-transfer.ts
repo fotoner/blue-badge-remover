@@ -1,4 +1,5 @@
 import type { FilterPack } from '@shared/types';
+import { tp } from '@shared/i18n';
 
 const PACK_ID_PATTERN = /^[a-zA-Z0-9._-]{1,100}$/;
 const MAX_RULES_LENGTH = 200_000;
@@ -64,16 +65,17 @@ export function showExportModal(rules: string): void {
 function createExportModal(): HTMLElement {
   const modal = document.createElement('div');
   modal.className = 'export-modal';
+  // 번역 문구는 확장에 포함된 고정 사전 값이라 템플릿에 넣어도 안전하다 (사용자 입력 아님)
   modal.innerHTML = `
-    <h3>필터 팩 내보내기</h3>
-    <label>팩 이름 *</label>
-    <input type="text" id="export-name" value="내 키워드 필터" placeholder="필터 팩 이름">
-    <label>설명</label><textarea id="export-desc" placeholder="이 필터 팩에 대한 설명"></textarea>
-    <label>작성자</label><input type="text" id="export-author" placeholder="@handle 또는 이름">
-    <label>카테고리</label><input type="text" id="export-category" placeholder="예: 정치, 금융, 어그로">
-    <label>버전</label><input type="text" id="export-version" value="1.0.0" placeholder="1.0.0">
-    <div class="btn-row"><button class="btn-secondary" id="export-cancel">취소</button>
-      <button class="btn-primary" id="export-confirm">내보내기</button></div>`;
+    <h3>${tp('exportPackTitle')}</h3>
+    <label>${tp('packName')}</label>
+    <input type="text" id="export-name" value="${tp('packDefaultName')}" placeholder="${tp('packNamePlaceholder')}">
+    <label>${tp('packDescription')}</label><textarea id="export-desc" placeholder="${tp('packDescriptionPlaceholder')}"></textarea>
+    <label>${tp('packAuthor')}</label><input type="text" id="export-author" placeholder="${tp('packAuthorPlaceholder')}">
+    <label>${tp('packCategory')}</label><input type="text" id="export-category" placeholder="${tp('packCategoryPlaceholder')}">
+    <label>${tp('packVersion')}</label><input type="text" id="export-version" value="1.0.0" placeholder="1.0.0">
+    <div class="btn-row"><button class="btn-secondary" id="export-cancel">${tp('cancel')}</button>
+      <button class="btn-primary" id="export-confirm">${tp('export')}</button></div>`;
   return modal;
 }
 
@@ -84,7 +86,7 @@ function inputValue(id: string, fallback = ''): string {
 function buildExportPack(rules: string): FilterPack {
   return {
     id: `custom-${Date.now()}`,
-    name: inputValue('export-name', '내 키워드 필터'),
+    name: inputValue('export-name', tp('packDefaultName')),
     description: inputValue('export-desc'),
     author: inputValue('export-author'),
     category: inputValue('export-category') || undefined,

@@ -11,8 +11,9 @@ describe('askInlineConfirm', () => {
   });
 
   it('메시지와 확인/취소 버튼을 보여주고 확인 시 true로 끝난다', async () => {
-    const answer = askInlineConfirm(container, '목록을 바꿀까요?', '바꾸기');
+    const answer = askInlineConfirm(container, '목록을 바꿀까요?', { confirm: '바꾸기', cancel: '취소' });
     expect(container.hidden).toBe(false);
+    expect(container.querySelector('[data-confirm="no"]')!.textContent).toBe('취소');
     expect(container.textContent).toContain('목록을 바꿀까요?');
     container.querySelector<HTMLButtonElement>('[data-confirm="yes"]')!.click();
     await expect(answer).resolves.toBe(true);
@@ -21,14 +22,14 @@ describe('askInlineConfirm', () => {
   });
 
   it('취소 시 false로 끝난다', async () => {
-    const answer = askInlineConfirm(container, '목록을 바꿀까요?', '바꾸기');
+    const answer = askInlineConfirm(container, '목록을 바꿀까요?', { confirm: '바꾸기', cancel: '취소' });
     container.querySelector<HTMLButtonElement>('[data-confirm="no"]')!.click();
     await expect(answer).resolves.toBe(false);
     expect(container.hidden).toBe(true);
   });
 
   it('메시지는 텍스트로만 넣는다 (HTML 해석 금지)', () => {
-    void askInlineConfirm(container, '<img src=x onerror=alert(1)>', '확인');
+    void askInlineConfirm(container, '<img src=x onerror=alert(1)>', { confirm: '확인', cancel: '취소' });
     expect(container.querySelector('img')).toBeNull();
   });
 });

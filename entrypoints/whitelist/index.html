@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="../../src/whitelist/style.css">
-  <title>Blue Badge Remover - 화이트리스트</title>
+  <title data-i18n="whitelistPageTitle">Blue Badge Remover - 화이트리스트</title>
 </head>
 <body>
   <div class="container">
     <header>
       <h1>Blue Badge Remover</h1>
-      <p class="subtitle" id="page-subtitle">화이트리스트 관리</p>
+      <p class="subtitle" id="page-subtitle" data-i18n="manageWhitelist">화이트리스트 관리</p>
     </header>
 
     <section class="section">
@@ -18,20 +18,21 @@
         <textarea
           id="whitelist-input"
           rows="4"
+          data-i18n-placeholder="whitelistPlaceholder"
           placeholder="@아이디를 한 줄에 하나씩 입력 (Ctrl/⌘+Enter로 추가)"
         ></textarea>
-        <button id="whitelist-add" class="btn-primary" type="button">추가</button>
+        <button id="whitelist-add" class="btn-primary" type="button" data-i18n="add">추가</button>
       </div>
     </section>
 
     <details class="section whitelist-list" open>
-      <summary><h2 id="list-heading">등록된 계정</h2></summary>
+      <summary><h2 id="list-heading" data-i18n="whitelistHeading">등록된 계정</h2></summary>
       <div id="whitelist-container"></div>
-      <p id="whitelist-empty" class="empty-hint" style="display:none">등록된 계정이 없습니다</p>
+      <p id="whitelist-empty" class="empty-hint" style="display:none" data-i18n="whitelistEmpty">등록된 계정이 없습니다</p>
     </details>
 
     <section class="section hint-section">
-      <p class="hint">팔로우 중인 계정은 별도 동기화로 자동 처리됩니다.</p>
+      <p class="hint" data-i18n="whitelistFollowHint">팔로우 중인 계정은 별도 동기화로 자동 처리됩니다.</p>
     </section>
   </div>
 

@@ -4,6 +4,7 @@ import { logger } from '@shared/utils/logger';
 import { MESSAGE_TYPES } from '@shared/constants';
 import { cleanupOldStats } from '@features/stats';
 import { handleWhitelistRequest } from '@features/settings/whitelist-storage';
+import { keepLegacyLanguageOnUpdate } from '@features/settings';
 
 const UPDATE_NOTI_FLAG = 'bbr-update-available';
 
@@ -17,6 +18,7 @@ export default defineBackground(() => {
 
   // 확장 업데이트 감지
   browser.runtime.onInstalled.addListener((details) => {
+    if (details.reason === 'update') void keepLegacyLanguageOnUpdate();
     if (details.reason === 'update' && !isFirefoxAndroid) {
       void browser.storage.local.set({ [UPDATE_NOTI_FLAG]: true });
     }

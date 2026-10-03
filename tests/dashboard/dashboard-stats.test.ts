@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatStatCount, computeCategoryBars, getShareText } from '../../src/dashboard/stats-helpers';
+import { formatStatCount, computeCategoryBars } from '../../src/dashboard/stats-helpers';
 
 describe('formatStatCount', () => {
   it('should format count with Korean unit', () => {
@@ -36,19 +36,5 @@ describe('computeCategoryBars', () => {
     const result = computeCategoryBars({ '경제': 40, '정치': 20 });
     expect(result[0]!.percent).toBe(100);
     expect(result[1]!.percent).toBe(50);
-  });
-});
-
-describe('getShareText', () => {
-  it('should generate share text with count', () => {
-    const text = getShareText(47);
-    expect(text).toContain('47');
-    expect(text).toContain('Blue Badge Remover');
-  });
-
-  it('should URL-encode properly', () => {
-    const text = getShareText(10);
-    // Should be a valid string (no encoding issues)
-    expect(typeof text).toBe('string');
   });
 });

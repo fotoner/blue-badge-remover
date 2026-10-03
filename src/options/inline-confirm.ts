@@ -3,7 +3,12 @@
 // (Chrome: cross-origin subframe 대화상자 차단, Firefox: about:addons 내장 페이지 미지원).
 // 페이지 안에 확인/취소 버튼을 띄워 대신 묻는다.
 
-export function askInlineConfirm(container: HTMLElement, message: string, confirmLabel: string): Promise<boolean> {
+export interface ConfirmLabels {
+  confirm: string;
+  cancel: string;
+}
+
+export function askInlineConfirm(container: HTMLElement, message: string, labels: ConfirmLabels): Promise<boolean> {
   return new Promise((resolve) => {
     const text = document.createElement('p');
     text.className = 'inline-confirm-message';
@@ -13,13 +18,13 @@ export function askInlineConfirm(container: HTMLElement, message: string, confir
     yes.type = 'button';
     yes.className = 'btn-primary';
     yes.dataset['confirm'] = 'yes';
-    yes.textContent = confirmLabel;
+    yes.textContent = labels.confirm;
 
     const no = document.createElement('button');
     no.type = 'button';
     no.className = 'btn-secondary';
     no.dataset['confirm'] = 'no';
-    no.textContent = '취소';
+    no.textContent = labels.cancel;
 
     const actions = document.createElement('div');
     actions.className = 'btn-row';

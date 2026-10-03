@@ -1,6 +1,6 @@
 import { browser } from 'wxt/browser';
 import { getSettings, getWhitelist, addManyToWhitelist, removeFromWhitelist } from '@features/settings';
-import { t } from '@shared/i18n';
+import { applyTranslations, t } from '@shared/i18n';
 import type { Language } from '@shared/i18n';
 
 export function normalizeHandle(input: string): string | null {
@@ -60,17 +60,13 @@ async function init(): Promise<void> {
   const settings = await getSettings();
   const lang = settings.language;
 
-  const subtitleEl = document.getElementById('page-subtitle')!;
   const inputEl = document.getElementById('whitelist-input') as HTMLTextAreaElement;
   const addBtn = document.getElementById('whitelist-add') as HTMLButtonElement;
   const container = document.getElementById('whitelist-container')!;
   const emptyEl = document.getElementById('whitelist-empty')!;
   const headingEl = document.getElementById('list-heading')!;
 
-  subtitleEl.textContent = t('manageWhitelist', lang);
-  inputEl.placeholder = t('whitelistPlaceholder', lang);
-  addBtn.textContent = t('add', lang);
-  emptyEl.textContent = t('whitelistEmpty', lang);
+  applyTranslations(lang);
 
   const refresh = async (): Promise<void> => {
     const list = await getWhitelist();

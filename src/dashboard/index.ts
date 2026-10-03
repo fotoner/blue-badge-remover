@@ -1,6 +1,6 @@
 import { browser } from 'wxt/browser';
 import { getSettings, updateSettings, type SettingsPatch } from '@features/settings';
-import { t, type Language } from '@shared/i18n';
+import { applyTranslations, t } from '@shared/i18n';
 import type { Settings } from '@shared/types';
 import { renderStats, bindStatsEvents } from './stats-section';
 import {
@@ -29,22 +29,6 @@ function renderVersion(): void {
   if (el) el.textContent = manifest.version;
   const tag = document.getElementById('version-display');
   if (tag) tag.textContent = `v${manifest.version}`;
-}
-
-function applyTranslations(lang: Language): void {
-  document.querySelectorAll('[data-i18n]').forEach((el) => {
-    const key = el.getAttribute('data-i18n');
-    if (key) {
-      el.textContent = t(key as Parameters<typeof t>[0], lang);
-    }
-  });
-
-  document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
-    const key = el.getAttribute('data-i18n-placeholder');
-    if (key && el instanceof HTMLInputElement) {
-      el.placeholder = t(key as Parameters<typeof t>[0], lang);
-    }
-  });
 }
 
 function readDashboardSettings(): SettingsPatch {

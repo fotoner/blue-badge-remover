@@ -2,6 +2,7 @@
 // 키워드 빈도 차트 렌더링
 import { countTokens, topN } from '@features/keyword-collector';
 import type { CollectedFadak, FilterRule } from '@shared/types';
+import { tp } from '@shared/i18n';
 
 let hideFiltered = false;
 let hideEnglish = false;
@@ -92,7 +93,7 @@ function renderKeywordDetail(keyword: string, list: CollectedFadak[], section: H
   header.className = 'kw-detail-header';
   const title = document.createElement('span');
   title.className = 'kw-detail-title';
-  title.textContent = `"${keyword}" 포함 · ${matches.length}건`;
+  title.textContent = tp('keywordMatches', { keyword, count: String(matches.length) });
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
   closeBtn.className = 'kw-detail-close';
@@ -107,7 +108,7 @@ function renderKeywordDetail(keyword: string, list: CollectedFadak[], section: H
   if (matches.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'kw-empty';
-    empty.textContent = '매칭되는 트윗이 없습니다.';
+    empty.textContent = tp('noMatchingTweets');
     detail.appendChild(empty);
   } else {
     const listEl = document.createElement('div');
@@ -117,7 +118,7 @@ function renderKeywordDetail(keyword: string, list: CollectedFadak[], section: H
       item.className = 'kw-detail-item';
       const meta = document.createElement('span');
       meta.className = 'kw-detail-meta';
-      meta.textContent = `@${m.handle}${m.isBio ? ' · 바이오' : ''}`;
+      meta.textContent = `@${m.handle}${m.isBio ? ` · ${tp('bioLabel')}` : ''}`;
       const textEl = document.createElement('p');
       textEl.className = 'kw-detail-text';
       textEl.appendChild(highlightToken(m.text, keyword));
@@ -175,15 +176,15 @@ function createHeadingRow(
   headingRow.className = 'keywords-heading-row';
   const heading = document.createElement('h2');
   heading.className = 'keywords-heading';
-  heading.textContent = `자주 사용되는 키워드 Top ${topLimit}`;
+  heading.textContent = tp('topKeywords', { count: String(topLimit) });
   const toggleGroup = document.createElement('div');
   toggleGroup.className = 'kw-toggle-group';
   toggleGroup.append(
-    createToggleButton('필터 미포함만', hideFiltered, () => {
+    createToggleButton(tp('unfilteredOnly'), hideFiltered, () => {
       hideFiltered = !hideFiltered;
       renderKeywords(list, rules, section);
     }),
-    createToggleButton('영어 키워드 제외', hideEnglish, () => {
+    createToggleButton(tp('excludeEnglish'), hideEnglish, () => {
       hideEnglish = !hideEnglish;
       renderKeywords(list, rules, section);
     }),
@@ -247,7 +248,7 @@ export function renderKeywords(list: CollectedFadak[], rules: FilterRule[], sect
   if (top.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'kw-empty';
-    empty.textContent = '필터 미포함 키워드가 없습니다.';
+    empty.textContent = tp('noUnfilteredKeywords');
     element.appendChild(empty);
     return;
   }

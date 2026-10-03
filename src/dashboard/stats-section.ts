@@ -1,5 +1,5 @@
 import { getTodayStats, getAllTimeTotal, resetAllStats } from '@features/stats';
-import { t } from '@shared/i18n';
+import { t, translateCategoryName, type Language } from '@shared/i18n';
 import type { Settings } from '@shared/types';
 import { formatStatCount, computeCategoryBars } from './stats-helpers';
 
@@ -36,7 +36,7 @@ export async function renderStats({ keywordFilterEnabled, language }: StatsSetti
     if (barsEl) barsEl.style.display = 'none';
   } else {
     if (barsEl) barsEl.style.display = 'flex';
-    renderCategoryBars(stats.byCategory);
+    renderCategoryBars(stats.byCategory, language);
   }
 }
 
@@ -54,7 +54,7 @@ export function bindStatsEvents(getSettings: () => StatsSettings): void {
   });
 }
 
-function renderCategoryBars(categories: Record<string, number>): void {
+function renderCategoryBars(categories: Record<string, number>, language: Language): void {
   const container = document.getElementById('category-bars');
   if (!container) return;
 
@@ -67,7 +67,7 @@ function renderCategoryBars(categories: Record<string, number>): void {
 
     const nameEl = document.createElement('span');
     nameEl.className = 'category-bar-name';
-    nameEl.textContent = bar.name;
+    nameEl.textContent = translateCategoryName(bar.name, language);
 
     const track = document.createElement('div');
     track.className = 'category-bar-track';
@@ -79,7 +79,7 @@ function renderCategoryBars(categories: Record<string, number>): void {
 
     const countEl = document.createElement('span');
     countEl.className = 'category-bar-count';
-    countEl.textContent = `${bar.count}건`;
+    countEl.textContent = formatStatCount(bar.count, language);
 
     row.appendChild(nameEl);
     row.appendChild(track);

@@ -7,6 +7,7 @@ import {
 } from '@features/keyword-filter';
 import { getSettings, updateSettings } from '@features/settings';
 import { STORAGE_KEYS } from '@shared/constants';
+import { applyTranslations, setPageLanguage, tp } from '@shared/i18n';
 import { renderCategories, updateStats } from './categories';
 import { bindPackEvents, renderFilterPacks } from './filter-packs';
 import { bindSettingsTransferEvents } from './settings-transfer';
@@ -26,6 +27,8 @@ async function init(): Promise<void> {
   ]);
   const disabledCategories =
     (stored[STORAGE_KEYS.DISABLED_FILTER_CATEGORIES] as string[] | undefined) ?? [];
+  setPageLanguage(settings.language);
+  applyTranslations(settings.language);
 
   customEl.value = customText;
   defaultFilterToggle.checked = settings.defaultFilterEnabled;
@@ -55,7 +58,7 @@ async function init(): Promise<void> {
 }
 
 function showSaveStatus(element: HTMLSpanElement, success: boolean): void {
-  element.textContent = success ? '저장 완료' : '저장 실패';
+  element.textContent = success ? tp('saved') : tp('saveFailed');
   element.className = `save-status ${success ? 'success' : 'error'}`;
   setTimeout(() => { element.textContent = ''; }, 2000);
 }

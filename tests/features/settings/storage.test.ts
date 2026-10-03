@@ -3,7 +3,10 @@ import type { Mock } from 'vitest';
 import { DEFAULT_SETTINGS } from '@shared/constants';
 
 const mockStorage: Record<string, unknown> = {};
-const { mockSendMessage } = vi.hoisted(() => ({ mockSendMessage: vi.fn() }));
+const { mockSendMessage, mockGetUILanguage } = vi.hoisted(() => ({
+  mockSendMessage: vi.fn(),
+  mockGetUILanguage: vi.fn((): string => 'ko-KR'),
+}));
 
 vi.mock('wxt/browser', () => ({
   browser: {
@@ -23,18 +26,31 @@ vi.mock('wxt/browser', () => ({
     runtime: {
       sendMessage: mockSendMessage,
     },
+    i18n: {
+      getUILanguage: mockGetUILanguage,
+    },
   },
 }));
 
 // Dynamic import after mock is set up
 const { handleWhitelistRequest } = await import('@features/settings/whitelist-storage');
 mockSendMessage.mockImplementation((request: unknown) => handleWhitelistRequest(request));
-const { getSettings, updateSettings, getWhitelist, addToWhitelist, addManyToWhitelist, removeFromWhitelist } = await import('@features/settings/storage');
+const {
+  getSettings,
+  updateSettings,
+  keepLegacyLanguageOnUpdate,
+  getWhitelist,
+  addToWhitelist,
+  addManyToWhitelist,
+  removeFromWhitelist,
+} = await import('@features/settings/storage');
 const { browser } = await import('wxt/browser');
 
 beforeEach(() => {
   Object.keys(mockStorage).forEach((k) => delete mockStorage[k]);
   mockSendMessage.mockClear();
+  mockGetUILanguage.mockReset();
+  mockGetUILanguage.mockReturnValue('ko-KR');
 });
 
 describe('getSettings', () => {
@@ -79,6 +95,59 @@ describe('getSettings', () => {
     const settings = await getSettings();
     expect(settings.enabled).toBe(true);
     expect(settings.keywordFilterEnabled).toBe(DEFAULT_SETTINGS.keywordFilterEnabled);
+  });
+});
+
+// 기본 언어가 브라우저와 무관하게 한국어여서 영어권 사용자도 한국어 UI로 시작하던 문제
+describe('언어 기본값', () => {
+  it.each([
+    ['en-US', 'en'],
+    ['ja', 'ja'],
+    ['ko-KR', 'ko'],
+    ['fr-FR', 'en'],
+  ] as const)('저장된 언어가 없으면 브라우저 언어 %s → %s로 시작한다', async (uiLanguage, expected) => {
+    mockGetUILanguage.mockReturnValue(uiLanguage);
+    expect((await getSettings()).language).toBe(expected);
+  });
+
+  it('저장된 언어는 브라우저 언어보다 우선한다', async () => {
+    mockGetUILanguage.mockReturnValue('en-US');
+    mockStorage['settings'] = { ...DEFAULT_SETTINGS, language: 'ja' };
+    expect((await getSettings()).language).toBe('ja');
+  });
+
+  it('브라우저 언어를 읽을 수 없으면 영어로 시작한다', async () => {
+    mockGetUILanguage.mockImplementation(() => { throw new Error('not implemented'); });
+    expect((await getSettings()).language).toBe('en');
+  });
+
+  it('설정을 처음 저장할 때 감지한 언어가 함께 저장된다', async () => {
+    mockGetUILanguage.mockReturnValue('en-US');
+    await updateSettings({ enabled: false });
+    expect((mockStorage['settings'] as { language: string }).language).toBe('en');
+  });
+});
+
+// 업데이트 전에는 언어를 저장하지 않은 사용자도 한국어로 보고 있었다 — 업데이트만으로 언어가 바뀌면 안 된다
+describe('keepLegacyLanguageOnUpdate', () => {
+  it('저장된 설정이 없으면 기존 기본값인 한국어를 저장한다', async () => {
+    mockGetUILanguage.mockReturnValue('en-US');
+    await keepLegacyLanguageOnUpdate();
+    expect((mockStorage['settings'] as { language: string }).language).toBe('ko');
+  });
+
+  it('저장된 설정에 언어가 없으면 한국어를 채우고 다른 값은 유지한다', async () => {
+    mockStorage['settings'] = { enabled: false };
+    await keepLegacyLanguageOnUpdate();
+    const stored = mockStorage['settings'] as { language: string; enabled: boolean };
+    expect(stored.language).toBe('ko');
+    expect(stored.enabled).toBe(false);
+  });
+
+  it('이미 저장된 언어는 바꾸지 않는다', async () => {
+    mockStorage['settings'] = { ...DEFAULT_SETTINGS, language: 'en' };
+    await keepLegacyLanguageOnUpdate();
+    expect((mockStorage['settings'] as { language: string }).language).toBe('en');
   });
 });
 

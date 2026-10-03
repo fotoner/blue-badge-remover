@@ -2,6 +2,7 @@
 // 수집된 파딱 계정 목록 렌더링 + 내보내기
 import { getCollectedFadaks, clearCollectedFadaks } from '@features/keyword-collector';
 import type { CollectedFadak } from '@shared/types';
+import { tp } from '@shared/i18n';
 
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -16,7 +17,7 @@ function buildEntry(fadak: CollectedFadak): HTMLElement {
   header.innerHTML = `
     <span class="handle">@${escapeHtml(fadak.handle)}</span>
     <span class="display-name">${escapeHtml(fadak.displayName)}</span>
-    <span class="tweet-count">${fadak.tweetTexts.length}개 트윗</span>
+    <span class="tweet-count">${tp('collectorTweetCount', { count: String(fadak.tweetTexts.length) })}</span>
   `;
 
   const body = document.createElement('div');
@@ -56,7 +57,10 @@ export function renderList(list: CollectedFadak[]): void {
   container.innerHTML = '';
 
   if (list.length === 0) {
-    container.innerHTML = '<p class="empty">수집된 데이터가 없습니다.<br>팝업에서 키워드 수집을 활성화하고 X를 탐색하세요.</p>';
+    const empty = document.createElement('p');
+    empty.className = 'empty';
+    empty.append(tp('collectorEmpty'), document.createElement('br'), tp('collectorEmptyHint'));
+    container.appendChild(empty);
     return;
   }
 
@@ -69,7 +73,10 @@ export function renderList(list: CollectedFadak[]): void {
 export function renderStats(list: CollectedFadak[]): void {
   const total = list.length;
   const totalTweets = list.reduce((sum, f) => sum + f.tweetTexts.length, 0);
-  document.getElementById('stats')!.textContent = `${total}개 계정 · ${totalTweets}개 트윗`;
+  document.getElementById('stats')!.textContent = tp('collectorStats', {
+    accounts: String(total),
+    tweets: String(totalTweets),
+  });
 }
 
 export function bindExportEvents(): void {
@@ -95,12 +102,12 @@ export function bindExportEvents(): void {
     }
     await navigator.clipboard.writeText(lines.join('\n'));
     const btn = document.getElementById('copy-text-btn') as HTMLButtonElement;
-    btn.textContent = '복사됨!';
-    setTimeout(() => { btn.textContent = '텍스트 복사'; }, 2000);
+    btn.textContent = tp('copied');
+    setTimeout(() => { btn.textContent = tp('copyText'); }, 2000);
   });
 
   document.getElementById('clear-btn')!.addEventListener('click', async () => {
-    if (!confirm('수집된 모든 데이터를 삭제하시겠습니까?')) return;
+    if (!confirm(tp('collectorClearConfirm'))) return;
     await clearCollectedFadaks();
   });
 }

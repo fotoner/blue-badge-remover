@@ -10,3 +10,11 @@ describe('background whitelist wiring', () => {
     expect(source).toContain('if (type === MESSAGE_TYPES.WHITELIST) return handleWhitelistRequest(message)');
   });
 });
+
+describe('background language migration wiring', () => {
+  it('업데이트 설치 시 기존 사용자의 언어(한국어)를 고정한다', () => {
+    const source = readFileSync(resolve(process.cwd(), 'entrypoints/background.ts'), 'utf8');
+
+    expect(source).toContain("if (details.reason === 'update') void keepLegacyLanguageOnUpdate()");
+  });
+});

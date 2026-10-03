@@ -8,6 +8,7 @@ import {
 } from '@features/keyword-filter';
 import { getFilterPacks } from '@features/filter-pack';
 import { STORAGE_KEYS } from '@shared/constants';
+import { getPageLanguage, tp, translateCategoryName } from '@shared/i18n';
 
 type FilterCategory = ReturnType<typeof parseCategories>[number];
 
@@ -19,7 +20,10 @@ export function renderCategories(
 ): void {
   container.innerHTML = '';
   if (!masterEnabled) {
-    container.innerHTML = '<p class="categories-disabled">내장 필터가 비활성화되어 있습니다</p>';
+    const notice = document.createElement('p');
+    notice.className = 'categories-disabled';
+    notice.textContent = tp('builtinFiltersDisabled');
+    container.appendChild(notice);
     return;
   }
   const disabledSet = new Set(disabledCategories);
@@ -41,7 +45,7 @@ function createCategoryCard(
   const info = document.createElement('div');
   info.className = 'category-info';
   info.append(
-    createTextElement('span', 'category-name', category.name),
+    createTextElement('span', 'category-name', translateCategoryName(category.name, getPageLanguage())),
     createTextElement('span', 'category-count', String(category.keywords.length)),
   );
   const toggle = document.createElement('input');

@@ -2,6 +2,7 @@ import { browser } from 'wxt/browser';
 import { getWhitelist, replaceWhitelist } from '@features/settings';
 import { parseFilterList } from '@features/keyword-filter';
 import { STORAGE_KEYS } from '@shared/constants';
+import { tp, type TranslationKey } from '@shared/i18n';
 import { logger } from '@shared/utils/logger';
 import { askInlineConfirm } from './inline-confirm';
 
@@ -160,9 +161,8 @@ const importDeps: ImportDeps = {
     if (!container) return false;
     return askInlineConfirm(
       container,
-      `현재 화이트리스트·커스텀 필터·보호 키워드를 백업 내용으로 바꿉니다 `
-      + `(화이트리스트 ${summary.whitelist}개 · 커스텀 규칙 ${summary.customRules}개 · 보호 키워드 ${summary.protectedKeywords}개).`,
-      '바꾸기',
+      tp('importReplaceConfirm', summaryParams(summary)),
+      { confirm: tp('replace'), cancel: tp('cancel') },
     );
   },
   replaceWhitelist,
@@ -174,9 +174,17 @@ const importDeps: ImportDeps = {
   },
 };
 
-const INVALID_MESSAGES: Record<'too-large' | 'invalid-format', string> = {
-  'too-large': '파일이 너무 큽니다 (최대 2MB)',
-  'invalid-format': '올바른 백업 파일이 아닙니다',
+function summaryParams(summary: ImportSummary): Record<string, string> {
+  return {
+    whitelist: String(summary.whitelist),
+    rules: String(summary.customRules),
+    keywords: String(summary.protectedKeywords),
+  };
+}
+
+const INVALID_MESSAGES: Record<'too-large' | 'invalid-format', TranslationKey> = {
+  'too-large': 'backupTooLarge',
+  'invalid-format': 'backupInvalid',
 };
 
 const STATUS_CLEAR_MS = 4000;
@@ -200,21 +208,20 @@ async function importFilterLists(
   try {
     const outcome = await importFilterListFile(file, importDeps);
     if (outcome.status === 'invalid') {
-      showTransferStatus(INVALID_MESSAGES[outcome.reason], false);
+      showTransferStatus(tp(INVALID_MESSAGES[outcome.reason]), false);
       return;
     }
     if (outcome.status === 'cancelled') return;
     renderImportedFilterLists(outcome.backup, fields.custom, fields.protected);
     onImported();
-    const { whitelist, customRules, protectedKeywords } = outcome.summary;
     if (outcome.status === 'partial') {
-      showTransferStatus('필터·보호 키워드는 가져왔지만 화이트리스트 교체에 실패했습니다. 다시 시도해 주세요', false);
+      showTransferStatus(tp('importPartial'), false);
       return;
     }
-    showTransferStatus(`가져왔습니다 (화이트리스트 ${whitelist}개 · 규칙 ${customRules}개 · 보호 키워드 ${protectedKeywords}개)`, true);
+    showTransferStatus(tp('importDone', summaryParams(outcome.summary)), true);
   } catch (error) {
     logger.warn('Filter list backup import failed', { error: String(error) });
-    showTransferStatus('가져오기에 실패했습니다', false);
+    showTransferStatus(tp('importFailed'), false);
   } finally {
     input.value = '';
   }

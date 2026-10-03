@@ -25,7 +25,3 @@ export function computeCategoryBars(
     percent: max > 0 ? Math.round((count / max) * 100) : 0,
   }));
 }
-
-export function getShareText(count: number): string {
-  return `오늘 Blue Badge Remover로 파딱 트윗 ${count}개를 숨겼습니다! 🛡️\n\nhttps://chromewebstore.google.com/detail/blue-badge-remover/gpoiflbcmmpihejhgnomdkaofdgjlbhm`;
-}

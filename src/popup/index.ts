@@ -1,7 +1,7 @@
 import { browser } from 'wxt/browser';
 import { getSettings, updateSettings } from '@features/settings';
 import { getTodayStats, getAllTimeTotal } from '@features/stats';
-import { t } from '@shared/i18n';
+import { applyTranslations, t } from '@shared/i18n';
 import { STORAGE_KEYS } from '@shared/constants';
 import type { Settings } from '@shared/types';
 
@@ -28,7 +28,7 @@ async function init(): Promise<void> {
   settings = await getSettings();
   renderVersion();
   renderToggle();
-  applyTranslations();
+  applyTranslations(settings.language);
   await renderStats();
   await renderInfo();
   await renderUpdateBanner();
@@ -44,18 +44,6 @@ function renderVersion(): void {
 
 function renderToggle(): void {
   (document.getElementById('enabled') as HTMLInputElement).checked = settings.enabled;
-}
-
-function applyTranslations(): void {
-  const lang = settings.language;
-
-  document.querySelectorAll('[data-i18n]').forEach((el) => {
-    const key = el.getAttribute('data-i18n');
-    if (!key) return;
-    // Skip todayHidden — rendered dynamically with count param
-    if (key === 'todayHidden') return;
-    el.textContent = t(key as Parameters<typeof t>[0], lang);
-  });
 }
 
 async function renderStats(): Promise<void> {
@@ -77,7 +65,7 @@ async function renderInfo(): Promise<void> {
   const totalEl = document.getElementById('total-hidden');
   if (totalEl) {
     const total = await getAllTimeTotal();
-    totalEl.textContent = `${total}개`;
+    totalEl.textContent = t('statCount', settings.language, { count: String(total) });
   }
 
   // 키워드 필터 상태
@@ -93,7 +81,9 @@ async function renderInfo(): Promise<void> {
     try {
       const stored = await browser.storage.local.get([STORAGE_KEYS.FOLLOW_LIST]);
       const followList = (stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? [];
-      followEl.textContent = followList.length > 0 ? `${followList.length}명` : '미동기화';
+      followEl.textContent = followList.length > 0
+        ? t('followCount', settings.language, { count: String(followList.length) })
+        : t('notSynced', settings.language);
       followEl.style.color = followList.length > 0 ? '#e7e9ea' : '#536471';
     } catch {
       followEl.textContent = '-';

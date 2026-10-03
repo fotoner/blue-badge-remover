@@ -3,6 +3,8 @@
 import { browser } from 'wxt/browser';
 import { getCollectedFadaks } from '@features/keyword-collector';
 import { getCustomFilterList, parseFilterList, DEFAULT_FILTER_LIST } from '@features/keyword-filter';
+import { getSettings } from '@features/settings';
+import { applyTranslations, setPageLanguage } from '@shared/i18n';
 import type { CollectedFadak, FilterRule } from '@shared/types';
 import { renderKeywords } from './keyword-chart';
 import { renderList, renderStats, bindExportEvents } from './account-list';
@@ -15,7 +17,9 @@ async function loadFilterRules(): Promise<FilterRule[]> {
 }
 
 async function init(): Promise<void> {
-  const [list, rules] = await Promise.all([getCollectedFadaks(), loadFilterRules()]);
+  const [list, rules, settings] = await Promise.all([getCollectedFadaks(), loadFilterRules(), getSettings()]);
+  setPageLanguage(settings.language);
+  applyTranslations(settings.language);
   filterRules = rules;
   renderStats(list);
   renderKeywords(list, filterRules);
