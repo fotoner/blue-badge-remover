@@ -1,6 +1,6 @@
 // 빌드된 확장 화면(dist/chrome-mv3)을 chrome.* 스텁 위에 띄워 스토어 이미지용으로 캡처한다.
 // 사용법: npm run build && node scripts/store-assets/capture.mjs [en|ko|ja]
-// 예시 데이터의 계정 아이디는 모두 가상이다.
+// 예시 계정 아이디는 실존 계정과 겹칠 수 없는 16자 이상 sample_… (README 참고). 팔로우 목록은 개수만 보인다.
 /* global document -- page.evaluate 콜백은 브라우저에서 실행된다 */
 import process from 'node:process';
 import { mkdir, readFile } from 'node:fs/promises';
