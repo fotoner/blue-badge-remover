@@ -280,6 +280,7 @@ input[type="checkbox"]:checked::after {
 /* Buttons */
 .btn-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   margin-top: 14px;
@@ -287,6 +288,7 @@ input[type="checkbox"]:checked::after {
 
 /* Primary button — pill, no border */
 .btn-primary {
+  white-space: nowrap;
   background: var(--accent);
   color: #fff;
   border: none;
@@ -380,6 +382,7 @@ input[type="checkbox"]:checked::after {
 
 /* Secondary button — no border, radius 4px */
 .btn-secondary {
+  white-space: nowrap;
   background: var(--surface-2);
   color: var(--text-primary);
   padding: 9px 24px;
