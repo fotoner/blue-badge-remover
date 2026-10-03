@@ -78,12 +78,21 @@ function installStub({ store, version, uiLanguage }) {
   globalThis.browser = api;
 }
 
-// selector: 그 요소만 찍는다. sections: 긴 화면에서 from 요소가 든 section부터 to 요소가 든 section까지만 따로 찍는다
+// 스토어 갤러리에서 스크린샷은 절반 정도로 줄어 보이므로, 화면 전체 대신 핵심 부분만 잘라(clips) 크게 쓴다.
+// clips: from 요소의 위부터 to 요소의 아래까지 (가로는 화면 전체, 위아래 여백 pad). 폭을 좁혀 찍을수록 같은 칸에서 더 크게 보인다.
 const PAGES = [
-  { name: 'popup', path: '/popup.html', width: 340, selector: '.container' },
-  { name: 'dashboard', path: '/dashboard.html', width: 500 },
-  { name: 'options', path: '/options.html', width: 500, sections: { name: 'options-custom', from: '#custom-filters', to: '#protected-keywords' } },
-  { name: 'whitelist', path: '/whitelist.html', width: 500 },
+  { name: 'popup', path: '/popup.html', width: 340, selector: '.container', clips: [
+    { name: 'popup-top', from: '.header', to: '.stats-row', pad: 8 },
+  ] },
+  { name: 'dashboard', path: '/dashboard.html', width: 360, clips: [
+    { name: 'dashboard-scope', from: '#section-filter-settings', to: 'label:has(#filter-lists)' },
+  ] },
+  { name: 'options', path: '/options.html', width: 360, clips: [
+    { name: 'options-custom', from: 'section:has(#custom-filters)', to: 'section:has(#custom-filters)', pad: 12 },
+  ] },
+  { name: 'whitelist', path: '/whitelist.html', width: 360, clips: [
+    { name: 'whitelist-list', from: '.add-row', to: '#whitelist-container' },
+  ] },
 ];
 
 const SECTION_MARGIN = 24;
@@ -103,13 +112,12 @@ async function assertFontsLoaded(page, families, label) {
   if (missing.length > 0) throw new Error(`${label}: 웹폰트를 불러오지 못했습니다 (${missing.join(', ')}) — 네트워크를 확인하세요`);
 }
 
-async function captureSections(page, { name, from, to }) {
-  const sectionOf = (selector) => page.locator('section', { has: page.locator(selector) });
-  const first = await sectionOf(from).boundingBox();
-  const last = await sectionOf(to).boundingBox();
+async function captureClip(page, { name, from, to, pad = SECTION_MARGIN }) {
+  const first = await page.locator(from).first().boundingBox();
+  const last = await page.locator(to).last().boundingBox();
   if (!first || !last) throw new Error(`${name}: ${from} / ${to} 구간을 찾지 못했습니다`);
-  const top = Math.max(0, first.y - SECTION_MARGIN);
-  const clip = { x: 0, y: top, width: page.viewportSize().width, height: last.y + last.height + SECTION_MARGIN - top };
+  const top = Math.max(0, first.y - pad);
+  const clip = { x: 0, y: top, width: page.viewportSize().width, height: last.y + last.height + pad - top };
   const out = join(outDir, `${name}.png`);
   await page.screenshot({ path: out, clip, fullPage: true });
   return out;
@@ -137,7 +145,7 @@ try {
     if (target.selector) await page.locator(target.selector).screenshot({ path: out });
     else await page.screenshot({ path: out, fullPage: true });
     process.stdout.write(`${out}\n`);
-    if (target.sections) process.stdout.write(`${await captureSections(page, target.sections)}\n`);
+    for (const clip of target.clips ?? []) process.stdout.write(`${await captureClip(page, clip)}\n`);
     await page.close();
   }
 } finally {

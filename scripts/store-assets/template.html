@@ -34,48 +34,40 @@
   }
   .frame { overflow: hidden; background: var(--bg); display: flex; flex-direction: column; }
 
-  /* ── 스크린샷 1280×800 ── */
-  .shot { width: 1280px; height: 800px; padding: 48px 64px 56px; }
-  header {
-    display: flex; align-items: center; gap: 14px;
-    padding-bottom: 20px; border-bottom: 1px solid var(--border-subtle);
+  /* ── 스크린샷 1280×800 ──
+     스토어 갤러리에서는 약 46%(590px 폭)로 줄어 보인다. 줄어든 뒤에도 읽히도록 글자는 크게, UI는 핵심만 잘라 약 2배로.
+     글은 왼쪽 열, 화면은 오른쪽·아래 가장자리까지 붙인다 */
+  .shot {
+    width: 1280px; height: 800px; padding: 64px 0 0 64px;
+    display: grid; grid-template-columns: 470px 1fr; column-gap: 40px;
   }
-  header img { width: 28px; height: 28px; }
-  .product { font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
-  .meta { font-family: var(--font-mono); font-size: 17px; color: var(--text-muted); }
-  .url { margin-left: auto; }
-  .body {
-    flex: 1; min-height: 0;
-    display: grid; grid-template-columns: 1fr 560px; gap: 64px;
-    padding-top: 44px;
-  }
-  .text { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
-  .label { font-size: 18px; font-weight: 500; color: var(--text-muted); }
+  .text { min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding-bottom: 60px; }
+  .label { font-size: 24px; font-weight: 500; color: var(--text-muted); }
   h1 {
-    margin-top: 14px; font-size: 50px; font-weight: 700;
-    line-height: 1.2; letter-spacing: -0.01em; white-space: pre-line;
+    margin-top: 16px; font-size: 64px; font-weight: 700;
+    line-height: 1.16; letter-spacing: -0.015em; white-space: pre-line;
   }
-  .desc { margin-top: 18px; font-size: 21px; line-height: 1.55; color: var(--text-secondary); }
-  .points {
-    margin-top: auto; padding-left: 20px;
-    border-left: 3px solid var(--accent); list-style: none;
-  }
-  .points li { font-size: 19px; line-height: 1.6; color: var(--text-secondary); }
+  .desc { margin-top: 24px; font-size: 28px; line-height: 1.5; color: var(--text-secondary); white-space: pre-line; }
+  .brand { margin-top: auto; display: flex; align-items: center; gap: 12px; }
+  .brand img { width: 34px; height: 34px; }
+  .product { font-family: var(--font-display); font-size: 24px; font-weight: 700; letter-spacing: -0.01em; color: var(--text-secondary); }
   .visual { min-height: 0; overflow: hidden; }
   .visual img {
-    display: block; max-width: 100%;
-    border: 1px solid var(--border-subtle);
+    display: block; max-width: none;
+    border-top: 1px solid var(--border-subtle); border-left: 1px solid var(--border-subtle);
   }
 
   /* ── X 타임라인 재현 (확장이 그리는 숨김 표시와 같은 스타일·문구) ── */
   .timeline {
-    background: #000; border: 1px solid #2f3336; height: 100%;
+    background: #000; border: 1px solid #2f3336; border-right: none; min-height: 100%;
     font-family: -apple-system, "Segoe UI", Roboto, var(--font-body);
   }
   .tl-head { padding: 16px 20px; font-size: 19px; font-weight: 700; color: #e7e9ea; border-bottom: 1px solid #2f3336; }
   .tweet { display: flex; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #2f3336; }
+  .tweet > div { min-width: 0; }
   .avatar { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; }
-  .tw-meta { font-size: 15px; color: #71767b; }
+  /* X처럼 이름 줄이 길면 말줄임 */
+  .tw-meta { font-size: 15px; color: #71767b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tw-meta b { color: #e7e9ea; font-weight: 700; margin-right: 4px; }
   .tw-text { margin-top: 3px; font-size: 15px; line-height: 1.4; color: #e7e9ea; }
   .hidden-row {
@@ -94,13 +86,13 @@
   .promo .desc { margin-top: 12px; padding-left: 14px; border-left: 3px solid var(--accent); font-size: 17px; line-height: 1.4; }
 
   /* ── 마키 1400×560 ── */
-  .marquee { width: 1400px; height: 560px; padding: 56px 72px; }
-  .marquee .body { padding-top: 0; grid-template-columns: 1fr 470px; gap: 72px; }
+  .marquee { width: 1400px; height: 560px; padding: 56px 0 0 72px; }
+  .marquee .body { height: 100%; display: grid; grid-template-columns: 1fr 640px; column-gap: 64px; }
   .marquee .mark { display: flex; align-items: center; gap: 14px; }
   .marquee .mark img { width: 44px; height: 44px; }
-  .marquee .mark span { font-family: var(--font-mono); font-size: 18px; color: var(--text-muted); }
-  .marquee h1 { margin-top: auto; font-size: 64px; line-height: 1.1; }
-  .marquee .desc { margin-top: 20px; padding-left: 20px; border-left: 3px solid var(--accent); font-size: 24px; }
+  .marquee .mark span { font-family: var(--font-mono); font-size: 20px; color: var(--text-muted); }
+  .marquee h1 { margin-top: auto; font-size: 66px; line-height: 1.1; }
+  .marquee .desc { margin-top: 22px; padding-left: 20px; border-left: 3px solid var(--accent); font-size: 28px; }
 </style>
 </head>
 <body>
@@ -143,13 +135,20 @@
     return box;
   }
 
+  // 캡처는 3배율이므로 CSS 크기 = 원본 픽셀 / 3. scale배로 키워 보여준다
+  const CAPTURE_DPR = 3;
   function visual(spec) {
     const figure = el('figure', 'visual');
-    if (spec.type === 'timeline') figure.append(timeline(spec));
-    else {
+    if (spec.type === 'timeline') {
+      const box = timeline(spec);
+      box.style.zoom = String(spec.zoom ?? 1);
+      figure.append(box);
+    } else {
       const img = el('img');
+      img.addEventListener('load', () => {
+        img.style.width = `${(img.naturalWidth / CAPTURE_DPR) * spec.scale}px`;
+      });
       img.src = spec.src;
-      if (spec.width) img.style.width = `${spec.width}px`;
       figure.append(img);
     }
     return figure;
@@ -165,19 +164,14 @@
 
   if (asset.kind === 'screenshot') {
     frame.classList.add('shot');
-    const header = el('header');
-    const icon = el('img');
-    icon.src = asset.icon;
-    header.append(icon, el('span', 'product', asset.product), el('span', 'meta url', asset.url));
     const text = el('section', 'text');
     text.dataset.fit = 'text';
-    text.append(el('p', 'label', asset.label), el('h1', '', asset.title), el('p', 'desc', asset.desc));
-    const points = el('ul', 'points');
-    for (const point of asset.points) points.append(el('li', '', point));
-    text.append(points);
-    const body = el('div', 'body');
-    body.append(text, visual(asset.visual));
-    frame.append(header, body);
+    const brand = el('div', 'brand');
+    const icon = el('img');
+    icon.src = asset.icon;
+    brand.append(icon, el('span', 'product', asset.product));
+    text.append(el('p', 'label', asset.label), el('h1', '', asset.title), el('p', 'desc', asset.desc), brand);
+    frame.append(text, visual(asset.visual));
   } else if (asset.kind === 'promo') {
     frame.classList.add('promo');
     frame.append(mark(), el('h1', '', asset.title), el('p', 'desc', asset.desc));
