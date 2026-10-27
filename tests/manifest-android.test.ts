@@ -6,6 +6,6 @@ import config from '../wxt.config';
 describe('Firefox 매니페스트', () => {
   it('Firefox for Android 호환을 위해 gecko_android를 선언한다', () => {
     const manifest = config.manifest as { browser_specific_settings?: Record<string, unknown> };
-    expect(manifest.browser_specific_settings).toHaveProperty('gecko_android');
+    expect(manifest.browser_specific_settings).toHaveProperty('gecko_android', {});
   });
 });
