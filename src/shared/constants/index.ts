@@ -36,6 +36,8 @@ export const STORAGE_KEYS = {
   DISABLED_FILTER_CATEGORIES: 'disabledFilterCategories',
   FILTER_PACKS: 'filterPacks',
   PROTECTED_KEYWORDS: 'protectedKeywords',
+  /** 오염된 팔로우 목록을 한 번 비웠다는 표식 (#70) */
+  FOLLOW_LIST_RESET: 'followListResetV1',
 } as const;
 
 export const X_GRAPHQL_ENDPOINTS = [
