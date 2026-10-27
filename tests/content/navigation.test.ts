@@ -54,24 +54,40 @@ describe('navigation', () => {
   });
 
   describe('listenForNavigation', () => {
-    it('should trigger callback on history.pushState', () => {
-      const callback = vi.fn();
-      setOnNavigate(callback);
-      listenForNavigation();
+    // X는 MAIN world에서 pushState를 부르므로 content script(ISOLATED world)의 패치로는 못 잡는다.
+    // Navigation API 이벤트는 모든 world에 전달된다 (2026-10 실측).
+    function stubNavigation(): EventTarget {
+      const nav = new EventTarget();
+      Object.defineProperty(window, 'navigation', { value: nav, configurable: true });
+      return nav;
+    }
 
-      history.pushState({}, '', '/new-page');
-
-      expect(callback).toHaveBeenCalled();
+    afterEach(() => {
+      Reflect.deleteProperty(window, 'navigation');
     });
 
-    it('should trigger callback on history.replaceState', () => {
+    it('Navigation API의 currententrychange로 이동을 폴링 없이 바로 감지한다', () => {
+      const nav = stubNavigation();
       const callback = vi.fn();
       setOnNavigate(callback);
       listenForNavigation();
 
-      history.replaceState({}, '', '/replaced-page');
+      originalPushState.call(history, {}, '', '/new-page');
+      nav.dispatchEvent(new Event('currententrychange'));
 
-      expect(callback).toHaveBeenCalled();
+      expect(callback).toHaveBeenCalledOnce();
+    });
+
+    it('Navigation API가 없으면 URL 폴링으로 감지한다', () => {
+      const callback = vi.fn();
+      setOnNavigate(callback);
+      listenForNavigation();
+
+      originalPushState.call(history, {}, '', '/polled');
+      expect(callback).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(500);
+
+      expect(callback).toHaveBeenCalledOnce();
     });
 
     it('should trigger callback on popstate event', () => {
@@ -85,47 +101,48 @@ describe('navigation', () => {
       expect(callback).toHaveBeenCalled();
     });
 
-    it('should preserve original pushState behavior', () => {
+    it('이벤트로 처리한 URL을 폴링이 다시 처리하지 않는다', () => {
+      const nav = stubNavigation();
       const callback = vi.fn();
       setOnNavigate(callback);
       listenForNavigation();
 
-      history.pushState({ key: 'value' }, '', '/preserved');
-
-      expect(window.location.pathname).toBe('/preserved');
-      expect(history.state).toEqual({ key: 'value' });
-    });
-
-    it('should preserve original replaceState behavior', () => {
-      const callback = vi.fn();
-      setOnNavigate(callback);
-      listenForNavigation();
-
-      history.replaceState({ replaced: true }, '', '/replaced-state');
-
-      expect(window.location.pathname).toBe('/replaced-state');
-      expect(history.state).toEqual({ replaced: true });
-    });
-
-    it('history 트리거 뒤 URL 폴링이 같은 URL을 다시 처리하지 않는다', () => {
-      const callback = vi.fn();
-      setOnNavigate(callback);
-      listenForNavigation();
-
-      history.pushState({}, '', '/deduped');
+      originalPushState.call(history, {}, '', '/deduped');
+      nav.dispatchEvent(new Event('currententrychange'));
       vi.advanceTimersByTime(1000);
 
       expect(callback).toHaveBeenCalledOnce();
     });
 
-    it('같은 URL의 replaceState는 재처리하지 않는다', () => {
+    it('URL이 그대로면 currententrychange가 와도 재처리하지 않는다', () => {
+      const nav = stubNavigation();
       const callback = vi.fn();
       setOnNavigate(callback);
       listenForNavigation();
 
-      history.replaceState({ changed: true }, '', window.location.href);
+      nav.dispatchEvent(new Event('currententrychange'));
 
       expect(callback).not.toHaveBeenCalled();
+    });
+
+    it('리스너를 멈추면 currententrychange를 더 받지 않는다', () => {
+      const nav = stubNavigation();
+      const callback = vi.fn();
+      setOnNavigate(callback);
+      listenForNavigation();
+      stopListeningForNavigation();
+
+      originalPushState.call(history, {}, '', '/after-stop');
+      nav.dispatchEvent(new Event('currententrychange'));
+
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it('history 메서드를 바꿔 끼우지 않는다', () => {
+      listenForNavigation();
+
+      expect(history.pushState).toBe(originalPushState);
+      expect(history.replaceState).toBe(originalReplaceState);
     });
   });
 });
