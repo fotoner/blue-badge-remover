@@ -62,68 +62,81 @@ function injectBannerStyles(): void {
   document.head.appendChild(style);
 }
 
+function tryInsertProfileBanner(deps: FadakBannerDeps, settings: Settings, pathHandle: string): boolean {
+  // 배지를 기다리는 사이 본인으로 확인될 수 있다 — 붙이기 직전에 다시 확인 (#88)
+  if (deps.isCurrentUser(pathHandle)) return true;
+  const stickyHeader = document.querySelector('[data-testid="primaryColumn"] > div > div:first-child');
+  if (!stickyHeader) return false;
+  const verifiedBadge = stickyHeader.querySelector('[data-testid="icon-verified"]');
+  if (!verifiedBadge) return false;
+  if (document.getElementById(FADAK_BANNER_ID)) return true;
+
+  // 금딱이면 배너 표시하지 않음
+  if (!isBlueBadgeElement(verifiedBadge)) return true;
+
+  injectBannerStyles();
+  const lang = settings.language;
+
+  const banner = document.createElement('div');
+  banner.id = FADAK_BANNER_ID;
+  banner.className = 'bbr-fadak-banner bbr-banner-warning';
+
+  const text = document.createElement('span');
+  text.textContent = t('fadakProfileBanner', lang, { handle: pathHandle });
+  banner.appendChild(text);
+
+  const btn = document.createElement('button');
+  btn.className = 'bbr-banner-btn';
+  btn.textContent = t('addToWhitelist', lang);
+  btn.addEventListener('click', async () => {
+    await deps.addToWhitelist('@' + pathHandle);
+    text.textContent = t('addedToWhitelist', lang);
+    banner.className = 'bbr-fadak-banner bbr-banner-success';
+    btn.remove();
+    setTimeout(() => banner.remove(), TIMINGS.BANNER_SUCCESS_DISMISS);
+  });
+  banner.appendChild(btn);
+
+  stickyHeader.appendChild(banner);
+  return true;
+}
+
 export function showFadakProfileBanner(deps: FadakBannerDeps): void {
   const settings = deps.getCurrentSettings();
   if (!deps.isProfilePage() || !settings.enabled) return;
-  if (document.getElementById(FADAK_BANNER_ID)) return;
 
   const pathHandle = window.location.pathname.split('/')[1]?.toLowerCase();
   if (!pathHandle) return;
+  // 본인이 파딱이어도 본인 프로필·트윗에는 경고를 띄우지 않는다. 본인 확인 전에 붙은 배너는 지운다 (#88)
+  if (deps.isCurrentUser(pathHandle)) {
+    clearBanner(FADAK_BANNER_ID);
+    return;
+  }
+  if (document.getElementById(FADAK_BANNER_ID)) return;
   if (deps.isHandleFollowed(pathHandle)) return;
   if (deps.isHandleWhitelisted(pathHandle)) return;
-  // 본인이 파딱이어도 본인 프로필·트윗에는 경고를 띄우지 않는다 (#88)
-  if (deps.isCurrentUser(pathHandle)) return;
 
-  function tryInsertBanner(): boolean {
-    const stickyHeader = document.querySelector('[data-testid="primaryColumn"] > div > div:first-child');
-    if (!stickyHeader) return false;
-    const verifiedBadge = stickyHeader.querySelector('[data-testid="icon-verified"]');
-    if (!verifiedBadge) return false;
-    if (document.getElementById(FADAK_BANNER_ID)) return true;
-
-    // 금딱이면 배너 표시하지 않음
-    if (!isBlueBadgeElement(verifiedBadge)) return true;
-
-    injectBannerStyles();
-    const lang = settings.language;
-
-    const banner = document.createElement('div');
-    banner.id = FADAK_BANNER_ID;
-    banner.className = 'bbr-fadak-banner bbr-banner-warning';
-
-    const text = document.createElement('span');
-    text.textContent = t('fadakProfileBanner', lang, { handle: pathHandle ?? '' });
-    banner.appendChild(text);
-
-    const btn = document.createElement('button');
-    btn.className = 'bbr-banner-btn';
-    btn.textContent = t('addToWhitelist', lang);
-    btn.addEventListener('click', async () => {
-      await deps.addToWhitelist('@' + pathHandle);
-      text.textContent = t('addedToWhitelist', lang);
-      banner.className = 'bbr-fadak-banner bbr-banner-success';
-      btn.remove();
-      setTimeout(() => banner.remove(), TIMINGS.BANNER_SUCCESS_DISMISS);
-    });
-    banner.appendChild(btn);
-
-    stickyHeader.appendChild(banner);
-    return true;
-  }
-
-  if (tryInsertBanner()) return;
+  if (tryInsertProfileBanner(deps, settings, pathHandle)) return;
 
   // Wait for badge to render via MutationObserver
   if (fadakBannerObserver) fadakBannerObserver.disconnect();
   const target = document.querySelector('[data-testid="primaryColumn"]') ?? document.body;
   fadakBannerObserver = new MutationObserver(() => {
-    if (tryInsertBanner()) {
+    if (tryInsertProfileBanner(deps, settings, pathHandle)) {
       fadakBannerObserver?.disconnect();
       fadakBannerObserver = null;
     }
   });
   fadakBannerObserver.observe(target, { childList: true, subtree: true });
   setTimeout(() => { fadakBannerObserver?.disconnect(); fadakBannerObserver = null; }, TIMINGS.BANNER_OBSERVER_TIMEOUT);
+}
+
+function clearBanner(id: typeof FADAK_BANNER_ID | typeof DETAIL_BANNER_ID): void {
+  document.getElementById(id)?.remove();
+  const observer = id === FADAK_BANNER_ID ? fadakBannerObserver : detailBannerObserver;
+  observer?.disconnect();
+  if (id === FADAK_BANNER_ID) fadakBannerObserver = null;
+  else detailBannerObserver = null;
 }
 
 export function removeFadakBanner(): void {
@@ -155,6 +168,7 @@ function findCurrentStatusTweet(): HTMLElement | null {
 }
 
 function tryInsertDetailBanner(deps: FadakBannerDeps, settings: Settings, pathHandle: string): boolean {
+  if (deps.isCurrentUser(pathHandle)) return true;
   const stickyHeader = document.querySelector('[data-testid="primaryColumn"] > div > div:first-child');
   if (!stickyHeader) return false;
   const targetTweet = findCurrentStatusTweet();
@@ -191,14 +205,16 @@ function tryInsertDetailBanner(deps: FadakBannerDeps, settings: Settings, pathHa
 export function showFadakDetailBanner(deps: FadakBannerDeps): void {
   const settings = deps.getCurrentSettings();
   if (!window.location.pathname.includes('/status/') || !settings.enabled) return;
-  if (document.getElementById(DETAIL_BANNER_ID)) return;
 
   const pathHandle = window.location.pathname.split('/')[1]?.toLowerCase();
   if (!pathHandle) return;
+  if (deps.isCurrentUser(pathHandle)) {
+    clearBanner(DETAIL_BANNER_ID);
+    return;
+  }
+  if (document.getElementById(DETAIL_BANNER_ID)) return;
   if (deps.isHandleFollowed(pathHandle)) return;
   if (deps.isHandleWhitelisted(pathHandle)) return;
-  // 본인이 파딱이어도 본인 프로필·트윗에는 경고를 띄우지 않는다 (#88)
-  if (deps.isCurrentUser(pathHandle)) return;
 
   if (tryInsertDetailBanner(deps, settings, pathHandle)) return;
 

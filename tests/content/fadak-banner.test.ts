@@ -91,6 +91,29 @@ describe('fadak-banner whitelist button', () => {
     expect(document.getElementById(FADAK_BANNER_ID)).toBeNull();
   });
 
+  // #88 리뷰: 본인 계정이 배너 대기 중에 늦게 확인되는 경우
+  it('배지를 기다리는 동안 본인으로 확인되면 배너를 붙이지 않는다', async () => {
+    document.body.innerHTML = '<div data-testid="primaryColumn"><div><div></div></div></div>';
+    let isMe = false;
+    showFadakProfileBanner(createDeps({ isCurrentUser: () => isMe }));
+    isMe = true;
+    document.querySelector('[data-testid="primaryColumn"] > div > div')!.innerHTML =
+      '<svg data-testid="icon-verified"><g><path d="M0 0"></path></g></svg>';
+    await new Promise((r) => setTimeout(r, 0));
+    expect(document.getElementById(FADAK_BANNER_ID)).toBeNull();
+  });
+
+  it('본인 확인 전에 붙은 배너는 다시 불렀을 때 지운다', () => {
+    setupDOM();
+    let isMe = false;
+    const deps = createDeps({ isCurrentUser: () => isMe });
+    showFadakProfileBanner(deps);
+    expect(document.getElementById(FADAK_BANNER_ID)).not.toBeNull();
+    isMe = true;
+    showFadakProfileBanner(deps);
+    expect(document.getElementById(FADAK_BANNER_ID)).toBeNull();
+  });
+
   it('should not render banner for followed users', () => {
     setupDOM();
     showFadakProfileBanner(createDeps({ isHandleFollowed: () => true }));
@@ -185,6 +208,17 @@ describe('showFadakDetailBanner', () => {
   it('화이트리스트 유저면 배너를 표시하지 않는다', () => {
     setupDetailDOM({ authorBadge: BLUE_BADGE_SVG });
     showFadakDetailBanner(createDeps({ isHandleWhitelisted: () => true }));
+    expect(document.getElementById(DETAIL_BANNER_ID)).toBeNull();
+  });
+
+  it('본인 확인 전에 붙은 상세 배너는 다시 불렀을 때 지운다 (#88)', () => {
+    setupDetailDOM({ authorBadge: BLUE_BADGE_SVG });
+    let isMe = false;
+    const deps = createDeps({ isCurrentUser: () => isMe });
+    showFadakDetailBanner(deps);
+    expect(document.getElementById(DETAIL_BANNER_ID)).not.toBeNull();
+    isMe = true;
+    showFadakDetailBanner(deps);
     expect(document.getElementById(DETAIL_BANNER_ID)).toBeNull();
   });
 

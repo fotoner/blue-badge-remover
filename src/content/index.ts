@@ -59,6 +59,9 @@ async function detectAndHandleAccountSwitch(): Promise<boolean> {
     if (settings.debugMode) logger.info('Account switched', { from: switched.from, to: currentHandle, cachedFollows: switched.follows.length });
     restoreHiddenTweets();
     reprocessExistingTweets();
+    // 계정이 바뀌면 본인 여부가 달라진다 — 배너를 새 계정 기준으로 다시 맞춘다 (#88)
+    showFadakProfileBanner(fadakBannerDeps);
+    showFadakDetailBanner(fadakBannerDeps);
   }
   return true;
 }
