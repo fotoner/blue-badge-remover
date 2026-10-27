@@ -5,6 +5,7 @@ type TweetCallback = (tweetElement: HTMLElement) => void;
 
 export class FeedObserver {
   private observer: MutationObserver | null = null;
+  private container: Element | null = null;
   private onTweetAdded: TweetCallback;
   private pendingTweets: HTMLElement[] = [];
   private rafScheduled = false;
@@ -15,6 +16,7 @@ export class FeedObserver {
 
   observe(container: Element): void {
     this.disconnect();
+    this.container = container;
     this.observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
@@ -30,6 +32,15 @@ export class FeedObserver {
     });
     this.observer.observe(container, { childList: true, subtree: true });
     logger.info('FeedObserver started');
+  }
+
+  /**
+   * 같은 컨테이너를 이미 관찰 중이면 연결을 유지한다.
+   * 끊었다가 다시 붙이는 사이 추가된 트윗은 숨김 전에 그대로 그려진다 (뒤로가기 팝인).
+   */
+  ensureObserving(container: Element): void {
+    if (this.observer && this.container === container) return;
+    this.observe(container);
   }
 
   private scheduleProcessing(): void {
@@ -58,6 +69,7 @@ export class FeedObserver {
     if (this.observer) {
       this.observer.disconnect();
       this.observer = null;
+      this.container = null;
       this.pendingTweets = [];
       this.rafScheduled = false;
       logger.info('FeedObserver disconnected');

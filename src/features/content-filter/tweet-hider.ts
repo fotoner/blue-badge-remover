@@ -2,9 +2,8 @@
 import { t, type Language, DEFAULT_LANGUAGE } from '@shared/i18n';
 import {
   ORIGINAL_CONTENT_KEY, HIDE_REASON_ATTR, COLLAPSED_ATTR, EXPANDED_ATTR,
-  EXPANDED_ACTIONS_ATTR, HIDDEN_QUOTE_ATTR, PRESERVED_HEIGHT_ATTR,
+  EXPANDED_ACTIONS_ATTR, HIDDEN_QUOTE_ATTR,
 } from './hide-attrs';
-import { hideKeepingHeight, markPreservedPlaceholder } from './preserved-height';
 
 const STYLE_INJECTED_ATTR = 'data-bbr-styles';
 
@@ -54,7 +53,6 @@ export interface HideContext {
   quotedBy?: string;
   category?: string;
   matchedRule?: string;
-  preserveHeight?: boolean;
   onWhitelist?: () => void | Promise<void>;
 }
 
@@ -164,16 +162,9 @@ export function hideTweet(
 ): void {
   if (element.hasAttribute(ORIGINAL_CONTENT_KEY)) return;
   if (element.hasAttribute(EXPANDED_ATTR)) return;
-  const preservedHeight = context?.preserveHeight
-    ? Math.ceil(element.getBoundingClientRect().height)
-    : 0;
 
   if (mode === 'remove') {
-    if (preservedHeight > 0) {
-      hideKeepingHeight(element, preservedHeight);
-    } else {
-      element.style.display = 'none';
-    }
+    element.style.display = 'none';
     element.setAttribute(ORIGINAL_CONTENT_KEY, 'hidden');
     element.setAttribute(HIDE_REASON_ATTR, context?.reason ?? 'unknown');
     return;
@@ -194,7 +185,6 @@ export function hideTweet(
   placeholder.setAttribute(COLLAPSED_ATTR, 'true');
   placeholder.className = 'bbr-placeholder';
   placeholder.innerHTML = SHIELD_ICON;
-  if (preservedHeight > 0) markPreservedPlaceholder(element, placeholder, preservedHeight);
 
   const textSpan = document.createElement('span');
   textSpan.textContent = label;
@@ -240,13 +230,9 @@ export function hideQuoteBlock(quoteElement: HTMLElement, context?: HideQuoteCon
 
 export function showTweet(element: HTMLElement): void {
   element.style.display = '';
-  element.style.visibility = '';
-  element.style.pointerEvents = '';
-  element.style.minHeight = '';
   element.removeAttribute(ORIGINAL_CONTENT_KEY);
   element.removeAttribute(HIDE_REASON_ATTR);
   element.removeAttribute(EXPANDED_ATTR);
-  element.removeAttribute(PRESERVED_HEIGHT_ATTR);
   element.querySelector(`[${EXPANDED_ACTIONS_ATTR}]`)?.remove();
 
   // 직접 자식 placeholder만 제거 — 인용 블록 안의 placeholder는 유지

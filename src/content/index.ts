@@ -1,12 +1,12 @@
 // src/content/index.ts
 // Content script 진입점. 초기화 + 모듈 연결만 담당.
 import { browser } from 'wxt/browser';
-import { FeedObserver, setTweetHiderLanguage, releasePreservedHeights } from '@features/content-filter';
+import { FeedObserver, setTweetHiderLanguage } from '@features/content-filter';
 import { getSettings as loadSettings, getWhitelist, addToWhitelist } from '@features/settings';
 import { MESSAGE_TYPES, STORAGE_KEYS, TIMINGS } from '@shared/constants';
 import { logger } from '@shared/utils/logger';
 import { showFadakProfileBanner, showFadakDetailBanner, removeFadakBanner } from './fadak-banner';
-import { listenForNavigation, setOnNavigate, setOnScrollRestorationEnd } from './navigation';
+import { listenForNavigation, setOnNavigate } from './navigation';
 import { collectFollowsFromDOM, disconnectFollowObserver, listenForFollowButtonClicks, getMyHandle, switchFollowAccount } from './follow-collector';
 import { isProfilePage, getProfileLinkHref } from './page-utils';
 import { observeSettingsShortcut } from './settings-shortcut';
@@ -85,14 +85,14 @@ function startAccountSwitchWatcher(): void {
 
 function startObserving(): void {
   const feed = document.querySelector('main') ?? document.body;
-  feedObserver.observe(feed);
+  // X는 이동해도 main을 유지한다 — 연결을 유지해야 새로 그려진 트윗을 첫 페인트 전에 숨긴다
+  feedObserver.ensureObserving(feed);
 }
 
 function handleNavigate(): void {
   const settings = getSettings();
   if (settings.keywordCollectorEnabled) void flushCollector();
   void flushStats();
-  feedObserver.disconnect();
   removeFadakBanner();
   if (!window.location.pathname.includes('/following')) {
     disconnectFollowObserver();
@@ -182,8 +182,6 @@ async function init(): Promise<void> {
   syncHoverCardObserver(settings);
 
   setOnNavigate(handleNavigate);
-  // 뒤로가기/모달 닫기 후 높이 보존 창이 끝나면 보존한 높이를 해제 (#43)
-  setOnScrollRestorationEnd(releasePreservedHeights);
   listenForNavigation();
   observeSettingsShortcut();
   collectFollowsFromDOM(followCollectorDeps);

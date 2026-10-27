@@ -171,6 +171,38 @@ describe('FeedObserver', () => {
     container2.remove();
   });
 
+  // 뒤로가기 팝인: 재연결 사이에 X가 그린 트윗을 놓치면 숨김 전에 한 프레임 이상 그대로 보인다
+  it('같은 컨테이너를 다시 관찰하라고 하면 기존 연결을 유지한다', async () => {
+    feedObserver.observe(container);
+    vi.clearAllMocks();
+
+    feedObserver.ensureObserving(container);
+    const tweet = createTweetArticle();
+    container.appendChild(tweet);
+    await flushMicrotasks();
+
+    expect(logger.info).not.toHaveBeenCalledWith('FeedObserver disconnected');
+    expect(callback).toHaveBeenCalledWith(tweet);
+  });
+
+  it('관찰 중이 아니거나 컨테이너가 바뀌면 새 컨테이너를 관찰한다', async () => {
+    feedObserver.ensureObserving(container);
+    const container2 = document.createElement('div');
+    document.body.appendChild(container2);
+
+    feedObserver.ensureObserving(container2);
+    const oldTweet = createTweetArticle();
+    const newTweet = createTweetArticle();
+    container.appendChild(oldTweet);
+    container2.appendChild(newTweet);
+    await flushMicrotasks();
+
+    // 빈 article 두 개는 깊은 비교로 구분되지 않아 참조로 확인
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(callback.mock.calls[0]![0]).toBe(newTweet);
+    container2.remove();
+  });
+
   it('should batch multiple mutations into a single RAF frame', async () => {
     let rafCallCount = 0;
     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {

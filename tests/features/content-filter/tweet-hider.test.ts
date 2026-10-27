@@ -16,35 +16,6 @@ describe('hideTweet', () => {
     expect(tweetEl.style.display).toBe('none');
   });
 
-  it('뒤로가기 복원 창의 remove 모드는 원래 높이를 빈 공간으로 보존한다', () => {
-    tweetEl.getBoundingClientRect = () => ({ height: 320 }) as DOMRect;
-
-    hideTweet(tweetEl, 'remove', { reason: 'fadak', preserveHeight: true });
-
-    expect(tweetEl.style.display).toBe('');
-    expect(tweetEl.style.visibility).toBe('hidden');
-    expect(tweetEl.style.minHeight).toBe('320px');
-  });
-
-  it('높이 보존된 트윗을 표시하면 임시 레이아웃 스타일을 제거한다', () => {
-    tweetEl.getBoundingClientRect = () => ({ height: 240 }) as DOMRect;
-    hideTweet(tweetEl, 'remove', { reason: 'fadak', preserveHeight: true });
-
-    showTweet(tweetEl);
-
-    expect(tweetEl.style.visibility).toBe('');
-    expect(tweetEl.style.minHeight).toBe('');
-  });
-
-  it('뒤로가기 복원 창의 collapse placeholder도 원래 높이를 보존한다', () => {
-    tweetEl.getBoundingClientRect = () => ({ height: 180 }) as DOMRect;
-
-    hideTweet(tweetEl, 'collapse', { reason: 'fadak', preserveHeight: true });
-
-    const placeholder = tweetEl.querySelector<HTMLElement>('[data-bbr-collapsed]');
-    expect(placeholder?.style.minHeight).toBe('180px');
-  });
-
   it('should replace content with collapsed placeholder in collapse mode', () => {
     hideTweet(tweetEl, 'collapse');
     expect(tweetEl.style.display).not.toBe('none');

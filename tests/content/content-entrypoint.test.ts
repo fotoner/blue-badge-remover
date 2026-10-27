@@ -14,3 +14,15 @@ describe('content bridge startup order', () => {
     expect(readySignal).toBeGreaterThan(accountCheck);
   });
 });
+
+describe('SPA navigation', () => {
+  // 뒤로가기 팝인: 끊었다가 다시 붙이는 사이 X가 그린 트윗은 숨김 전에 그대로 그려진다
+  it('이동할 때 FeedObserver를 끊지 않는다', () => {
+    const start = source.indexOf('function handleNavigate()');
+    const end = source.indexOf('\nfunction ', start + 1);
+    const body = source.slice(start, end);
+
+    expect(start).toBeGreaterThan(-1);
+    expect(body).not.toContain('feedObserver.disconnect()');
+  });
+});

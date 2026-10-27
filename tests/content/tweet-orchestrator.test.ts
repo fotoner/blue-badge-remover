@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { DEFAULT_SETTINGS } from '../../src/shared/constants';
 
@@ -24,7 +24,6 @@ const mockShowExpandedTweet = vi.fn();
 const mockShowTweet = vi.fn();
 const mockHideQuoteBlock = vi.fn();
 const mockShowQuoteBlock = vi.fn();
-const mockReleasePreservedHeights = vi.fn();
 vi.mock('@features/content-filter', () => ({
   shouldHideTweet: vi.fn().mockReturnValue(true),
   shouldHideRetweet: vi.fn().mockReturnValue(true),
@@ -35,8 +34,6 @@ vi.mock('@features/content-filter', () => ({
   hideQuoteBlock: (...args: unknown[]) => mockHideQuoteBlock(...args),
   showTweet: (...args: unknown[]) => mockShowTweet(...args),
   showQuoteBlock: (...args: unknown[]) => mockShowQuoteBlock(...args),
-  releasePreservedHeights: (...args: unknown[]) => mockReleasePreservedHeights(...args),
-  PRESERVED_HEIGHT_ATTR: 'data-bbr-preserved-height',
   setTweetHiderLanguage: vi.fn(),
   FeedObserver: class { observe() {} disconnect() {} },
 }));
@@ -66,6 +63,7 @@ import {
   getExpandedSet,
 } from '../../src/content/state';
 import { processTweet, restoreHiddenTweets, applyCurrentUserFallback } from '../../src/content/tweet-orchestrator';
+import { listenForNavigation, stopListeningForNavigation } from '../../src/content/navigation';
 
 let doc: Document;
 
@@ -537,27 +535,22 @@ describe('applyCurrentUserFallback', () => {
 });
 
 
-// #43: 창 종료 타이머를 놓쳐도 보존 높이가 남지 않게 하는 안전장치
-describe('processTweet — 보존 높이 안전장치', () => {
-  it('복원 창 밖에서 보존 표시가 남은 트윗을 만나면 보존 높이를 해제한다', () => {
-    const tweet = createTweetEl('someone');
-    tweet.setAttribute('data-bbr-original', 'hidden');
-    tweet.setAttribute('data-bbr-preserved-height', '662');
-    doc.querySelector('main')!.appendChild(tweet);
-
-    processTweet(tweet);
-
-    expect(mockReleasePreservedHeights).toHaveBeenCalledTimes(1);
+// 뒤로가기 팝인: 높이를 보존한 채 숨기면 빈 영역이 보였다가 2초 뒤 접히며 스크롤이 튄다
+describe('processTweet — 뒤로가기 직후 숨김', () => {
+  afterEach(() => {
+    stopListeningForNavigation();
   });
 
-  it('보존 표시가 없으면 해제하지 않는다', () => {
-    const tweet = createTweetEl('someone');
+  it('popstate 직후에도 높이를 보존하지 않고 바로 숨긴다', () => {
+    listenForNavigation();
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    const tweet = createTweetEl('testuser', { badge: true });
     doc.querySelector('main')!.appendChild(tweet);
-    mockReleasePreservedHeights.mockClear();
 
     processTweet(tweet);
 
-    expect(mockReleasePreservedHeights).not.toHaveBeenCalled();
+    expect(mockHideTweet).toHaveBeenCalledTimes(1);
+    expect(mockHideTweet.mock.calls[0]![2]).not.toHaveProperty('preserveHeight');
   });
 });
 
