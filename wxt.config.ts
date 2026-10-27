@@ -31,6 +31,8 @@ export default defineConfig({
           required: ['none'],
         },
       },
+      // 없으면 AMO가 데스크톱 전용으로 올려 Firefox Android에서 설치 버튼이 꺼진다 (#87)
+      gecko_android: {},
     },
   },
   zip: {
