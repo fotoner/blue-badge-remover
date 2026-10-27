@@ -6,9 +6,9 @@ import {
 } from './hide-attrs';
 
 const STYLE_INJECTED_ATTR = 'data-bbr-styles';
-// remove 모드에서 숨긴 트윗이 남기는 높이. 0에 가깝게 접으면 X 가상 리스트가 뒤로가기 위치 복원을
-// 어긋나게 한다 (#74 실측, 위치 유지: 약 1px 19/21, 2px 19/20, 8px 30/30).
-const REMOVED_CELL_HEIGHT = '8px';
+// remove 모드에서 숨긴 트윗이 남기는 높이. 8px는 뒤로가기 위치 유지가 가장 좋았지만(#74: 1px 19/21, 2px 19/20,
+// 8px 30/30) X 구분선 두 줄로 눈에 띄어 0으로 접는다 (#102).
+const REMOVED_CELL_HEIGHT = '0px';
 
 let currentLanguage: Language = DEFAULT_LANGUAGE;
 

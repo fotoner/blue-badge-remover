@@ -11,12 +11,12 @@ describe('hideTweet', () => {
     document.body.appendChild(tweetEl);
   });
 
-  // #74: 0에 가깝게 접으면 X 가상 리스트가 뒤로가기 위치 복원을 어긋나게 해서 8px 칸을 남긴다
-  it('remove 모드는 내용을 감추고 보이지 않는 8px 칸만 남긴다', () => {
+  // #102: 8px 칸이 구분선 두 줄로 눈에 띄어 높이를 0으로 접는다 (#74의 8px를 되돌림)
+  it('remove 모드는 내용을 감추고 높이 0으로 접는다', () => {
     hideTweet(tweetEl, 'remove');
     expect(tweetEl.style.display).toBe('');
     expect(tweetEl.style.visibility).toBe('hidden');
-    expect(tweetEl.style.height).toBe('8px');
+    expect(tweetEl.style.height).toBe('0px');
     expect(tweetEl.style.overflow).toBe('hidden');
   });
 
@@ -202,13 +202,13 @@ describe('hideTweet', () => {
     expect(tweetEl.querySelectorAll('[data-bbr-collapsed]').length).toBe(1);
   });
 
-  it('접기로 숨긴 트윗을 완전 제거로 다시 숨기면 접힘 표시를 걷고 8px 칸으로 바꾼다', () => {
+  it('접기로 숨긴 트윗을 완전 제거로 다시 숨기면 접힘 표시를 걷고 높이 0으로 접는다', () => {
     hideTweet(tweetEl, 'collapse', { reason: 'fadak', handle: '@fadakuser' });
     hideTweet(tweetEl, 'remove', { reason: 'fadak', handle: '@fadakuser' });
     expect(tweetEl.getAttribute('data-bbr-original')).toBe('hidden');
     expect(tweetEl.querySelector('[data-bbr-collapsed]')).toBeNull();
     expect(tweetEl.style.visibility).toBe('hidden');
-    expect(tweetEl.style.height).toBe('8px');
+    expect(tweetEl.style.height).toBe('0px');
   });
 
   it('이미 숨겨진 요소에 다른 reason으로 재호출 시 기존 data-bbr-reason 유지', () => {
