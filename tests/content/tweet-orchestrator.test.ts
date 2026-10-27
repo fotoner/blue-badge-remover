@@ -554,6 +554,32 @@ describe('processTweet — 뒤로가기 직후 숨김', () => {
   });
 });
 
+// 실제 X DOM (2026-10 Aside 실측): 리트위터 링크가 socialContext를 바깥에서 감싼다
+describe('processTweet — 리트위터 링크가 socialContext를 감싼 DOM', () => {
+  function createWrappedRepost(author: string, retweeter: string): HTMLElement {
+    const article = createTweetEl(author, { badge: true });
+    const wrapper = doc.createElement('a');
+    wrapper.setAttribute('role', 'link');
+    wrapper.setAttribute('href', `/${retweeter}`);
+    const social = doc.createElement('span');
+    social.setAttribute('data-testid', 'socialContext');
+    social.textContent = `${retweeter} 님이 재게시함`;
+    wrapper.appendChild(social);
+    article.prepend(wrapper);
+    return article;
+  }
+
+  it('팔로우한 사람이 재게시한 파딱 트윗은 숨기지 않는다', () => {
+    setFollowSet(new Set(['friend']));
+    const tweet = createWrappedRepost('fadak_author', 'friend');
+    doc.querySelector('main')!.appendChild(tweet);
+
+    processTweet(tweet);
+
+    expect(mockHideTweet).not.toHaveBeenCalled();
+  });
+});
+
 describe('restoreHiddenTweets', () => {
   it('data-bbr-original 속성이 있는 트윗을 복원한다', () => {
     const main = doc.querySelector('main')!;

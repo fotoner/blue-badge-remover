@@ -8,7 +8,7 @@ import { logger } from '@shared/utils/logger';
 import { showFadakProfileBanner, showFadakDetailBanner, removeFadakBanner } from './fadak-banner';
 import { listenForNavigation, setOnNavigate } from './navigation';
 import { collectFollowsFromDOM, disconnectFollowObserver, listenForFollowButtonClicks, getMyHandle, switchFollowAccount } from './follow-collector';
-import { isProfilePage, getProfileLinkHref } from './page-utils';
+import { isProfilePage, getAccountHandleFromDOM } from './page-utils';
 import { observeSettingsShortcut } from './settings-shortcut';
 import { setSettings, setFollowSet, setWhitelistSet, setProtectedKeywords, setCurrentUserHandle, getSettings, getFollowSet, getProtectedKeywords, getCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, profileCache, collectorBuffer } from './state';
 import { flushCollector } from './collector-buffer';
@@ -47,9 +47,7 @@ const followCollectorDeps = {
 };
 
 async function detectAndHandleAccountSwitch(): Promise<boolean> {
-  const href = getProfileLinkHref();
-  if (!href) return false;
-  const currentHandle = href.slice(1).toLowerCase();
+  const currentHandle = getAccountHandleFromDOM();
   if (!currentHandle) return false;
 
   const switched = await switchFollowAccount(currentHandle);
@@ -73,11 +71,11 @@ function signalContentReady(): void {
 
 function startAccountSwitchWatcher(): void {
   if (accountSwitchTimerId !== null) clearInterval(accountSwitchTimerId);
-  let lastHref = getProfileLinkHref() ?? '';
+  let lastHandle = getAccountHandleFromDOM();
   accountSwitchTimerId = setInterval(() => {
-    const href = getProfileLinkHref() ?? '';
-    if (href && href !== lastHref) {
-      lastHref = href;
+    const handle = getAccountHandleFromDOM();
+    if (handle && handle !== lastHandle) {
+      lastHandle = handle;
       void detectAndHandleAccountSwitch().then(() => signalContentReady());
     }
   }, TIMINGS.ACCOUNT_SWITCH_POLL);

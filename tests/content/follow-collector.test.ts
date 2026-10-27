@@ -72,6 +72,11 @@ describe('getMyHandle', () => {
     createProfileLink('MyHandle');
     expect(getMyHandle()).toBe('myhandle');
   });
+
+  it('프로필 링크가 없어도 계정 전환 버튼 아바타에서 핸들을 읽는다', () => {
+    document.body.innerHTML = '<button data-testid="SideNav_AccountSwitcher_Button"><div data-testid="UserAvatar-Container-MyHandle"></div></button>';
+    expect(getMyHandle()).toBe('myhandle');
+  });
 });
 
 describe('resolveAccountSwitchFollows', () => {

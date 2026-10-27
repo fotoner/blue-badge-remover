@@ -1,6 +1,6 @@
 // src/content/message-handler.ts
 // MAIN world(fetch-interceptor)에서 postMessage로 전달되는 데이터 수신 처리.
-import { MESSAGE_TYPES } from '@shared/constants';
+import { MESSAGE_TYPES, X_HANDLE_PATTERN } from '@shared/constants';
 import { logger } from '@shared/utils/logger';
 import { profileCache, collectorBuffer, getSettings, getFollowSet, getProtectedKeywords, getCurrentUserHandle } from './state';
 import { extractRetweeterHandle, extractTweetAuthor } from './tweet-processing';
@@ -21,7 +21,6 @@ interface ProfilePayload {
 
 type FollowSource = 'inline' | 'api-timeline' | 'api-not-following';
 
-const X_HANDLE_PATTERN = /^[A-Za-z0-9_]{1,15}$/;
 const MAX_PROFILE_BATCH = 1000;
 const MAX_DISPLAY_NAME_LENGTH = 100;
 const MAX_BIO_LENGTH = 2000;

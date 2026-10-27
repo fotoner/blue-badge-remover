@@ -1,11 +1,22 @@
 // src/content/tweet-processing.ts
 // DOM-level tweet parsing utilities used by processTweet in content/index.ts
 
+const SOCIAL_CONTEXT_SELECTOR = '[data-testid="socialContext"]';
+
+/**
+ * socialContext(재게시/고정 등) 링크 여부 — 로케일 독립.
+ * 2026-10 실측: 리트위터 링크가 socialContext를 바깥에서 감싼다 (<a href="/rt"><span data-testid="socialContext">).
+ * 링크가 안쪽에 있던 구조도 함께 처리한다.
+ */
+function isSocialContextLink(link: Element): boolean {
+  return link.closest(SOCIAL_CONTEXT_SELECTOR) !== null || link.querySelector(SOCIAL_CONTEXT_SELECTOR) !== null;
+}
+
 export function extractTweetAuthor(tweetEl: HTMLElement): { handle: string } | null {
   const allLinks = tweetEl.querySelectorAll('a[role="link"][href^="/"]');
   for (const link of allLinks) {
-    // socialContext(재게시/고정 등) 내부 링크는 로케일과 무관하게 제외; 텍스트 정규식은 testid 없는 DOM 변형 폴백
-    if (link.closest('[data-testid="socialContext"]')) continue;
+    // socialContext 링크는 로케일과 무관하게 제외; 텍스트 정규식은 testid 없는 DOM 변형 폴백
+    if (isSocialContextLink(link)) continue;
     const text = link.textContent ?? '';
     if (/재게시함|Retweeted|reposted/i.test(text)) continue;
     const href = link.getAttribute('href');
@@ -46,9 +57,10 @@ export function extractRetweeterName(tweetEl: HTMLElement): string | null {
  * ('재게시함'/'Retweeted' 등 텍스트에 의존하지 않음). 커뮤니티/토픽 링크('/i/...')는 제외.
  */
 export function extractRetweeterHandle(tweetEl: HTMLElement): string | null {
-  const socialContext = tweetEl.querySelector('[data-testid="socialContext"]');
+  const socialContext = tweetEl.querySelector(SOCIAL_CONTEXT_SELECTOR);
   if (!socialContext) return null;
-  const link = socialContext.querySelector('a[href^="/"]');
+  const wrapper = socialContext.closest('a[href^="/"]');
+  const link = socialContext.querySelector('a[href^="/"]') ?? (wrapper && tweetEl.contains(wrapper) ? wrapper : null);
   const href = link?.getAttribute('href');
   if (!href) return null;
   const handle = href.slice(1).split(/[/?#]/)[0];
@@ -138,8 +150,8 @@ export function extractTweetText(tweetEl: HTMLElement): string {
 export function extractDisplayName(tweetEl: HTMLElement, handle: string): string | null {
   const links = tweetEl.querySelectorAll('a[role="link"]');
   for (const link of links) {
-    // socialContext 내부 링크는 로케일과 무관하게 표시 이름 후보에서 제외
-    if (link.closest('[data-testid="socialContext"]')) continue;
+    // socialContext 링크는 로케일과 무관하게 표시 이름 후보에서 제외
+    if (isSocialContextLink(link)) continue;
     const href = link.getAttribute('href') ?? '';
     if (href === `/${handle}` && !link.textContent?.startsWith('@')) {
       const name = link.textContent?.trim();

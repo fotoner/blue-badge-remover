@@ -21,6 +21,9 @@ export const DEFAULT_SETTINGS: Settings = {
   aggressorFilterEnabled: false,
 };
 
+/** X 핸들 형식 — DOM·MAIN world에서 읽은 핸들은 이 형식일 때만 신뢰한다 */
+export const X_HANDLE_PATTERN = /^[A-Za-z0-9_]{1,15}$/;
+
 export const STORAGE_KEYS = {
   SETTINGS: 'settings',
   WHITELIST: 'whitelist',

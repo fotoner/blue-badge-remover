@@ -3,7 +3,7 @@ import { browser } from 'wxt/browser';
 import { STORAGE_KEYS, TIMINGS } from '@shared/constants';
 import type { Settings } from '@shared/types';
 import { logger } from '@shared/utils/logger';
-import { getProfileLinkHref } from './page-utils';
+import { getAccountHandleFromDOM } from './page-utils';
 
 export interface FollowCollectorDeps {
   getCurrentSettings: () => Settings;
@@ -20,8 +20,7 @@ let followDebounceTimerId: ReturnType<typeof setTimeout> | null = null;
 const SYNC_BANNER_ID = 'bbr-follow-sync-banner';
 
 export function getMyHandle(): string | null {
-  const href = getProfileLinkHref();
-  return href ? href.slice(1).toLowerCase() : null;
+  return getAccountHandleFromDOM();
 }
 
 export function resolveAccountSwitchFollows(

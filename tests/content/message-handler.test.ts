@@ -69,7 +69,7 @@ vi.mock('../../src/content/fadak-banner', () => ({
 }));
 
 vi.mock('../../src/content/page-utils', () => ({
-  getProfileLinkHref: vi.fn().mockReturnValue(null),
+  getAccountHandleFromDOM: vi.fn().mockReturnValue(null),
 }));
 
 // --- Import modules after all mocks are registered ---
