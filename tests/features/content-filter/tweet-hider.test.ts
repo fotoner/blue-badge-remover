@@ -11,9 +11,21 @@ describe('hideTweet', () => {
     document.body.appendChild(tweetEl);
   });
 
-  it('should hide tweet with display:none in remove mode', () => {
+  // #74: 0에 가깝게 접으면 X 가상 리스트가 뒤로가기 위치 복원을 어긋나게 해서 8px 칸을 남긴다
+  it('remove 모드는 내용을 감추고 보이지 않는 8px 칸만 남긴다', () => {
     hideTweet(tweetEl, 'remove');
-    expect(tweetEl.style.display).toBe('none');
+    expect(tweetEl.style.display).toBe('');
+    expect(tweetEl.style.visibility).toBe('hidden');
+    expect(tweetEl.style.height).toBe('8px');
+    expect(tweetEl.style.overflow).toBe('hidden');
+  });
+
+  it('showTweet은 remove 모드의 숨김 스타일을 모두 되돌린다', () => {
+    hideTweet(tweetEl, 'remove');
+    showTweet(tweetEl);
+    expect(tweetEl.style.visibility).toBe('');
+    expect(tweetEl.style.height).toBe('');
+    expect(tweetEl.style.overflow).toBe('');
   });
 
   it('should replace content with collapsed placeholder in collapse mode', () => {

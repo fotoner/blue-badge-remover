@@ -6,6 +6,9 @@ import {
 } from './hide-attrs';
 
 const STYLE_INJECTED_ATTR = 'data-bbr-styles';
+// remove 모드에서 숨긴 트윗이 남기는 높이. 0에 가깝게 접으면 X 가상 리스트가 뒤로가기 위치 복원을
+// 어긋나게 한다 (#74 실측, 위치 유지: 약 1px 19/21, 2px 19/20, 8px 30/30).
+const REMOVED_CELL_HEIGHT = '8px';
 
 let currentLanguage: Language = DEFAULT_LANGUAGE;
 
@@ -164,7 +167,9 @@ export function hideTweet(
   if (element.hasAttribute(EXPANDED_ATTR)) return;
 
   if (mode === 'remove') {
-    element.style.display = 'none';
+    element.style.visibility = 'hidden';
+    element.style.height = REMOVED_CELL_HEIGHT;
+    element.style.overflow = 'hidden';
     element.setAttribute(ORIGINAL_CONTENT_KEY, 'hidden');
     element.setAttribute(HIDE_REASON_ATTR, context?.reason ?? 'unknown');
     return;
@@ -230,6 +235,9 @@ export function hideQuoteBlock(quoteElement: HTMLElement, context?: HideQuoteCon
 
 export function showTweet(element: HTMLElement): void {
   element.style.display = '';
+  element.style.visibility = '';
+  element.style.height = '';
+  element.style.overflow = '';
   element.removeAttribute(ORIGINAL_CONTENT_KEY);
   element.removeAttribute(HIDE_REASON_ATTR);
   element.removeAttribute(EXPANDED_ATTR);
