@@ -44,6 +44,13 @@ export default tseslint.config(
     },
   },
   {
+    // 데모 영상 키트 — 브라우저에서 releases/*.html이 불러 쓴다 (scripts/demo-video/README.md)
+    files: ['scripts/demo-video/**/*.js'],
+    languageOptions: {
+      globals: { window: 'readonly', document: 'readonly', location: 'readonly', URLSearchParams: 'readonly' },
+    },
+  },
+  {
     files: ['src/injected/**/*.ts', 'src/shared/utils/logger.ts'],
     rules: {
       'no-console': 'off',

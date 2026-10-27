@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Blue Badge Remover 1.8.0 demo</title>
+<link rel="stylesheet" href="../kit.css">
+</head>
+<body>
+<script src="../kit.js"></script>
+<script>
+const { h, tweet, focal, hiddenRow, prog, out, center, cursorAt, pressed, setSwitch, grow } = BBRDemo;
+
+// 예시 계정 — sample_로 시작하는 16자 이상 (tests/demo-video/sample-handles.test.ts)
+const ACC = {
+  cat: { name: '고양이 일기', handle: 'sample_daily_cat_photos', color: '#7a6a4f' },
+  weather: { name: '동네 날씨', handle: 'sample_weather_bot_seoul', color: '#3d5a80' },
+  book: { name: '책 모임', handle: 'sample_bookclub_monthly', color: '#4a6b52' },
+  promo: { name: '수익 인증', handle: 'sample_fadak_promo_daily', color: '#8a4b4b', fadak: true },
+  author: { name: '주말 요리 기록', handle: 'sample_weekend_cooking_log', color: '#6b7a4f', fadak: true },
+  reader: { name: '지나가는 사람', handle: 'sample_curious_reader_01', color: '#4f6d7a' },
+  replier: { name: '레시피 모음', handle: 'sample_recipe_link_daily', color: '#7a5a4f', fadak: true },
+};
+
+// ── 장면 1: 뒤로가기 — 1.7.0은 숨긴 자리가 빈 칸으로 생겼다 접히고, 1.8.0은 그대로 ──
+function column(ver, isNew) {
+  return `<div class="col" style="position:absolute;top:0;left:${isNew ? 404 : 0}px;width:372px">
+    <div class="ver${isNew ? ' new' : ''}">${ver}</div>
+    <div class="xwin" style="height:560px">
+      <div class="view home"><div class="tl-head">홈</div>
+        ${tweet(ACC.cat, '고양이가 키보드 위에서 잠들었어요', '12분')}
+        ${isNew ? '' : `<div class="slot empty-slot" style="display:none">${tweet(ACC.promo, '하루 10분으로 월 300 버는 법, 프로필 링크에서 확인하세요', '1시간')}</div>`}
+        ${tweet(ACC.weather, '오후부터 비 소식이 있어요. 우산 챙기세요', '1시간', ' data-click')}
+        ${tweet(ACC.book, '이번 달 책은 『작은 아씨들』입니다. 금요일에 만나요', '2시간')}
+        ${tweet(ACC.cat, '창문 밖 비둘기와 눈싸움 중', '3시간')}
+      </div>
+      <div class="view detail" style="display:none"><div class="tl-head"><span class="back">←</span>게시물</div>
+        ${focal(ACC.weather, '오후부터 비 소식이 있어요. 우산 챙기세요', '오후 3:12 · 2026년 10월 28일')}
+        ${tweet(ACC.reader, '감사합니다 덕분에 안 젖었어요', '30분')}
+      </div>
+    </div></div>`;
+}
+
+function showColumn(col, tau) {
+  const inDetail = tau >= 0.9 && tau < 2.6;
+  col.querySelector('.home').style.display = inDetail ? 'none' : 'block';
+  col.querySelector('.detail').style.display = inDetail ? 'block' : 'none';
+  const slot = col.querySelector('.slot');
+  if (slot) slot.style.display = tau >= 2.6 && tau < 4.2 ? 'block' : 'none';
+}
+
+// 클릭 지점은 숨긴 칸이 없는 홈 화면 기준으로 잰다
+function targets(col) {
+  const home = col.querySelector('.home'); const detail = col.querySelector('.detail'); const slot = col.querySelector('.slot');
+  const saved = [home.style.display, detail.style.display, slot?.style.display];
+  home.style.display = 'block'; detail.style.display = 'none'; if (slot) slot.style.display = 'none';
+  const click = center(col.querySelector('[data-click]'));
+  const win = col.querySelector('.xwin').getBoundingClientRect();
+  [home.style.display, detail.style.display] = saved; if (slot) slot.style.display = saved[2];
+  return { click, back: [win.left + 26, win.top + 26] };
+}
+
+const backNavigation = {
+  id: 'back-navigation',
+  width: 776,
+  duration: 11.0,
+  mount(el) { el.innerHTML = column('1.7.0', false) + column('1.8.0', true); },
+  render(T, { loop }) {
+    const [c17, c18] = this.el.querySelectorAll('.col');
+    const L0 = 0.6, R0 = 6.0;
+    const L = targets(c17), R = targets(c18);
+    showColumn(c17, T - L0); showColumn(c18, T - R0);
+    const start = [520, 600];
+    const cursor = cursorAt([[0, ...start], [L0 + 0.7, ...L.click], [L0 + 1.9, ...L.click], [L0 + 2.45, ...L.back], [L0 + 4.4, ...L.back],
+      [R0 + 0.7, ...R.click], [R0 + 1.9, ...R.click], [R0 + 2.45, ...R.back],
+      ...(loop ? [[R0 + 3.9, ...R.back], [10.8, ...start]] : [[11.0, ...R.back]])], T);
+    return { cursor, press: pressed(T, [L0 + 0.8, L0 + 2.5, R0 + 0.8, R0 + 2.5]) };
+  },
+};
+
+// ── 장면 2: 트윗 상세 설정 — 글쓴이 타래 보기 → 상세에서 접어 두기 → 펼치기 (반복 클립은 거꾸로 끈다) ──
+const detailSettings = {
+  id: 'detail-settings',
+  width: 928,
+  duration: 9.4,
+  loopDuration: 12.0,
+  mount(el) {
+    el.innerHTML = `
+      <div class="dash" style="position:absolute;top:26px;left:0;width:330px;zoom:1.4">
+        <h3>필터링 범위</h3>
+        <div class="toggle-row"><span>홈 타임라인</span><span class="sw on"><i></i></span></div>
+        <div class="toggle-row"><span>트윗 상세 / 답글</span><span class="sw on"><i></i></span></div>
+        <div class="children">
+          <div class="toggle-row"><span>글쓴이 타래 보기</span><span class="sw" data-sw="thread"><i></i></span></div>
+          <p class="hint">트윗 상세에서 들어간 트윗 글쓴이의 앞뒤 타래는 숨기지 않습니다</p>
+          <div class="toggle-row"><span>상세에서는 접어 두고 펼쳐볼 수 있게</span><span class="sw" data-sw="collapse"><i></i></span></div>
+        </div>
+        <div class="toggle-row"><span>검색 결과</span><span class="sw on"><i></i></span></div>
+      </div>
+      <div style="position:absolute;top:0;left:500px;width:428px">
+        <div class="ver">트윗 상세</div>
+        <div class="xwin" style="height:560px"><div class="tl-head"><span class="back">←</span>게시물</div>
+          <div class="bbr-banner">이 트윗은 파딱 계정 @${ACC.author.handle}의 게시물입니다</div>
+          <div data-box="root" style="overflow:hidden;height:0">${tweet(ACC.author, '1/ 냉장고 털어서 주말 반찬 세 가지 만들었어요', '5시간')}</div>
+          ${focal(ACC.author, '2/ 첫 번째는 계란말이. 약불에서 천천히 말면 안 터져요', '오후 6:20 · 2026년 10월 26일')}
+          <div data-box="reply" style="overflow:hidden;height:0">${tweet(ACC.author, '3/ 마지막은 남은 채소로 볶음밥. 간장은 한 숟갈이면 충분해요', '4시간')}</div>
+          <div data-box="other" style="overflow:hidden;height:0">
+            <div class="ph">${hiddenRow(ACC.replier)}</div>
+            <div class="exp" style="display:none">${tweet(ACC.replier, '더 많은 반찬 레시피는 프로필 링크에서 확인하세요', '3시간')}<div class="exp-actions"><span>화이트리스트에 추가</span><span>다시 접기</span></div></div>
+          </div>
+          ${tweet(ACC.reader, '계란말이 팁 감사해요', '1시간')}
+        </div>
+      </div>`;
+    this.el.querySelector('.exp .tweet').style.borderBottom = 'none';
+  },
+  render(T, { loop }) {
+    const q = (s) => this.el.querySelector(s);
+    const sw1 = q('[data-sw="thread"]'), sw2 = q('[data-sw="collapse"]');
+    setSwitch(sw1, out(prog(T, 2.0, 2.15)) - (loop ? out(prog(T, 10.2, 10.35)) : 0));
+    setSwitch(sw2, out(prog(T, 4.2, 4.35)) - (loop ? out(prog(T, 9.2, 9.35)) : 0));
+    const thread = out(prog(T, 2.5, 2.8)) - (loop ? out(prog(T, 10.4, 10.7)) : 0);
+    grow(q('[data-box="root"]'), thread);
+    grow(q('[data-box="reply"]'), thread);
+    // 다른 파딱 답글: 두 번째 토글을 켜면 접힘 표시로 나타나고, 누르면 펼쳐진다
+    const shown = out(prog(T, 4.6, 4.85)) - (loop ? out(prog(T, 9.4, 9.7)) : 0);
+    const expand = out(prog(T, 6.5, 6.75));
+    const other = q('[data-box="other"]'), ph = q('.ph'), exp = q('.exp');
+    ph.style.display = 'block'; exp.style.display = 'block';
+    const phH = ph.offsetHeight, expH = exp.offsetHeight;
+    ph.style.display = expand < 0.5 ? 'block' : 'none';
+    exp.style.display = expand >= 0.5 ? 'block' : 'none';
+    exp.style.opacity = prog(expand, 0.5, 1);
+    other.style.height = `${(phH + (expH - phH) * expand) * shown}px`;
+    other.style.opacity = shown;
+    const o = other.getBoundingClientRect();
+    const p1 = center(sw1), p2 = center(sw2), pOther = [o.left + o.width / 2 - 40, o.top + 24], pAside = [o.right - 50, o.bottom + 36];
+    const start = [300, 640];
+    const cursor = cursorAt([[0, ...start], [0.9, ...start], [1.85, ...p1], [3.4, ...p1], [4.05, ...p2], [5.3, ...p2],
+      [6.2, ...pOther], [6.6, ...pOther], [7.3, ...pAside],
+      ...(loop ? [[8.4, ...pAside], [9.05, ...p2], [9.7, ...p2], [10.05, ...p1], [10.8, ...p1], [11.7, ...start]] : [[9.4, ...pAside]])], T);
+    return { cursor, press: pressed(T, loop ? [2.0, 4.2, 6.4, 9.2, 10.2] : [2.0, 4.2, 6.4]) };
+  },
+};
+
+BBRDemo.run({ version: '1.8.0', where: 'Chrome · Edge · Firefox (Android 포함)', scenes: [backNavigation, detailSettings] });
+</script>
+</body>
+</html>

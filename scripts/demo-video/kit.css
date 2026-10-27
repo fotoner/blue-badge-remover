@@ -1,0 +1,67 @@
+/* 데모 영상 공통 스타일 — docs/DESIGN.md 토큰. border가 있으면 radius 0, 그라데이션·글로우·튀는 이징 없음 */
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=block");
+
+:root {
+  --bg: #0e1418; --surface-1: #131b21; --surface-3: #21303a;
+  --text-primary: #f5f9fc; --text-secondary: #d7e1e8; --text-muted: #8c9aa5;
+  --accent: #1d9bf0; --border-subtle: rgba(255, 255, 255, 0.08); --border-strong: rgba(29, 155, 240, 0.32);
+  --font-body: "IBM Plex Sans KR", sans-serif; --font-mono: "JetBrains Mono", monospace;
+  --font-display: "Space Grotesk", var(--font-body);
+  --x-font: -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", var(--font-body);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1280px; height: 720px; overflow: hidden; background: var(--bg); }
+body { color: var(--text-primary); font-family: var(--font-body); word-break: keep-all; -webkit-font-smoothing: antialiased; }
+#stage { position: relative; width: 1280px; height: 720px; }
+
+.brand { position: absolute; left: 48px; top: 30px; font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text-secondary); }
+.brand span { font-family: var(--font-mono); font-weight: 400; color: var(--text-muted); margin-left: 8px; }
+.scene { position: absolute; top: 74px; height: 610px; }
+
+/* ── X 재현 (scripts/store-assets/template.html과 같은 스타일) ── */
+.ver { font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); margin-bottom: 8px; height: 18px; }
+.ver.new { color: var(--accent); }
+.xwin { position: relative; background: #000; border: 1px solid #2f3336; overflow: hidden; font-family: var(--x-font); color: #e7e9ea; }
+.view { position: absolute; inset: 0; background: #000; }
+.tl-head { display: flex; align-items: center; gap: 22px; padding: 14px 18px; font-size: 18px; font-weight: 700; border-bottom: 1px solid #2f3336; }
+.tl-head .back { font-size: 18px; width: 18px; }
+.tweet { position: relative; display: flex; gap: 12px; padding: 13px 16px; border-bottom: 1px solid #2f3336; overflow: hidden; }
+.tweet > div:last-child { min-width: 0; }
+.avatar { flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%; }
+.tw-meta { display: flex; align-items: center; gap: 3px; font-size: 14px; color: #71767b; white-space: nowrap; overflow: hidden; }
+.tw-meta b { color: #e7e9ea; font-weight: 700; }
+.tw-meta .h { overflow: hidden; text-overflow: ellipsis; margin-left: 2px; }
+.badge { flex-shrink: 0; width: 16px; height: 16px; }
+.tw-text { margin-top: 3px; font-size: 15px; line-height: 1.4; }
+.focal { padding: 14px 16px 0; border-bottom: 1px solid #2f3336; }
+.focal .row { display: flex; align-items: center; gap: 12px; }
+.focal .tw-text { margin-top: 12px; font-size: 18px; }
+.focal .time { margin-top: 12px; padding: 12px 0; border-top: 1px solid #2f3336; font-size: 14px; color: #71767b; }
+/* 확장이 그리는 표시 — 문구는 src/shared/i18n과 맞춘다 */
+.hidden-row { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 14px; border-bottom: 1px solid #2f3336; color: #536471; font-size: 13px; overflow: hidden; }
+.hidden-row svg { flex-shrink: 0; width: 16px; height: 16px; opacity: 0.6; }
+.exp-actions { display: flex; justify-content: flex-end; gap: 4px; padding: 0 12px 8px; border-bottom: 1px solid #2f3336; color: #536471; font-size: 13px; }
+.exp-actions span { min-height: 30px; display: inline-flex; align-items: center; padding: 0 8px; }
+.bbr-banner { padding: 7px 12px; background: #f4212e; color: #fff; font-size: 12.5px; font-weight: 500; text-align: center; }
+/* 숨김이 실패해 자리가 잠깐 비는 증상 — 내용은 감추고 칸과 구분선만 남긴다 */
+.empty-slot .tweet > * { visibility: hidden; }
+
+/* ── 대시보드 재현 (src/dashboard/style.css) ── */
+.dash { background: var(--surface-1); border: 1px solid var(--border-subtle); padding: 18px 20px; font-size: 13px; }
+.dash h3 { font-family: var(--font-display); font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; }
+.sw { position: relative; width: 36px; height: 20px; border-radius: 10px; background: var(--surface-3); flex-shrink: 0; }
+.sw.on { background: var(--accent); }
+.sw i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--text-primary); }
+.sw.on i { transform: translateX(16px); }
+.children { margin: 0 0 4px 10px; padding-left: 12px; border-left: 3px solid var(--border-strong); }
+.children .toggle-row { padding: 5px 0; }
+.hint { color: var(--text-muted); font-size: 11px; line-height: 1.4; padding-bottom: 6px; }
+
+/* ── 마지막 화면 ── */
+.end { position: absolute; left: 96px; top: 240px; padding-left: 22px; border-left: 3px solid var(--accent); }
+.end h1 { font-family: var(--font-display); font-size: 48px; font-weight: 700; letter-spacing: -0.02em; }
+.end h1 span { font-family: var(--font-mono); font-weight: 400; font-size: 40px; color: var(--text-muted); margin-left: 14px; }
+.end .where { margin-top: 18px; font-size: 20px; color: var(--text-secondary); }
+
+#cursor { position: absolute; left: 0; top: 0; width: 22px; height: 22px; pointer-events: none; z-index: 10; transform-origin: 2px 2px; }
