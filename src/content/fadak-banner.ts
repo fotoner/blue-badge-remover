@@ -13,6 +13,7 @@ export interface FadakBannerDeps {
   isProfilePage: () => boolean;
   isHandleFollowed: (handle: string) => boolean;
   isHandleWhitelisted: (handle: string) => boolean;
+  isCurrentUser: (handle: string) => boolean;
   getCurrentSettings: () => Settings;
   addToWhitelist: (handle: string) => Promise<void>;
 }
@@ -70,6 +71,8 @@ export function showFadakProfileBanner(deps: FadakBannerDeps): void {
   if (!pathHandle) return;
   if (deps.isHandleFollowed(pathHandle)) return;
   if (deps.isHandleWhitelisted(pathHandle)) return;
+  // 본인이 파딱이어도 본인 프로필·트윗에는 경고를 띄우지 않는다 (#88)
+  if (deps.isCurrentUser(pathHandle)) return;
 
   function tryInsertBanner(): boolean {
     const stickyHeader = document.querySelector('[data-testid="primaryColumn"] > div > div:first-child');
@@ -194,6 +197,8 @@ export function showFadakDetailBanner(deps: FadakBannerDeps): void {
   if (!pathHandle) return;
   if (deps.isHandleFollowed(pathHandle)) return;
   if (deps.isHandleWhitelisted(pathHandle)) return;
+  // 본인이 파딱이어도 본인 프로필·트윗에는 경고를 띄우지 않는다 (#88)
+  if (deps.isCurrentUser(pathHandle)) return;
 
   if (tryInsertDetailBanner(deps, settings, pathHandle)) return;
 

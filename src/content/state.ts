@@ -40,6 +40,10 @@ export function isHandleFollowed(handle: string): boolean {
   return _followSet.has(handle.toLowerCase());
 }
 
+export function isCurrentUserHandle(handle: string): boolean {
+  return _currentUserHandle !== null && _currentUserHandle.toLowerCase() === handle.toLowerCase();
+}
+
 export function isHandleWhitelisted(handle: string): boolean {
   return _whitelistSet.has('@' + handle.toLowerCase());
 }

@@ -258,6 +258,7 @@ describe('classifyQuote', () => {
       quotedIsFadak: true,
       quotedInFollow: false,
       quotedIsWhitelisted: false,
+      quotedIsCurrentUser: false,
       parentHandle: 'parent_user',
       parentInFollow: false,
       parentIsWhitelisted: false,
@@ -277,6 +278,16 @@ describe('classifyQuote', () => {
     const result = classifyQuote(makeQuoteInput({ quotedInFollow: true }));
     expect(result.action).toBe('show');
     expect(result.reason).toBe('follow');
+  });
+
+  // #88: 파딱 사용자의 트윗을 남이 인용해도 본인 트윗은 숨기지 않음
+  it('인용된 계정이 본인 = show (전체 숨김 모드여도)', () => {
+    const result = classifyQuote(makeQuoteInput({
+      quotedIsCurrentUser: true,
+      settings: { ...defaultSettings, quoteMode: 'entire' },
+    }));
+    expect(result.action).toBe('show');
+    expect(result.reason).toBe('quoted-self');
   });
 
   it('self-quote + 부모 팔로우 = show', () => {

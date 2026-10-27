@@ -4,7 +4,7 @@ import { detectBadgeSvg, isBlueBadgeElement } from '@features/badge-detection/sv
 import { hideTweet, hideQuoteBlock, showExpandedTweet, showTweet, showQuoteBlock } from '@features/content-filter';
 import { extractTweetAuthor, extractRetweeterName, extractRetweeterHandle, extractTweetStatusPath, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, formatUserLabel, addDebugLabel, findAuthorBadge } from './tweet-processing';
 import { isProfilePage, isDetailPage, getPageType } from './page-utils';
-import { profileCache, getSettings, getWhitelistSet, getActiveFilterRules, getProtectedKeywords, getCurrentUserHandle, setCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, getExpandedSet } from './state';
+import { profileCache, getSettings, getWhitelistSet, getActiveFilterRules, getProtectedKeywords, getCurrentUserHandle, setCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, isCurrentUserHandle, getExpandedSet } from './state';
 import { bufferCollectedFadak } from './collector-buffer';
 import { classifyTweet, classifyQuote } from './tweet-classifier';
 import type { ClassifyResult, QuoteClassifyResult } from './tweet-classifier';
@@ -184,6 +184,7 @@ function processQuoteBlock(
     quotedHandle, quotedIsFadak,
     quotedInFollow: isHandleFollowed(quotedHandle ?? ''),
     quotedIsWhitelisted: isHandleWhitelisted(quotedHandle ?? ''),
+    quotedIsCurrentUser: quotedHandle !== null && isCurrentUserHandle(quotedHandle),
     parentHandle, parentInFollow,
     parentIsWhitelisted: isHandleWhitelisted(parentHandle),
     retweeterExempt,

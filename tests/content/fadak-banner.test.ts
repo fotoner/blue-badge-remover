@@ -36,6 +36,7 @@ function createDeps(overrides?: Partial<FadakBannerDeps>): FadakBannerDeps {
     isProfilePage: () => true,
     isHandleFollowed: () => false,
     isHandleWhitelisted: () => false,
+    isCurrentUser: () => false,
     getCurrentSettings: () => DEFAULT_SETTINGS,
     addToWhitelist: vi.fn().mockResolvedValue(undefined),
     ...overrides,
@@ -81,6 +82,13 @@ describe('fadak-banner whitelist button', () => {
       const span = banner.querySelector('span');
       expect(span?.textContent).toBe('화이트리스트에 추가됨');
     });
+  });
+
+  // #88: 파딱 사용자가 본인 프로필에서 경고를 보지 않게
+  it('본인 프로필에는 배너를 표시하지 않는다', () => {
+    setupDOM();
+    showFadakProfileBanner(createDeps({ isCurrentUser: (handle) => handle === 'fadakuser' }));
+    expect(document.getElementById(FADAK_BANNER_ID)).toBeNull();
   });
 
   it('should not render banner for followed users', () => {
@@ -177,6 +185,12 @@ describe('showFadakDetailBanner', () => {
   it('화이트리스트 유저면 배너를 표시하지 않는다', () => {
     setupDetailDOM({ authorBadge: BLUE_BADGE_SVG });
     showFadakDetailBanner(createDeps({ isHandleWhitelisted: () => true }));
+    expect(document.getElementById(DETAIL_BANNER_ID)).toBeNull();
+  });
+
+  it('본인 트윗 상세에는 배너를 표시하지 않는다 (#88)', () => {
+    setupDetailDOM({ authorBadge: BLUE_BADGE_SVG });
+    showFadakDetailBanner(createDeps({ isCurrentUser: (handle) => handle === 'quoter' }));
     expect(document.getElementById(DETAIL_BANNER_ID)).toBeNull();
   });
 });

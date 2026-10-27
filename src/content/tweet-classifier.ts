@@ -38,6 +38,8 @@ export interface QuoteClassifyInput {
   quotedIsFadak: boolean;
   quotedInFollow: boolean;
   quotedIsWhitelisted: boolean;
+  /** 인용된 계정이 로그인한 본인 — 본인 트윗은 인용 카드 안에서도 숨기지 않는다 (#88) */
+  quotedIsCurrentUser: boolean;
   parentHandle: string;
   parentInFollow: boolean;
   parentIsWhitelisted: boolean;
@@ -118,7 +120,7 @@ function classifyRetweet(settings: Settings, pageType: PageType, match: Partial<
 
 /** 인용 트윗 분류 (순수 함수) */
 export function classifyQuote(input: QuoteClassifyInput): QuoteClassifyResult {
-  const { quotedHandle, quotedIsFadak, quotedInFollow, quotedIsWhitelisted, parentHandle, parentInFollow, parentIsWhitelisted, retweeterExempt, settings, pageType } = input;
+  const { quotedHandle, quotedIsFadak, quotedInFollow, quotedIsWhitelisted, quotedIsCurrentUser, parentHandle, parentInFollow, parentIsWhitelisted, retweeterExempt, settings, pageType } = input;
   const parentExempt = parentInFollow || parentIsWhitelisted;
 
   // self-quote: 예외 부모(팔로우/화이트리스트)가 자기 트윗을 인용
@@ -127,6 +129,7 @@ export function classifyQuote(input: QuoteClassifyInput): QuoteClassifyResult {
   }
 
   if (!quotedIsFadak) return { action: 'show', reason: 'not-fadak' };
+  if (quotedIsCurrentUser) return { action: 'show', reason: 'quoted-self' };
   if (quotedInFollow || quotedIsWhitelisted) return { action: 'show', reason: quotedInFollow ? 'follow' : 'whitelist' };
   if (!isPageFilterEnabled(settings, pageType)) return { action: 'show', reason: 'page-filter-off' };
 

@@ -10,7 +10,7 @@ import { listenForNavigation, setOnNavigate } from './navigation';
 import { collectFollowsFromDOM, disconnectFollowObserver, listenForFollowButtonClicks, getMyHandle, switchFollowAccount } from './follow-collector';
 import { isProfilePage, getAccountHandleFromDOM } from './page-utils';
 import { observeSettingsShortcut } from './settings-shortcut';
-import { setSettings, setFollowSet, setWhitelistSet, setProtectedKeywords, setCurrentUserHandle, getSettings, getFollowSet, getProtectedKeywords, getCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, profileCache, collectorBuffer } from './state';
+import { setSettings, setFollowSet, setWhitelistSet, setProtectedKeywords, setCurrentUserHandle, getSettings, getFollowSet, getProtectedKeywords, getCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, isCurrentUserHandle, profileCache, collectorBuffer } from './state';
 import { flushCollector } from './collector-buffer';
 import { loadFilterRules } from './filter-pipeline';
 import { processTweet, restoreHiddenTweets, reprocessExistingTweets, applyCurrentUserFallback } from './tweet-orchestrator';
@@ -34,6 +34,7 @@ const fadakBannerDeps = {
   isProfilePage,
   isHandleFollowed,
   isHandleWhitelisted,
+  isCurrentUser: isCurrentUserHandle,
   getCurrentSettings: () => getSettings(),
   addToWhitelist,
 };
