@@ -610,6 +610,7 @@ describe('restoreHiddenTweets', () => {
 // #94: 상세 페이지에서는 글쓴이의 앞뒤 타래를 숨기지 않고, 다른 파딱 답글은 펼쳐볼 수 있게 접어 둔다
 describe('processTweet — 트윗 상세 페이지', () => {
   const originalLocation = window.location;
+  const DETAIL_ON = { ...DEFAULT_SETTINGS, showAuthorThread: true, collapseOnDetail: true };
 
   function withStatusLink(article: HTMLElement, path: string): HTMLElement {
     const link = doc.createElement('a');
@@ -623,10 +624,18 @@ describe('processTweet — 트윗 상세 페이지', () => {
     Object.defineProperty(window, 'location', {
       value: { ...originalLocation, pathname: '/Author_A/status/200' }, writable: true, configurable: true,
     });
+    setSettings(DETAIL_ON);
   });
 
   afterEach(() => {
     Object.defineProperty(window, 'location', { value: originalLocation, writable: true, configurable: true });
+  });
+
+  it('기본값(두 토글 꺼짐)에서는 기존처럼 글쓴이의 다른 트윗도 완전 제거한다', () => {
+    setSettings({ ...DEFAULT_SETTINGS });
+    const root = withStatusLink(createTweetEl('author_a', { badge: true }), '/author_a/status/100');
+    processTweet(root);
+    expect(mockHideTweet).toHaveBeenCalledWith(root, 'remove', expect.objectContaining({ reason: 'fadak' }), expect.any(Function));
   });
 
   it('들어간 트윗 글쓴이의 루트·타래 트윗은 숨기지 않는다', () => {
@@ -642,7 +651,7 @@ describe('processTweet — 트윗 상세 페이지', () => {
   });
 
   it('상세 접어 두기를 끄면 숨김 방식(완전 제거)을 따른다', () => {
-    setSettings({ ...DEFAULT_SETTINGS, collapseOnDetail: false });
+    setSettings({ ...DETAIL_ON, collapseOnDetail: false });
     const reply = withStatusLink(createTweetEl('other_fadak', { badge: true }), '/other_fadak/status/300');
     processTweet(reply);
     expect(mockHideTweet).toHaveBeenCalledWith(reply, 'remove', expect.anything(), expect.any(Function));
@@ -659,7 +668,7 @@ describe('processTweet — 트윗 상세 페이지', () => {
   });
 
   it('글쓴이 타래 보기를 끄면 글쓴이의 다른 트윗도 지금처럼 숨긴다', () => {
-    setSettings({ ...DEFAULT_SETTINGS, showAuthorThread: false });
+    setSettings({ ...DETAIL_ON, showAuthorThread: false });
     const root = withStatusLink(createTweetEl('author_a', { badge: true }), '/author_a/status/100');
     processTweet(root);
     expect(mockHideTweet).toHaveBeenCalledWith(root, 'collapse', expect.objectContaining({ reason: 'fadak' }), expect.any(Function));

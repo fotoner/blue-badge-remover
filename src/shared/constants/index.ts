@@ -19,8 +19,9 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultFilterEnabled: true,
   milestoneBannerEnabled: false,
   aggressorFilterEnabled: false,
-  showAuthorThread: true,
-  collapseOnDetail: true,
+  // 기존 사용자의 상세 페이지 동작을 바꾸지 않도록 꺼진 채로 시작한다 (#94)
+  showAuthorThread: false,
+  collapseOnDetail: false,
 };
 
 /** X 핸들 형식 — DOM·MAIN world에서 읽은 핸들은 이 형식일 때만 신뢰한다 */

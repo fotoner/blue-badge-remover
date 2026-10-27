@@ -61,12 +61,12 @@
   <header class="head">
     <div class="tag">#94 · 확정 시안 · 2026-10-28</div>
     <h1>트윗 상세 — 글쓴이 타래 보기 · 상세에서 접어 두기</h1>
-    <p>"트윗 상세 / 답글" 아래에 하위 토글 두 개를 둔다. 두 토글은 서로 독립이고 기본값은 둘 다 켜짐. X 화면의 트윗에는 따로 표시를 붙이지 않는다.</p>
+    <p>"트윗 상세 / 답글" 아래에 하위 토글 두 개를 둔다. 두 토글은 서로 독립이고 기본값은 둘 다 꺼짐(기존 동작 유지, 2026-10-28 변경). X 화면의 트윗에는 따로 표시를 붙이지 않는다.</p>
   </header>
 
   <div class="title">설정 — 대시보드 › 필터링 범위</div>
   <div class="pair">
-    <div><p class="cap">기본 (켜짐)</p>
+    <div><p class="cap">켠 상태</p>
       <div class="dash">
         <h2>필터링 범위</h2><p class="desc">파딱 트윗을 숨길 영역을 선택합니다</p>
         <div class="toggle-row"><span>홈 타임라인</span><span class="sw on"></span></div>
@@ -99,14 +99,14 @@
   <div class="title">조합별 상세 화면 (숨김 방식: 완전 제거)</div>
   <table>
     <tr><th>글쓴이 타래 보기</th><th>상세에서 접어 두기</th><th>글쓴이의 루트·타래</th><th>다른 파딱 글</th></tr>
-    <tr><td>켬 <span class="star">★</span></td><td>켬 <span class="star">★</span></td><td>보임</td><td>접힘 — 눌러서 펼쳐보기</td></tr>
+    <tr><td>켬</td><td>켬</td><td>보임</td><td>접힘 — 눌러서 펼쳐보기</td></tr>
     <tr><td>켬</td><td>끔</td><td>보임</td><td>완전 제거</td></tr>
     <tr><td>끔</td><td>켬</td><td>접힘 — 눌러서 펼쳐보기</td><td>접힘 — 눌러서 펼쳐보기</td></tr>
-    <tr><td>끔</td><td>끔</td><td>완전 제거</td><td>완전 제거 (= 이전 동작)</td></tr>
+    <tr><td>끔 <span class="star">★</span></td><td>끔 <span class="star">★</span></td><td>완전 제거</td><td>완전 제거 (= 이전 동작)</td></tr>
   </table>
-  <p class="note">★ 기본값. "글쓴이"는 상세 URL(<code>/{handle}/status/{id}</code>)의 핸들이다. 남의 답글로 들어갔을 때 위쪽에 있는 다른 파딱의 루트는 "다른 파딱 글"로 본다.</p>
+  <p class="note">★ 기본값 — 기존 사용자의 상세 페이지 동작을 바꾸지 않는다. "글쓴이"는 상세 URL(<code>/{handle}/status/{id}</code>)의 핸들이다. 남의 답글로 들어갔을 때 위쪽에 있는 다른 파딱의 루트는 "다른 파딱 글"로 본다.</p>
 
-  <div class="title">X 화면 — 기본값, 파딱 A의 타래 중 2번째 트윗을 눌러 들어갔을 때</div>
+  <div class="title">X 화면 — 두 토글을 켰을 때, 파딱 A의 타래 중 2번째 트윗을 눌러 들어갔을 때</div>
   <div class="pair">
     <div><p class="cap">이전</p>
       <div class="x">

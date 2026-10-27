@@ -55,8 +55,9 @@ describe('트윗 상세 하위 토글', () => {
     expect(document.getElementById('detail-options')?.classList.contains('is-disabled')).toBe(false);
   });
 
-  it('기본값은 둘 다 켜짐이다', () => {
-    expect(DEFAULT_SETTINGS.showAuthorThread).toBe(true);
-    expect(DEFAULT_SETTINGS.collapseOnDetail).toBe(true);
+  // 기존 사용자의 상세 페이지 동작을 바꾸지 않도록 둘 다 꺼진 채로 시작한다
+  it('기본값은 둘 다 꺼짐이다', () => {
+    expect(DEFAULT_SETTINGS.showAuthorThread).toBe(false);
+    expect(DEFAULT_SETTINGS.collapseOnDetail).toBe(false);
   });
 });
