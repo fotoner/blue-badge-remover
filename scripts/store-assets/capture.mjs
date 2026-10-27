@@ -30,8 +30,8 @@ function today() {
 const store = {
   ...seed.storage,
   settings: { ...seed.storage.settings, language: lang },
-  followList: Array.from({ length: seed.followCount }, (_, i) => `@follow_${i}`),
-  lastSyncAt: new Date(Date.now() - 1000 * 60 * 42).toISOString(),
+  followListV2: Array.from({ length: seed.followCount }, (_, i) => `@follow_${i}`),
+  lastSyncAtV2: new Date(Date.now() - 1000 * 60 * 42).toISOString(),
   [`stats-${today()}`]: { date: today(), totalShown: 0, byPack: {}, ...seed.today },
 };
 

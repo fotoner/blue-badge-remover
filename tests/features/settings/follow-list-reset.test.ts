@@ -61,10 +61,26 @@ describe('removeLegacyFollowData (#70)', () => {
     expect(mockStorage).not.toHaveProperty('followCache');
   });
 
+  // 리뷰 S2: 늦은 v1 쓰기 뒤 v2로 정상 동기화된 상태에서 다음 업데이트가 와도 v2 동기화 시각은 남아야 한다
+  it('v1을 지울 때 v2 동기화 시각은 건드리지 않는다', async () => {
+    Object.assign(mockStorage, {
+      followCache: { me: ['polluted_a'] },
+      lastSyncAt: '2026-10-01T00:00:00.000Z',
+      [STORAGE_KEYS.FOLLOW_LIST]: ['really_followed'],
+      [STORAGE_KEYS.LAST_SYNC_AT]: '2026-10-27T09:00:00.000Z',
+    });
+
+    await removeLegacyFollowData();
+
+    expect(STORAGE_KEYS.LAST_SYNC_AT).not.toBe('lastSyncAt');
+    expect(mockStorage[STORAGE_KEYS.LAST_SYNC_AT]).toBe('2026-10-27T09:00:00.000Z');
+    expect(mockStorage).not.toHaveProperty('lastSyncAt');
+  });
+
   it('v1 데이터가 없으면 아무것도 지우지 않는다', async () => {
-    Object.assign(mockStorage, { lastSyncAt: '2026-10-27T00:00:00.000Z', [STORAGE_KEYS.FOLLOW_LIST]: ['a'] });
+    Object.assign(mockStorage, { [STORAGE_KEYS.LAST_SYNC_AT]: '2026-10-27T00:00:00.000Z', [STORAGE_KEYS.FOLLOW_LIST]: ['a'] });
 
     expect(await removeLegacyFollowData()).toBe(false);
-    expect(mockStorage['lastSyncAt']).toBe('2026-10-27T00:00:00.000Z');
+    expect(mockStorage[STORAGE_KEYS.LAST_SYNC_AT]).toBe('2026-10-27T00:00:00.000Z');
   });
 });

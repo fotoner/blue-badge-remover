@@ -198,7 +198,7 @@ async function init(): Promise<void> {
     logger.debug('Storage state', {
       followCount: ((allStorage[STORAGE_KEYS.FOLLOW_LIST] as string[]) ?? []).length,
       whitelistCount: ((allStorage['whitelist'] as string[]) ?? []).length,
-      lastSyncAt: allStorage['lastSyncAt'],
+      lastSyncAt: allStorage[STORAGE_KEYS.LAST_SYNC_AT],
     });
     logger.info('Blue Badge Remover initialized');
   }

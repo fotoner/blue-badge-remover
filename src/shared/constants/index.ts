@@ -27,11 +27,11 @@ export const X_HANDLE_PATTERN = /^[A-Za-z0-9_]{1,15}$/;
 export const STORAGE_KEYS = {
   SETTINGS: 'settings',
   WHITELIST: 'whitelist',
-  // #68로 오염된 v1(followList·followCache)을 버리고 v2로 새로 모은다. 옛 키에 늦게 도착한 쓰기는 읽지 않는다 (#70)
+  // #68로 오염된 v1(followList·followCache·lastSyncAt)을 버리고 v2로 새로 모은다. 옛 키에 늦게 도착한 쓰기는 읽지 않는다 (#70)
   FOLLOW_LIST: 'followListV2',
   FOLLOW_CACHE: 'followCacheV2',
   CURRENT_USER_ID: 'currentUserId',
-  LAST_SYNC_AT: 'lastSyncAt',
+  LAST_SYNC_AT: 'lastSyncAtV2',
   CUSTOM_FILTER_LIST: 'customFilterList',
   COLLECTED_FADAKS: 'collectedFadaks',
   DISABLED_FILTER_CATEGORIES: 'disabledFilterCategories',
