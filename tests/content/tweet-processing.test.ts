@@ -222,6 +222,32 @@ describe('extractRetweeterHandle', () => {
 // --- findQuoteBlock ---
 
 describe('findQuoteBlock', () => {
+  // 실제 X DOM (2026-10 실측): 인용 카드는 User-Name을 품은 div[role="link"], 라벨은 화면 언어를 따른다
+  it('라벨이 다른 언어여도 User-Name을 품은 div[role="link"]를 인용 카드로 찾음', () => {
+    const el = html(`
+      <article data-testid="tweet">
+        <div data-testid="User-Name"><a role="link" href="/author">Author</a></div>
+        <div>
+          <div>引用</div>
+          <div role="link" tabindex="0" id="ja-quote">
+            <div data-testid="User-Name"><a href="/quoted">Quoted</a></div>
+          </div>
+        </div>
+      </article>
+    `);
+    expect(findQuoteBlock(el)?.id).toBe('ja-quote');
+  });
+
+  it('User-Name이 없는 div[role="link"](링크 카드 등)는 인용 카드로 보지 않음', () => {
+    const el = html(`
+      <article data-testid="tweet">
+        <div data-testid="User-Name"><a role="link" href="/author">Author</a></div>
+        <div role="link" tabindex="0"><span>링크 미리보기</span></div>
+      </article>
+    `);
+    expect(findQuoteBlock(el)).toBeNull();
+  });
+
   it('한국어 "인용" 레이블로 인용 블록 탐지', () => {
     const el = html(`
       <article>

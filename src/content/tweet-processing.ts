@@ -69,6 +69,11 @@ export function extractRetweeterHandle(tweetEl: HTMLElement): string | null {
 }
 
 export function findQuoteBlock(tweetEl: HTMLElement): HTMLElement | null {
+  // 구조 우선 (로케일 무관): 인용 카드는 User-Name을 품은 div[role="link"] (2026-10 실측)
+  for (const card of tweetEl.querySelectorAll<HTMLElement>('div[role="link"]')) {
+    if (card.querySelector('[data-testid="User-Name"]')) return card;
+  }
+  // 폴백: '인용'/'Quote' 라벨 다음 형제 — 위 구조가 없는 DOM 변형용
   const ownerDoc = tweetEl.ownerDocument;
   const walker = ownerDoc.createTreeWalker(tweetEl, NodeFilter.SHOW_ELEMENT);
   let enFallback: HTMLElement | null = null;
