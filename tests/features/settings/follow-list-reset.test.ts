@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { STORAGE_KEYS } from '@shared/constants';
 
 const mockStorage: Record<string, unknown> = {};
 
@@ -20,38 +21,50 @@ vi.mock('wxt/browser', () => ({
   },
 }));
 
-const { resetPollutedFollowListOnce } = await import('@features/settings/follow-list-reset');
+const { removeLegacyFollowData } = await import('@features/settings/follow-list-reset');
 
-describe('resetPollutedFollowListOnce (#70)', () => {
+describe('removeLegacyFollowData (#70)', () => {
   beforeEach(() => {
     for (const k of Object.keys(mockStorage)) delete mockStorage[k];
+  });
+
+  it('오염된 v1 팔로우 데이터와 동기화 시각을 지우고 v2·계정·화이트리스트는 남긴다', async () => {
     Object.assign(mockStorage, {
-      followList: ['polluted_a', 'polluted_b', 'me'],
-      followCache: { me: ['polluted_a', 'me'], other: ['x'] },
+      followList: ['polluted_a', 'me'],
+      followCache: { me: ['polluted_a'], other: ['x'] },
       lastSyncAt: '2026-10-27T00:00:00.000Z',
+      [STORAGE_KEYS.FOLLOW_LIST]: ['really_followed'],
       currentUserId: 'me',
       whitelist: ['@kept'],
     });
-  });
 
-  it('처음 한 번은 팔로우 목록·캐시·동기화 시각을 비우고 계정·화이트리스트는 남긴다', async () => {
-    const didReset = await resetPollutedFollowListOnce();
+    expect(await removeLegacyFollowData()).toBe(true);
 
-    expect(didReset).toBe(true);
-    expect(mockStorage['followList']).toEqual([]);
-    expect(mockStorage['followCache']).toEqual({});
+    expect(mockStorage).not.toHaveProperty('followList');
+    expect(mockStorage).not.toHaveProperty('followCache');
     expect(mockStorage).not.toHaveProperty('lastSyncAt');
+    expect(mockStorage[STORAGE_KEYS.FOLLOW_LIST]).toEqual(['really_followed']);
     expect(mockStorage['currentUserId']).toBe('me');
     expect(mockStorage['whitelist']).toEqual(['@kept']);
   });
 
-  it('이미 비운 뒤에는 다시 비우지 않아 새로 모은 팔로우를 지킨다', async () => {
-    await resetPollutedFollowListOnce();
-    mockStorage['followList'] = ['really_followed'];
+  // 리뷰: 정리 전에 읽은 오염 캐시를 정리 뒤에 다시 쓰는 경합 — 옛 키에만 닿고 새 목록에는 섞이지 않아야 한다
+  it('정리 뒤 옛 키로 늦게 도착한 쓰기는 새 팔로우 목록에 섞이지 않는다', async () => {
+    Object.assign(mockStorage, { followCache: { me: ['polluted_a'] } });
+    await removeLegacyFollowData();
 
-    const didReset = await resetPollutedFollowListOnce();
+    mockStorage['followCache'] = { me: ['polluted_a', 'polluted_b'] };
 
-    expect(didReset).toBe(false);
-    expect(mockStorage['followList']).toEqual(['really_followed']);
+    expect(STORAGE_KEYS.FOLLOW_CACHE).not.toBe('followCache');
+    expect(mockStorage[STORAGE_KEYS.FOLLOW_CACHE]).toBeUndefined();
+    expect(await removeLegacyFollowData()).toBe(true);
+    expect(mockStorage).not.toHaveProperty('followCache');
+  });
+
+  it('v1 데이터가 없으면 아무것도 지우지 않는다', async () => {
+    Object.assign(mockStorage, { lastSyncAt: '2026-10-27T00:00:00.000Z', [STORAGE_KEYS.FOLLOW_LIST]: ['a'] });
+
+    expect(await removeLegacyFollowData()).toBe(false);
+    expect(mockStorage['lastSyncAt']).toBe('2026-10-27T00:00:00.000Z');
   });
 });

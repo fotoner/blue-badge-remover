@@ -27,8 +27,9 @@ export const X_HANDLE_PATTERN = /^[A-Za-z0-9_]{1,15}$/;
 export const STORAGE_KEYS = {
   SETTINGS: 'settings',
   WHITELIST: 'whitelist',
-  FOLLOW_LIST: 'followList',
-  FOLLOW_CACHE: 'followCache',
+  // #68로 오염된 v1(followList·followCache)을 버리고 v2로 새로 모은다. 옛 키에 늦게 도착한 쓰기는 읽지 않는다 (#70)
+  FOLLOW_LIST: 'followListV2',
+  FOLLOW_CACHE: 'followCacheV2',
   CURRENT_USER_ID: 'currentUserId',
   LAST_SYNC_AT: 'lastSyncAt',
   CUSTOM_FILTER_LIST: 'customFilterList',
@@ -36,8 +37,6 @@ export const STORAGE_KEYS = {
   DISABLED_FILTER_CATEGORIES: 'disabledFilterCategories',
   FILTER_PACKS: 'filterPacks',
   PROTECTED_KEYWORDS: 'protectedKeywords',
-  /** 오염된 팔로우 목록을 한 번 비웠다는 표식 (#70) */
-  FOLLOW_LIST_RESET: 'followListResetV1',
 } as const;
 
 export const X_GRAPHQL_ENDPOINTS = [

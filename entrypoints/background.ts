@@ -5,7 +5,7 @@ import { MESSAGE_TYPES } from '@shared/constants';
 import { cleanupOldStats } from '@features/stats';
 import { handleWhitelistRequest } from '@features/settings/whitelist-storage';
 import { initLanguageOnInstall } from '@features/settings';
-import { resetPollutedFollowListOnce } from '@features/settings/follow-list-reset';
+import { removeLegacyFollowData } from '@features/settings/follow-list-reset';
 
 const UPDATE_NOTI_FLAG = 'bbr-update-available';
 
@@ -20,7 +20,7 @@ export default defineBackground(() => {
   // 확장 업데이트 감지
   browser.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') void initLanguageOnInstall();
-    if (details.reason === 'install' || details.reason === 'update') void resetPollutedFollowListOnce();
+    if (details.reason === 'install' || details.reason === 'update') void removeLegacyFollowData();
     if (details.reason === 'update' && !isFirefoxAndroid) {
       void browser.storage.local.set({ [UPDATE_NOTI_FLAG]: true });
     }
