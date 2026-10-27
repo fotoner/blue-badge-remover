@@ -1,9 +1,9 @@
 // 확장이 의존하는 X 화면 구조가 그대로인지 실브라우저에서 점검한다 (X가 DOM을 바꿨는지 빨리 알아채기 위함).
 // 실행: aside repl "$(cat scripts/x-dom/smoke.js)"   (Aside 브라우저, x.com 로그인 필요)
-// 출력: PASS/FAIL <항목> <세부> 줄. FAIL이 나오면 해당 셀렉터를 쓰는 코드와 tests/fixtures/x-dom을 갱신한다.
+// 출력: PASS/FAIL/SKIP <항목> <세부> 줄 (SKIP은 표본이 없어 확인하지 못함). FAIL이 나오면 해당 셀렉터를 쓰는 코드와 tests/fixtures/x-dom을 갱신한다.
 
 const results = [];
-const check = (name, ok, detail) => results.push(`${ok ? 'PASS' : 'FAIL'} ${name} ${JSON.stringify(detail)}`);
+const check = (name, ok, detail, skipped = false) => results.push(`${skipped ? 'SKIP' : ok ? 'PASS' : 'FAIL'} ${name} ${JSON.stringify(detail)}`);
 
 const home = await openTab('https://x.com/home');
 await sleep(4500);
@@ -20,7 +20,8 @@ const dom = await home.evaluate(() => {
   const quoteLabelAgrees = quoteArticles.filter((a) => {
     const label = Array.from(a.querySelectorAll('div,span')).find((e) => e.childNodes.length === 1 && ['인용', 'Quote'].includes((e.textContent || '').trim()));
     const card = Array.from(a.querySelectorAll('div[role="link"]')).find((d) => d.querySelector('[data-testid="User-Name"]'));
-    return !label || label.nextElementSibling === card;
+    // 라벨 폴백(findQuoteBlock)도 쓸 수 있어야 한다 — 라벨이 없거나 카드의 앞 형제가 아니면 불일치
+    return !!label && label.nextElementSibling === card;
   });
   return {
     profileLink: !!document.querySelector('a[data-testid="AppTabBar_Profile_Link"]'),
@@ -39,7 +40,7 @@ check('account-handle', dom.profileLink || dom.switcherAvatar, { profileLink: do
 check('tweet-articles', dom.tweets > 0 && dom.withUserName === dom.tweets, { tweets: dom.tweets, withUserName: dom.withUserName });
 check('status-time-link', dom.withStatusTime >= dom.tweets * 0.8, { withStatusTime: dom.withStatusTime, tweets: dom.tweets });
 check('blue-badge-svg', dom.blueBadges > 0, { blueBadges: dom.blueBadges });
-check('quote-card', dom.quotes === 0 || dom.quoteLabelAgrees === dom.quotes, { quotes: dom.quotes, labelAgrees: dom.quoteLabelAgrees });
+check('quote-card', dom.quoteLabelAgrees === dom.quotes, { quotes: dom.quotes, labelAgrees: dom.quoteLabelAgrees }, dom.quotes === 0);
 check('navigation-api', dom.hasNavigationApi, {});
 
 const spa = await home.evaluate(async () => {
@@ -54,8 +55,8 @@ const spa = await home.evaluate(async () => {
   await new Promise((r) => setTimeout(r, 2000));
   return { sameMain: document.querySelector('main') === main, navEvents };
 });
-check('spa-main-kept', spa.skipped || spa.sameMain, spa);
-check('spa-navigation-event', spa.skipped || spa.navEvents >= 2, spa);
+check('spa-main-kept', !!spa.sameMain, spa, !!spa.skipped);
+check('spa-navigation-event', spa.navEvents >= 2, spa, !!spa.skipped);
 await closeTab(home);
 
 const search = await openTab('https://x.com/search?q=' + encodeURIComponent('from:elonmusk filter:nativeretweets include:nativeretweets') + '&f=live');

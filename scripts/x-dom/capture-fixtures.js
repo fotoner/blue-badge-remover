@@ -38,7 +38,9 @@ const SANITIZE = (rootSelector, keepTextSelectors) => {
         else child.textContent = fixHandle(text);
       } else if (child.nodeType === 1) {
         for (const attr of Array.from(child.attributes)) {
-          if (!KEEP_ATTRS.includes(attr.name)) child.removeAttribute(attr.name);
+          // aria-label에는 표시 이름이 들어갈 수 있다 — UI 문구만 있는 요소(내비게이션·계정 버튼·배지)에만 남긴다
+          const keepAria = attr.name !== 'aria-label' || child.matches('nav, [data-testid^="AppTabBar_"], [data-testid^="SideNav_"], [data-testid="icon-verified"]');
+          if (!KEEP_ATTRS.includes(attr.name) || !keepAria) child.removeAttribute(attr.name);
           else child.setAttribute(attr.name, fixHandle(attr.value));
         }
         if (child.tagName.toLowerCase() === 'path') child.setAttribute('d', 'M0 0');
@@ -57,7 +59,7 @@ async function captureFrom(url, pick) {
   const tab = await openTab(url);
   await sleep(4500);
   let html = null;
-  for (let i = 0; i < 8 && !html; i++) {
+  for (let i = 0; i < 15 && !html; i++) {
     html = await tab.evaluate(`(${pick})(${SANITIZE.toString()}, ${JSON.stringify(LABEL_SELECTORS)})`);
     if (!html) { await tab.evaluate(() => window.scrollBy(0, 1500)); await sleep(1000); }
   }
@@ -79,15 +81,27 @@ const PICKERS = {
     return `<header role="banner">${out}${sw}</header>`;
   }],
   'repost-wrapped-social-context': ['https://x.com/search?q=' + encodeURIComponent('from:elonmusk filter:nativeretweets include:nativeretweets') + '&f=live', (S, keep) => {
-    const a = Array.from(document.querySelectorAll('article[data-testid="tweet"]')).find((x) => x.querySelector('[data-testid="socialContext"]')?.closest('a') && x.querySelector('[data-testid="User-Name"] [data-testid="icon-verified"]'));
+    // 조건: 링크가 socialContext를 감싼 리트윗 + 작성자는 파딱 + 인용 카드는 금색·회색 배지(gradient)
+    const a = Array.from(document.querySelectorAll('article[data-testid="tweet"]')).find((x) => {
+      const card = Array.from(x.querySelectorAll('div[role="link"]')).find((d) => d.querySelector('[data-testid="User-Name"]'));
+      const authorName = Array.from(x.querySelectorAll('[data-testid="User-Name"]')).find((u) => !card?.contains(u));
+      return x.querySelector('[data-testid="socialContext"]')?.closest('a') && authorName?.querySelector('[data-testid="icon-verified"]')
+        && card?.querySelector('[data-testid="icon-verified"] linearGradient');
+    });
     if (!a) return null;
     a.setAttribute('data-bbr-capture', '3');
     const out = S('[data-bbr-capture="3"]', keep);
     a.removeAttribute('data-bbr-capture');
     return out;
   }],
-  'quote-card': ['https://x.com/home', (S, keep) => {
-    const a = Array.from(document.querySelectorAll('article[data-testid="tweet"]')).find((x) => Array.from(x.querySelectorAll('div[role="link"]')).some((d) => d.querySelector('[data-testid="User-Name"]')));
+  'quote-card': ['https://x.com/search?q=' + encodeURIComponent('filter:quote -filter:blue_verified') + '&f=live', (S, keep) => {
+    // 조건(#35 상황): 작성자는 배지 없음 + 인용 카드는 파딱 배지(gradient 없음)
+    const a = Array.from(document.querySelectorAll('article[data-testid="tweet"]')).find((x) => {
+      const card = Array.from(x.querySelectorAll('div[role="link"]')).find((d) => d.querySelector('[data-testid="User-Name"]'));
+      const authorName = Array.from(x.querySelectorAll('[data-testid="User-Name"]')).find((u) => !card?.contains(u));
+      const quoteBadge = card?.querySelector('[data-testid="icon-verified"]');
+      return card && authorName && !authorName.querySelector('[data-testid="icon-verified"]') && quoteBadge && !quoteBadge.querySelector('linearGradient');
+    });
     if (!a) return null;
     a.setAttribute('data-bbr-capture', '4');
     const out = S('[data-bbr-capture="4"]', keep);

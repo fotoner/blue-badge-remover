@@ -1,7 +1,9 @@
 // 뒤로가기 직후 숨김 품질을 한 번 측정한다 (#72·#73·#74).
 // 실행: aside repl "$(cat scripts/x-dom/back-nav-measure.js)"   — 여러 번 반복해 비율을 본다.
 // 시나리오: 홈을 2500px까지 조금씩 내림 → 보이는 트윗 상세로 이동 → 뒤로가기 → 3.5초 관찰.
-// 출력: BACKNAV {"flash": 숨기기 전에 그려진 파딱 수, "anchorShift": 클릭 전 맨 위 트윗의 위치 변화(px)}
+// 출력: BACKNAV {"flash": 그려진 뒤에 숨겨진 파딱 수, "anchorShift": 클릭 전 맨 위 트윗의 위치 변화(px)}
+// "그려짐"은 브라우저의 Element Timing 기록으로 판정한다. 트윗이 DOM에 들어오는 순간(그리기 전) 본문·이름에
+// elementtiming 속성을 달면, 실제로 화면에 그려졌을 때만 기록이 남는다. 프레임 번호 비교로는 그리기 전/후를 구분할 수 없다.
 
 const tab = await openTab('https://x.com/home');
 await sleep(4500);
@@ -21,31 +23,30 @@ if (!before) throw new Error('no visible tweet to open');
 await sleep(2500);
 
 await tab.evaluate(() => {
-  const isBlue = (a) => {
-    const b = a.querySelector('[data-testid="User-Name"] [data-testid="icon-verified"]');
-    if (!b) return false;
-    const svg = b.closest('svg') || b;
-    const paths = svg.querySelectorAll('path');
-    return !svg.querySelector('linearGradient') && paths.length === 1 && !paths[0].getAttribute('fill');
-  };
-  const S = { frames: 0, firstVisible: new Map(), hiddenFrame: new Map(), blankPx: 0 };
+  const S = { painted: new Map(), hiddenAt: new Map(), ids: new WeakMap(), next: 0 };
   window.__bbrMeasure = S;
-  const loop = () => {
-    S.frames++;
-    for (const a of document.querySelectorAll('article[data-testid="tweet"]')) {
-      if (!isBlue(a)) continue;
-      const hidden = a.hasAttribute('data-bbr-original');
-      const r = a.getBoundingClientRect();
-      const inView = r.height > 2 && r.bottom > 0 && r.top < innerHeight && getComputedStyle(a).visibility !== 'hidden';
-      if (inView && !hidden && !S.firstVisible.has(a)) S.firstVisible.set(a, S.frames);
-    }
-    if (S.frames < 220) requestAnimationFrame(loop);
+  new PerformanceObserver((list) => {
+    for (const e of list.getEntries()) if (!S.painted.has(e.identifier)) S.painted.set(e.identifier, e.renderTime || e.loadTime);
+  }).observe({ type: 'element' });
+  const idOf = (a) => { if (!S.ids.has(a)) S.ids.set(a, `bbr-${++S.next}`); return S.ids.get(a); };
+  // 배지가 늦게 붙어도 놓치지 않게 모든 트윗에 단다 — 셀 때는 숨겨진 트윗만 본다
+  const mark = (a) => {
+    a.querySelectorAll('[data-testid="tweetText"], [data-testid="tweetText"] *, [data-testid="User-Name"] span').forEach((el) => el.setAttribute('elementtiming', idOf(a)));
   };
-  // 숨김 시점은 속성이 바뀐 순간의 프레임으로 기록한다. 다음 샘플에서 읽으면 같은 프레임에 그리기 전 숨긴 것도 "보였다"로 센다.
   new MutationObserver((muts) => {
-    for (const m of muts) if (m.target.hasAttribute('data-bbr-original') && !S.hiddenFrame.has(m.target)) S.hiddenFrame.set(m.target, S.frames);
-  }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['data-bbr-original'] });
-  requestAnimationFrame(loop);
+    for (const m of muts) {
+      if (m.type === 'attributes') {
+        if (m.target.hasAttribute('data-bbr-original') && !S.hiddenAt.has(m.target)) S.hiddenAt.set(m.target, performance.now());
+        continue;
+      }
+      for (const node of m.addedNodes) {
+        if (!(node instanceof HTMLElement)) continue;
+        const own = node.closest('article[data-testid="tweet"]');
+        if (own) mark(own);
+        node.querySelectorAll('article[data-testid="tweet"]').forEach(mark);
+      }
+    }
+  }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-bbr-original'] });
   history.back();
 });
 await sleep(3500);
@@ -53,7 +54,10 @@ await sleep(3500);
 const out = await tab.evaluate(() => {
   const S = window.__bbrMeasure;
   let flash = 0;
-  for (const [a, f] of S.firstVisible) { const h = S.hiddenFrame.get(a); if (h !== undefined && f < h) flash++; }
+  for (const [a, hiddenAt] of S.hiddenAt) {
+    const paintedAt = S.ids.has(a) ? S.painted.get(S.ids.get(a)) : undefined;
+    if (paintedAt !== undefined && paintedAt < hiddenAt) flash++;
+  }
   const anchor = Array.from(document.querySelectorAll('article[data-testid="tweet"]'))
     .find((x) => x.querySelector('time')?.closest('a')?.getAttribute('href') === window.__bbrAnchor);
   return { flash, anchorTop: anchor ? Math.round(anchor.getBoundingClientRect().top) : null };

@@ -39,7 +39,7 @@ export default tseslint.config(
         openTab: 'readonly', closeTab: 'readonly', sleep: 'readonly',
         window: 'readonly', document: 'readonly', history: 'readonly', innerHeight: 'readonly',
         getComputedStyle: 'readonly', requestAnimationFrame: 'readonly', setTimeout: 'readonly', console: 'readonly',
-        MutationObserver: 'readonly',
+        MutationObserver: 'readonly', PerformanceObserver: 'readonly', performance: 'readonly', HTMLElement: 'readonly',
       },
     },
   },
