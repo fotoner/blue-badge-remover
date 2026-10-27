@@ -81,11 +81,15 @@ const PICKERS = {
     return `<header role="banner">${out}${sw}</header>`;
   }],
   'repost-wrapped-social-context': ['https://x.com/search?q=' + encodeURIComponent('from:elonmusk filter:nativeretweets include:nativeretweets') + '&f=live', (S, keep) => {
-    // 조건: 링크가 socialContext를 감싼 리트윗 + 작성자는 파딱 + 인용 카드는 금색·회색 배지(gradient)
+    // 조건: 링크가 socialContext를 감싼 리트윗 + 작성자는 파딱(path 1개·fill·gradient 없음) + 인용 카드는 금색·회색 배지(gradient)
     const a = Array.from(document.querySelectorAll('article[data-testid="tweet"]')).find((x) => {
       const card = Array.from(x.querySelectorAll('div[role="link"]')).find((d) => d.querySelector('[data-testid="User-Name"]'));
       const authorName = Array.from(x.querySelectorAll('[data-testid="User-Name"]')).find((u) => !card?.contains(u));
-      return x.querySelector('[data-testid="socialContext"]')?.closest('a') && authorName?.querySelector('[data-testid="icon-verified"]')
+      const authorBadge = authorName?.querySelector('[data-testid="icon-verified"]');
+      const authorSvg = authorBadge ? (authorBadge.closest('svg') || authorBadge) : null;
+      const authorIsBlue = !!authorSvg && !authorSvg.querySelector('linearGradient')
+        && authorSvg.querySelectorAll('path').length === 1 && !authorSvg.querySelector('path').getAttribute('fill');
+      return x.querySelector('[data-testid="socialContext"]')?.closest('a') && authorIsBlue
         && card?.querySelector('[data-testid="icon-verified"] linearGradient');
     });
     if (!a) return null;

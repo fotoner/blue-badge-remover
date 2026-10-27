@@ -39,7 +39,8 @@ const dom = await home.evaluate(() => {
 check('account-handle', dom.profileLink || dom.switcherAvatar, { profileLink: dom.profileLink, switcherAvatar: dom.switcherAvatar });
 check('tweet-articles', dom.tweets > 0 && dom.withUserName === dom.tweets, { tweets: dom.tweets, withUserName: dom.withUserName });
 check('status-time-link', dom.withStatusTime >= dom.tweets * 0.8, { withStatusTime: dom.withStatusTime, tweets: dom.tweets });
-check('blue-badge-svg', dom.blueBadges > 0, { blueBadges: dom.blueBadges });
+// 트윗이 적게 로드되면 파딱이 없을 수도 있다 — 표본이 작고 0건이면 확인 못 함(SKIP)
+check('blue-badge-svg', dom.blueBadges > 0, { blueBadges: dom.blueBadges, tweets: dom.tweets }, dom.blueBadges === 0 && dom.tweets < 10);
 check('quote-card', dom.quoteLabelAgrees === dom.quotes, { quotes: dom.quotes, labelAgrees: dom.quoteLabelAgrees }, dom.quotes === 0);
 check('navigation-api', dom.hasNavigationApi, {});
 
