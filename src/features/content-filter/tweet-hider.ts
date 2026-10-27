@@ -163,7 +163,12 @@ export function hideTweet(
   context?: HideContext,
   onExpandedChange?: ExpandedChangeHandler,
 ): void {
-  if (element.hasAttribute(ORIGINAL_CONTENT_KEY)) return;
+  const hiddenAs = element.getAttribute(ORIGINAL_CONTENT_KEY);
+  if (hiddenAs !== null) {
+    // 같은 article이 타임라인·상세를 오가며 다시 쓰이면 숨김 방식이 달라질 수 있다 — 같으면 그대로 둔다 (#94)
+    if (hiddenAs === (mode === 'remove' ? 'hidden' : 'collapsed')) return;
+    showTweet(element);
+  }
   if (element.hasAttribute(EXPANDED_ATTR)) return;
 
   if (mode === 'remove') {

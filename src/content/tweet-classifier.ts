@@ -42,6 +42,8 @@ export interface QuoteClassifyInput {
   quotedIsWhitelisted: boolean;
   /** 인용된 계정이 로그인한 본인 — 본인 트윗은 인용 카드 안에서도 숨기지 않는다 (#88) */
   quotedIsCurrentUser: boolean;
+  /** 인용한 트윗이 상세 글쓴이의 트윗 — 글쓴이 타래 보기가 켜져 있으면 통째로 숨기지 않는다 (#94) */
+  parentIsDetailAuthor: boolean;
   parentHandle: string;
   parentInFollow: boolean;
   parentIsWhitelisted: boolean;
@@ -130,10 +132,12 @@ function classifyRetweet(settings: Settings, pageType: PageType, match: Partial<
 export function classifyQuote(input: QuoteClassifyInput): QuoteClassifyResult {
   const { quotedHandle, quotedIsFadak, quotedInFollow, quotedIsWhitelisted, quotedIsCurrentUser, parentHandle, parentInFollow, parentIsWhitelisted, retweeterExempt, settings, pageType } = input;
   const parentExempt = parentInFollow || parentIsWhitelisted;
+  const parentDetailExempt = input.parentIsDetailAuthor && settings.showAuthorThread;
 
-  // self-quote: 예외 부모(팔로우/화이트리스트)가 자기 트윗을 인용
-  if (quotedHandle !== null && quotedHandle.toLowerCase() === parentHandle.toLowerCase() && parentExempt) {
-    return { action: 'show', reason: parentInFollow ? 'self-quote-followed' : 'self-quote-whitelisted' };
+  // self-quote: 예외 부모(팔로우/화이트리스트/상세 글쓴이)가 자기 트윗을 인용
+  if (quotedHandle !== null && quotedHandle.toLowerCase() === parentHandle.toLowerCase()) {
+    if (parentExempt) return { action: 'show', reason: parentInFollow ? 'self-quote-followed' : 'self-quote-whitelisted' };
+    if (parentDetailExempt) return { action: 'show', reason: 'self-quote-detail-author' };
   }
 
   if (!quotedIsFadak) return { action: 'show', reason: 'not-fadak' };
@@ -147,6 +151,7 @@ export function classifyQuote(input: QuoteClassifyInput): QuoteClassifyResult {
     if (parentExempt || retweeterExempt) {
       return { action: 'hide-quote', reason: parentExempt ? 'quote-fadak-parent-exempt' : 'quote-fadak-retweeter-exempt' };
     }
+    if (parentDetailExempt) return { action: 'hide-quote', reason: 'quote-fadak-detail-author' };
     return { action: 'hide-entire', reason: 'quote-fadak' };
   }
   if (quoteAction === 'hide-quote') return { action: 'hide-quote', reason: 'quote-fadak' };

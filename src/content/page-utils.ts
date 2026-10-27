@@ -48,8 +48,9 @@ const BOOKMARKS_PATH = /^\/i\/(bookmarks|history)(\/|$)/;
 export function getPageType(): PageType {
   const path = window.location.pathname;
   if (BOOKMARKS_PATH.test(path)) return 'bookmarks';
+  // 상세를 먼저 본다 — search·lists로 시작하는 핸들(/searchfan/status/…)이 검색·리스트로 판정되지 않게 (#94)
+  if (path.includes('/status/')) return 'replies';
   if (path.includes('/i/lists/') || path.includes('/lists/')) return 'lists';
   if (path.includes('/search')) return 'search';
-  if (path.includes('/status/')) return 'replies';
   return 'timeline';
 }

@@ -648,6 +648,16 @@ describe('processTweet — 트윗 상세 페이지', () => {
     expect(mockHideTweet).toHaveBeenCalledWith(reply, 'remove', expect.anything(), expect.any(Function));
   });
 
+  it('다른 파딱을 인용한 글쓴이 트윗은 인용 숨김이 트윗 전체여도 인용 카드만 숨긴다', () => {
+    vi.mocked(getQuoteAction).mockReturnValue('hide-entire');
+    mockDetectBadgeSvg.mockReturnValue(true);
+    const root = withStatusLink(createTweetEl('author_a', { badge: true }), '/author_a/status/100');
+    appendQuoteBlock(root, { badge: true });
+    processTweet(root);
+    expect(mockHideTweet).not.toHaveBeenCalled();
+    expect(mockHideQuoteBlock).toHaveBeenCalled();
+  });
+
   it('글쓴이 타래 보기를 끄면 글쓴이의 다른 트윗도 지금처럼 숨긴다', () => {
     setSettings({ ...DEFAULT_SETTINGS, showAuthorThread: false });
     const root = withStatusLink(createTweetEl('author_a', { badge: true }), '/author_a/status/100');

@@ -283,6 +283,7 @@ describe('classifyQuote', () => {
       quotedInFollow: false,
       quotedIsWhitelisted: false,
       quotedIsCurrentUser: false,
+      parentIsDetailAuthor: false,
       parentHandle: 'parent_user',
       parentInFollow: false,
       parentIsWhitelisted: false,
@@ -292,6 +293,26 @@ describe('classifyQuote', () => {
       ...overrides,
     };
   }
+
+  // #94: 상세 글쓴이의 트윗은 인용 때문에 통째로 숨기지 않는다 — 인용 카드만 접는다
+  describe('상세 글쓴이', () => {
+    const entire = { ...defaultSettings, quoteMode: 'entire' as const };
+
+    it('글쓴이 타래 보기가 켜져 있으면 다른 파딱을 인용한 글쓴이 트윗은 인용 카드만 숨긴다', () => {
+      const result = classifyQuote(makeQuoteInput({ parentIsDetailAuthor: true, settings: entire, pageType: 'replies' }));
+      expect(result).toEqual({ action: 'hide-quote', reason: 'quote-fadak-detail-author' });
+    });
+
+    it('글쓴이 타래 보기를 끄면 지금처럼 트윗 전체를 숨긴다', () => {
+      const settings = { ...entire, showAuthorThread: false };
+      expect(classifyQuote(makeQuoteInput({ parentIsDetailAuthor: true, settings, pageType: 'replies' })).action).toBe('hide-entire');
+    });
+
+    it('글쓴이가 자기 트윗을 인용하면 인용 카드도 숨기지 않는다', () => {
+      const result = classifyQuote(makeQuoteInput({ quotedHandle: 'author_a', parentHandle: 'author_a', parentIsDetailAuthor: true, settings: entire, pageType: 'replies' }));
+      expect(result).toEqual({ action: 'show', reason: 'self-quote-detail-author' });
+    });
+  });
 
   it('인용된 계정이 비파딱 = show', () => {
     const result = classifyQuote(makeQuoteInput({ quotedIsFadak: false }));

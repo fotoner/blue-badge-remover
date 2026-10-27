@@ -90,6 +90,17 @@ describe('getPageType', () => {
     expect(getPageType()).toBe('search');
   });
 
+  // 리뷰: search로 시작하는 핸들(searchfan 등)의 상세가 검색으로 판정되던 문제 (#94)
+  it.each([
+    ['/searchfan/status/200', 'replies'],
+    ['/searchfan/status/200/photo/1', 'replies'],
+    ['/search', 'search'],
+    ['/i/lists/123', 'lists'],
+  ] as const)('%s → %s', (path, expected) => {
+    setPath(path);
+    expect(getPageType()).toBe(expected);
+  });
+
   it('should return replies for status page', () => {
     setPath('/user/status/123456');
     expect(getPageType()).toBe('replies');

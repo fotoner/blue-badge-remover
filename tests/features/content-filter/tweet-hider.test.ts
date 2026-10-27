@@ -192,6 +192,25 @@ describe('hideTweet', () => {
     expect(other.getAttribute('data-bbr-reason')).toBe('unknown');
   });
 
+  // #94: 같은 article이 타임라인(완전 제거)과 상세(접기)를 오가며 다시 쓰이면 숨김 방식을 맞춘다
+  it('완전 제거로 숨긴 트윗을 접기로 다시 숨기면 펼칠 수 있는 접힘 표시로 바뀐다', () => {
+    hideTweet(tweetEl, 'remove', { reason: 'fadak', handle: '@fadakuser' });
+    hideTweet(tweetEl, 'collapse', { reason: 'fadak', handle: '@fadakuser' });
+    expect(tweetEl.getAttribute('data-bbr-original')).toBe('collapsed');
+    expect(tweetEl.style.visibility).toBe('');
+    expect(tweetEl.style.height).toBe('');
+    expect(tweetEl.querySelectorAll('[data-bbr-collapsed]').length).toBe(1);
+  });
+
+  it('접기로 숨긴 트윗을 완전 제거로 다시 숨기면 접힘 표시를 걷고 8px 칸으로 바꾼다', () => {
+    hideTweet(tweetEl, 'collapse', { reason: 'fadak', handle: '@fadakuser' });
+    hideTweet(tweetEl, 'remove', { reason: 'fadak', handle: '@fadakuser' });
+    expect(tweetEl.getAttribute('data-bbr-original')).toBe('hidden');
+    expect(tweetEl.querySelector('[data-bbr-collapsed]')).toBeNull();
+    expect(tweetEl.style.visibility).toBe('hidden');
+    expect(tweetEl.style.height).toBe('8px');
+  });
+
   it('이미 숨겨진 요소에 다른 reason으로 재호출 시 기존 data-bbr-reason 유지', () => {
     hideTweet(tweetEl, 'collapse', { reason: 'fadak', handle: '@fadakuser' });
     hideTweet(tweetEl, 'collapse', { reason: 'quote-entire', handle: '@fadakuser' });
