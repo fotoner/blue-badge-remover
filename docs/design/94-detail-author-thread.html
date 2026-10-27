@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>#94 트윗 상세 — 글쓴이 타래 보기 · 상세에서 접어 두기 (확정 시안)</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0E1418; --surface-1: #131B21; --surface-3: #21303A;
+    --text-primary: #F5F9FC; --text-muted: #8C9AA5; --accent: #1d9bf0;
+    --border-subtle: rgba(255, 255, 255, 0.08); --border-strong: rgba(29, 155, 240, 0.32);
+    --font-display: 'Space Grotesk', sans-serif; --font-body: 'IBM Plex Sans KR', sans-serif; --font-mono: 'JetBrains Mono', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #070A0D; color: var(--text-primary); font-family: var(--font-body); font-size: 13px; line-height: 1.5; padding: 32px 28px 64px; }
+  .page { max-width: 980px; }
+  .head { border-left: 3px solid var(--accent); padding-left: 14px; margin-bottom: 24px; }
+  .head .tag { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+  .head h1 { font-family: var(--font-display); font-size: 20px; font-weight: 600; margin: 2px 0 6px; }
+  .head p { color: var(--text-muted); }
+  .title { font-family: var(--font-display); font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 28px 0 10px; }
+
+  /* 대시보드 — src/dashboard/style.css와 같은 규칙 */
+  .dash { background: var(--bg); border: 1px solid var(--border-subtle); padding: 18px 20px; max-width: 600px; }
+  .dash h2 { font-family: var(--font-display); font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .desc { color: var(--text-muted); font-size: 11px; margin-bottom: 10px; line-height: 1.4; }
+  .hint { color: var(--text-muted); font-size: 11px; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; }
+  .sw { width: 36px; height: 20px; background: var(--surface-3); border-radius: 10px; position: relative; flex-shrink: 0; }
+  .sw::after { content: ''; position: absolute; width: 16px; height: 16px; background: var(--text-primary); border-radius: 50%; top: 2px; left: 2px; }
+  .sw.on { background: var(--accent); }
+  .sw.on::after { transform: translateX(16px); }
+  .toggle-children { margin: 0 0 6px 10px; padding-left: 12px; border-left: 3px solid var(--border-strong); }
+  .toggle-children .toggle-row { padding: 5px 0; }
+  .toggle-children .hint { margin: 0 0 6px; line-height: 1.4; }
+  .toggle-children.is-disabled { opacity: 0.4; border-left-color: var(--border-subtle); }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .cap { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+
+  table { border-collapse: collapse; background: var(--surface-1); border: 1px solid var(--border-subtle); width: 100%; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); font-size: 12px; vertical-align: top; }
+  th { font-family: var(--font-display); font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .star { color: var(--accent); }
+
+  /* X 상세 페이지 */
+  .x { background: #000; color: #e7e9ea; border: 1px solid #2f3336; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Apple SD Gothic Neo', sans-serif; font-size: 14px; line-height: 1.35; }
+  .ban { padding: 7px 12px; background: #F4212E; color: #fff; font-size: 12px; text-align: center; }
+  .tw { display: flex; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #2f3336; }
+  .av { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg, #c9d3dc, #8a96a3); }
+  .av.n { background: linear-gradient(135deg, #7fb8e6, #3a6fb3); }
+  .lbl { display: inline-block; font-size: 11px; font-weight: 600; margin-bottom: 3px; padding: 0 6px; border-radius: 3px; background: rgba(29, 155, 240, 0.2); color: #8ecdf8; }
+  .lbl.f { background: #2f3336; color: #e7e9ea; }
+  .ph { display: flex; align-items: center; justify-content: center; gap: 6px; color: #536471; font-size: 12px; min-height: 44px; border-bottom: 1px solid #2f3336; }
+  .gone { height: 8px; border-bottom: 1px solid #2f3336; position: relative; }
+  .gone span { position: absolute; right: 8px; top: -7px; font-size: 10px; color: #ff7b72; background: #000; padding: 0 4px; }
+  .note { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="head">
+    <div class="tag">#94 · 확정 시안 · 2026-10-28</div>
+    <h1>트윗 상세 — 글쓴이 타래 보기 · 상세에서 접어 두기</h1>
+    <p>"트윗 상세 / 답글" 아래에 하위 토글 두 개를 둔다. 두 토글은 서로 독립이고 기본값은 둘 다 켜짐. X 화면의 트윗에는 따로 표시를 붙이지 않는다.</p>
+  </header>
+
+  <div class="title">설정 — 대시보드 › 필터링 범위</div>
+  <div class="pair">
+    <div><p class="cap">기본 (켜짐)</p>
+      <div class="dash">
+        <h2>필터링 범위</h2><p class="desc">파딱 트윗을 숨길 영역을 선택합니다</p>
+        <div class="toggle-row"><span>홈 타임라인</span><span class="sw on"></span></div>
+        <div class="toggle-row"><span>트윗 상세 / 답글</span><span class="sw on"></span></div>
+        <div class="toggle-children">
+          <div class="toggle-row"><span>글쓴이 타래 보기</span><span class="sw on"></span></div>
+          <p class="hint">트윗 상세에서 들어간 트윗 글쓴이의 앞뒤 타래는 숨기지 않습니다</p>
+          <div class="toggle-row"><span>상세에서는 접어 두고 펼쳐볼 수 있게</span><span class="sw on"></span></div>
+          <p class="hint">숨김 방식이 완전 제거여도, 트윗 상세에서 숨긴 트윗은 눌러서 펼쳐볼 수 있게 접어 둡니다</p>
+        </div>
+        <div class="toggle-row"><span>검색 결과</span><span class="sw on"></span></div>
+      </div>
+    </div>
+    <div><p class="cap">"트윗 상세 / 답글" 꺼짐 → 하위 비활성</p>
+      <div class="dash">
+        <h2>필터링 범위</h2><p class="desc">파딱 트윗을 숨길 영역을 선택합니다</p>
+        <div class="toggle-row"><span>홈 타임라인</span><span class="sw on"></span></div>
+        <div class="toggle-row"><span>트윗 상세 / 답글</span><span class="sw"></span></div>
+        <div class="toggle-children is-disabled">
+          <div class="toggle-row"><span>글쓴이 타래 보기</span><span class="sw on"></span></div>
+          <p class="hint">트윗 상세에서 들어간 트윗 글쓴이의 앞뒤 타래는 숨기지 않습니다</p>
+          <div class="toggle-row"><span>상세에서는 접어 두고 펼쳐볼 수 있게</span><span class="sw on"></span></div>
+          <p class="hint">숨김 방식이 완전 제거여도, 트윗 상세에서 숨긴 트윗은 눌러서 펼쳐볼 수 있게 접어 둡니다</p>
+        </div>
+        <div class="toggle-row"><span>검색 결과</span><span class="sw on"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="title">조합별 상세 화면 (숨김 방식: 완전 제거)</div>
+  <table>
+    <tr><th>글쓴이 타래 보기</th><th>상세에서 접어 두기</th><th>글쓴이의 루트·타래</th><th>다른 파딱 글</th></tr>
+    <tr><td>켬 <span class="star">★</span></td><td>켬 <span class="star">★</span></td><td>보임</td><td>접힘 — 눌러서 펼쳐보기</td></tr>
+    <tr><td>켬</td><td>끔</td><td>보임</td><td>완전 제거</td></tr>
+    <tr><td>끔</td><td>켬</td><td>접힘 — 눌러서 펼쳐보기</td><td>접힘 — 눌러서 펼쳐보기</td></tr>
+    <tr><td>끔</td><td>끔</td><td>완전 제거</td><td>완전 제거 (= 이전 동작)</td></tr>
+  </table>
+  <p class="note">★ 기본값. "글쓴이"는 상세 URL(<code>/{handle}/status/{id}</code>)의 핸들이다. 남의 답글로 들어갔을 때 위쪽에 있는 다른 파딱의 루트는 "다른 파딱 글"로 본다.</p>
+
+  <div class="title">X 화면 — 기본값, 파딱 A의 타래 중 2번째 트윗을 눌러 들어갔을 때</div>
+  <div class="pair">
+    <div><p class="cap">이전</p>
+      <div class="x">
+        <div class="ban">이 트윗은 파딱 계정 @A의 게시물입니다</div>
+        <div class="gone"><span>A의 1번째 트윗 · 숨겨져 못 봄</span></div>
+        <div class="tw"><div class="av"></div><div><span class="lbl f">눌러서 들어온 트윗</span><div><b>A</b></div><div>2/ 이어서 설명하면…</div></div></div>
+        <div class="gone"><span>A의 3번째 트윗 · 숨김</span></div>
+        <div class="gone"><span>다른 파딱 B의 답글 · 숨김</span></div>
+        <div class="tw"><div class="av n"></div><div><b>일반 사용자</b><div>오 좋네요</div></div></div>
+      </div>
+    </div>
+    <div><p class="cap">바뀐 뒤</p>
+      <div class="x">
+        <div class="ban">이 트윗은 파딱 계정 @A의 게시물입니다</div>
+        <div class="tw"><div class="av"></div><div><span class="lbl">A의 1번째 트윗</span><div><b>A</b></div><div>1/ 서비스를 만들었습니다</div></div></div>
+        <div class="tw"><div class="av"></div><div><span class="lbl f">눌러서 들어온 트윗</span><div><b>A</b></div><div>2/ 이어서 설명하면…</div></div></div>
+        <div class="tw"><div class="av"></div><div><span class="lbl">A의 3번째 트윗</span><div><b>A</b></div><div>3/ 피드백 반영했습니다</div></div></div>
+        <div class="ph">파딱 @B의 트윗이 숨겨졌습니다 (클릭하여 펼치기)</div>
+        <div class="tw"><div class="av n"></div><div><b>일반 사용자</b><div>오 좋네요</div></div></div>
+      </div>
+    </div>
+  </div>
+  <p class="note">트윗 위의 꼬리표는 설명용이고 실제 화면에는 없다.</p>
+</div>
+</body>
+</html>

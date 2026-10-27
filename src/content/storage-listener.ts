@@ -69,6 +69,8 @@ function handleSettingsChange(
     prev.retweetFilter !== newSettings.retweetFilter ||
     prev.hideMode !== newSettings.hideMode ||
     prev.quoteMode !== newSettings.quoteMode ||
+    prev.showAuthorThread !== newSettings.showAuthorThread ||
+    prev.collapseOnDetail !== newSettings.collapseOnDetail ||
     prev.filter.timeline !== newSettings.filter.timeline ||
     prev.filter.replies !== newSettings.filter.replies ||
     prev.filter.search !== newSettings.filter.search ||

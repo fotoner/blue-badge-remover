@@ -19,6 +19,8 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultFilterEnabled: true,
   milestoneBannerEnabled: false,
   aggressorFilterEnabled: false,
+  showAuthorThread: true,
+  collapseOnDetail: true,
 };
 
 /** X 핸들 형식 — DOM·MAIN world에서 읽은 핸들은 이 형식일 때만 신뢰한다 */

@@ -29,6 +29,15 @@ export function getAccountHandleFromDOM(): string | null {
   return handle ? handle.toLowerCase() : null;
 }
 
+const STATUS_PATH = /^\/([^/]+)\/status\/\d+/;
+
+/** 트윗 상세에서 들어간 트윗의 글쓴이 핸들(소문자). 상세가 아니거나 /i/status처럼 핸들이 없으면 null (#94) */
+export function getDetailAuthorHandle(): string | null {
+  const handle = STATUS_PATH.exec(window.location.pathname)?.[1];
+  if (!handle || RESERVED_PATHS.includes(handle) || !X_HANDLE_PATTERN.test(handle)) return null;
+  return handle.toLowerCase();
+}
+
 export function isDetailPage(): boolean {
   return window.location.pathname.includes('/status/');
 }

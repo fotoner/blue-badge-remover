@@ -94,6 +94,16 @@ describe('storage-listener', () => {
     setProtectedKeywords([]);
   });
 
+  // #94: 상세 페이지 설정을 바꾸면 이미 그려진 트윗도 새 기준으로 다시 판정한다
+  it.each(['showAuthorThread', 'collapseOnDetail'] as const)('%s를 바꾸면 숨긴 트윗을 복원하고 다시 판정한다', (key) => {
+    dispatchChanges({
+      [STORAGE_KEYS.SETTINGS]: { newValue: { ...DEFAULT_SETTINGS, [key]: !DEFAULT_SETTINGS[key] } },
+    });
+
+    expect(mockRestoreHiddenTweets).toHaveBeenCalledTimes(1);
+    expect(mockReprocessExistingTweets).toHaveBeenCalledTimes(1);
+  });
+
   describe('whitelist change', () => {
     it('대소문자가 섞인 화이트리스트 항목도 소문자로 조회 가능해야 한다', () => {
       dispatchChanges({

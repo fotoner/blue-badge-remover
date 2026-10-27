@@ -124,6 +124,8 @@ describe('collectFollowsFromDOM - guard: myHandle !== pathUser', () => {
         defaultFilterEnabled: true,
         milestoneBannerEnabled: false,
         aggressorFilterEnabled: false,
+        showAuthorThread: true,
+        collapseOnDetail: true,
       }),
       setFollowSet: vi.fn(),
     };

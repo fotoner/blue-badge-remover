@@ -348,6 +348,40 @@ h3 {
   opacity: 0.85;
 }
 
+/* 하위 토글 — 부모 토글에 딸린 옵션. 좌측 신호선(border 있으므로 radius 0) */
+.toggle-children {
+  margin: 0 0 6px 10px;
+  padding-left: 12px;
+  border-left: 3px solid var(--border-strong);
+  transition: opacity 0.15s, border-color 0.15s;
+}
+
+.toggle-children .toggle-row {
+  padding: 5px 0;
+}
+
+.toggle-children .hint {
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+
+.toggle-children.is-disabled {
+  opacity: 0.4;
+  border-left-color: var(--border-subtle);
+}
+
+.toggle-children.is-disabled .toggle-row {
+  cursor: default;
+}
+
+.toggle-children.is-disabled .toggle-row:hover {
+  opacity: 1;
+}
+
+input[type="checkbox"]:disabled {
+  cursor: default;
+}
+
 /* Checkbox toggle switch — interactive pill */
 input[type="checkbox"] {
   appearance: none;

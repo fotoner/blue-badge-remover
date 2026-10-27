@@ -606,3 +606,52 @@ describe('restoreHiddenTweets', () => {
     expect(mockShowTweet).toHaveBeenCalledWith(tweet);
   });
 });
+
+// #94: 상세 페이지에서는 글쓴이의 앞뒤 타래를 숨기지 않고, 다른 파딱 답글은 펼쳐볼 수 있게 접어 둔다
+describe('processTweet — 트윗 상세 페이지', () => {
+  const originalLocation = window.location;
+
+  function withStatusLink(article: HTMLElement, path: string): HTMLElement {
+    const link = doc.createElement('a');
+    link.setAttribute('href', path);
+    link.appendChild(doc.createElement('time'));
+    article.appendChild(link);
+    return article;
+  }
+
+  beforeEach(() => {
+    Object.defineProperty(window, 'location', {
+      value: { ...originalLocation, pathname: '/Author_A/status/200' }, writable: true, configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(window, 'location', { value: originalLocation, writable: true, configurable: true });
+  });
+
+  it('들어간 트윗 글쓴이의 루트·타래 트윗은 숨기지 않는다', () => {
+    const root = withStatusLink(createTweetEl('author_a', { badge: true }), '/author_a/status/100');
+    processTweet(root);
+    expect(mockHideTweet).not.toHaveBeenCalled();
+  });
+
+  it('다른 파딱의 답글은 숨김 방식이 완전 제거여도 접어 둔다', () => {
+    const reply = withStatusLink(createTweetEl('other_fadak', { badge: true }), '/other_fadak/status/300');
+    processTweet(reply);
+    expect(mockHideTweet).toHaveBeenCalledWith(reply, 'collapse', expect.objectContaining({ reason: 'fadak' }), expect.any(Function));
+  });
+
+  it('상세 접어 두기를 끄면 숨김 방식(완전 제거)을 따른다', () => {
+    setSettings({ ...DEFAULT_SETTINGS, collapseOnDetail: false });
+    const reply = withStatusLink(createTweetEl('other_fadak', { badge: true }), '/other_fadak/status/300');
+    processTweet(reply);
+    expect(mockHideTweet).toHaveBeenCalledWith(reply, 'remove', expect.anything(), expect.any(Function));
+  });
+
+  it('글쓴이 타래 보기를 끄면 글쓴이의 다른 트윗도 지금처럼 숨긴다', () => {
+    setSettings({ ...DEFAULT_SETTINGS, showAuthorThread: false });
+    const root = withStatusLink(createTweetEl('author_a', { badge: true }), '/author_a/status/100');
+    processTweet(root);
+    expect(mockHideTweet).toHaveBeenCalledWith(root, 'collapse', expect.objectContaining({ reason: 'fadak' }), expect.any(Function));
+  });
+});

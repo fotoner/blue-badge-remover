@@ -17,6 +17,10 @@ export interface Settings {
   defaultFilterEnabled: boolean;
   milestoneBannerEnabled: boolean;
   aggressorFilterEnabled: boolean;
+  /** 트윗 상세에서 들어간 트윗 글쓴이의 앞뒤 타래는 숨기지 않는다 (#94) */
+  showAuthorThread: boolean;
+  /** 트윗 상세에서는 숨김 방식이 완전 제거여도 접어 두고 펼쳐볼 수 있게 한다 (#94) */
+  collapseOnDetail: boolean;
 }
 
 export interface CollectedFadak {

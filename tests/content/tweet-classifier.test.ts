@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classifyTweet, classifyQuote } from '../../src/content/tweet-classifier';
+import { classifyTweet, classifyQuote, resolveHideMode } from '../../src/content/tweet-classifier';
 import type { ClassifyInput, QuoteClassifyInput } from '../../src/content/tweet-classifier';
 import type { Settings } from '../../src/shared/types';
 
@@ -16,6 +16,8 @@ const defaultSettings: Settings = {
   defaultFilterEnabled: true,
   milestoneBannerEnabled: false,
   aggressorFilterEnabled: false,
+  showAuthorThread: true,
+  collapseOnDetail: true,
 };
 
 function makeInput(overrides: Partial<ClassifyInput> = {}): ClassifyInput {
@@ -36,11 +38,33 @@ function makeInput(overrides: Partial<ClassifyInput> = {}): ClassifyInput {
     profile: { handle: 'fadak_user', displayName: '파딱유저', bio: '' },
     tweetText: '일반 트윗',
     pageType: 'timeline',
+    isDetailAuthor: false,
     ...overrides,
   };
 }
 
 describe('classifyTweet', () => {
+  // #94: 사용자가 눌러서 들어간 트윗의 글쓴이라면 같은 상세 페이지의 앞뒤 타래도 보여 준다
+  it('글쓴이 타래 보기가 켜져 있으면 상세 페이지 글쓴이의 트윗은 표시한다', () => {
+    expect(classifyTweet(makeInput({ pageType: 'replies' })).action).toBe('hide');
+    expect(classifyTweet(makeInput({ pageType: 'replies', isDetailAuthor: true }))).toEqual({ action: 'show', reason: 'detail-author' });
+  });
+
+  it('글쓴이 타래 보기를 끄면 지금처럼 다른 파딱과 같이 숨긴다', () => {
+    const settings = { ...defaultSettings, showAuthorThread: false };
+    expect(classifyTweet(makeInput({ pageType: 'replies', isDetailAuthor: true, settings })).action).toBe('hide');
+  });
+
+  it('글쓴이 타래 예외는 공격성 필터보다 먼저 적용된다', () => {
+    const settings = { ...defaultSettings, aggressorFilterEnabled: true };
+    const profile = {
+      handle: 'fadak_user', displayName: '파딱유저', bio: '',
+      createdAt: new Date().toISOString(), followersCount: 2_000, followingCount: 100,
+    };
+    expect(classifyTweet(makeInput({ pageType: 'replies', settings, profile })).action).toBe('hide');
+    expect(classifyTweet(makeInput({ pageType: 'replies', settings, profile, isDetailAuthor: true }))).toEqual({ action: 'show', reason: 'detail-author' });
+  });
+
   it('확장 프로그램이 꺼져 있으면 파딱 리트윗도 표시한다', () => {
     const result = classifyTweet(makeInput({
       isRetweet: true,
@@ -402,5 +426,24 @@ describe('classifyQuote', () => {
       settings: { ...defaultSettings, quoteMode: 'entire', filter: { ...defaultSettings.filter, bookmarks: true } },
     }));
     expect(result.action).toBe('hide-entire');
+  });
+});
+
+// #94: 상세 페이지에서는 숨김 방식과 따로 접어 두고 펼쳐볼 수 있게 한다
+describe('resolveHideMode', () => {
+  it('상세 접어 두기가 켜져 있으면 상세 페이지에서는 완전 제거 대신 접는다', () => {
+    expect(resolveHideMode({ ...defaultSettings, hideMode: 'remove', collapseOnDetail: true }, 'replies')).toBe('collapse');
+  });
+
+  it('상세 접어 두기를 끄면 상세 페이지도 숨김 방식을 따른다', () => {
+    expect(resolveHideMode({ ...defaultSettings, hideMode: 'remove', collapseOnDetail: false }, 'replies')).toBe('remove');
+  });
+
+  it.each(['timeline', 'search', 'bookmarks', 'lists'] as const)('%s 화면은 상세 접어 두기와 상관없이 숨김 방식을 따른다', (pageType) => {
+    expect(resolveHideMode({ ...defaultSettings, hideMode: 'remove', collapseOnDetail: true }, pageType)).toBe('remove');
+  });
+
+  it('숨김 방식이 접기면 어느 화면에서든 접는다', () => {
+    expect(resolveHideMode({ ...defaultSettings, hideMode: 'collapse', collapseOnDetail: false }, 'replies')).toBe('collapse');
   });
 });

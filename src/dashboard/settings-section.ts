@@ -9,6 +9,9 @@ export function renderSettingsToDOM(settings: Settings): void {
   setChecked('filter-search', settings.filter.search);
   setChecked('filter-bookmarks', settings.filter.bookmarks);
   setChecked('filter-lists', settings.filter.lists);
+  setChecked('showAuthorThread', settings.showAuthorThread);
+  setChecked('collapseOnDetail', settings.collapseOnDetail);
+  syncDetailOptions();
   setChecked('retweetFilter', settings.retweetFilter);
   setChecked('debugMode', settings.debugMode);
   setChecked('keywordFilterEnabled', settings.keywordFilterEnabled);
@@ -29,6 +32,18 @@ export function renderSettingsToDOM(settings: Settings): void {
     `input[name="quoteMode"][value="${settings.quoteMode}"]`,
   ) as HTMLInputElement | null;
   if (quoteModeRadio) quoteModeRadio.checked = true;
+}
+
+const DETAIL_OPTION_IDS = ['showAuthorThread', 'collapseOnDetail'];
+
+/** 트윗 상세 하위 토글은 "트윗 상세 / 답글"이 켜져 있을 때만 의미가 있다 — 꺼져 있으면 비활성으로 둔다 (#94) */
+export function syncDetailOptions(): void {
+  const repliesFiltered = (document.getElementById('filter-replies') as HTMLInputElement | null)?.checked ?? true;
+  document.getElementById('detail-options')?.classList.toggle('is-disabled', !repliesFiltered);
+  for (const id of DETAIL_OPTION_IDS) {
+    const el = document.getElementById(id) as HTMLInputElement | null;
+    if (el) el.disabled = !repliesFiltered;
+  }
 }
 
 export async function renderSyncStatus(lang: Language): Promise<void> {

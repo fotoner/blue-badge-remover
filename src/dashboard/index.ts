@@ -8,6 +8,7 @@ import {
   bindSettingsEvents,
   renderSyncStatus,
   watchSyncStatus,
+  syncDetailOptions,
 } from './settings-section';
 
 let settings: Settings;
@@ -40,6 +41,8 @@ function readDashboardSettings(): SettingsPatch {
       bookmarks: checked('filter-bookmarks'),
       lists: checked('filter-lists'),
     },
+    showAuthorThread: checked('showAuthorThread'),
+    collapseOnDetail: checked('collapseOnDetail'),
     retweetFilter: checked('retweetFilter'),
     debugMode: checked('debugMode'),
     milestoneBannerEnabled: checked('milestoneBannerEnabled'),
@@ -61,6 +64,7 @@ function bindAllEvents(): void {
   document.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach((input) => {
     input.addEventListener('change', save);
   });
+  document.getElementById('filter-replies')?.addEventListener('change', syncDetailOptions);
 
   const languageSelect = document.getElementById('language') as HTMLSelectElement;
   languageSelect.addEventListener('change', async () => {

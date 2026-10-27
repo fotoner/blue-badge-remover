@@ -3,10 +3,10 @@
 import { detectBadgeSvg, isBlueBadgeElement } from '@features/badge-detection/svg-fallback';
 import { hideTweet, hideQuoteBlock, showExpandedTweet, showTweet, showQuoteBlock } from '@features/content-filter';
 import { extractTweetAuthor, extractRetweeterName, extractRetweeterHandle, extractTweetStatusPath, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, formatUserLabel, addDebugLabel, findAuthorBadge } from './tweet-processing';
-import { isProfilePage, isDetailPage, getPageType } from './page-utils';
+import { isProfilePage, isDetailPage, getPageType, getDetailAuthorHandle } from './page-utils';
 import { profileCache, getSettings, getWhitelistSet, getActiveFilterRules, getProtectedKeywords, getCurrentUserHandle, setCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, isCurrentUserHandle, getExpandedSet } from './state';
 import { bufferCollectedFadak } from './collector-buffer';
-import { classifyTweet, classifyQuote } from './tweet-classifier';
+import { classifyTweet, classifyQuote, resolveHideMode } from './tweet-classifier';
 import type { ClassifyResult, QuoteClassifyResult } from './tweet-classifier';
 import { recordHide } from '@features/stats';
 import { logger } from '@shared/utils/logger';
@@ -111,7 +111,7 @@ function applyTweetResult(
   if (statusPath && getExpandedSet().has(statusPath)) {
     showExpandedTweet(tweetEl, context, trackExpandedTweet);
   } else {
-    hideTweet(tweetEl, settings.hideMode, context, trackExpandedTweet);
+    hideTweet(tweetEl, resolveHideMode(settings, getPageType()), context, trackExpandedTweet);
   }
   recordHide(tweetEl, result.category, result.packId, statusPath);
   return true;
@@ -152,6 +152,7 @@ export function processTweet(tweetEl: HTMLElement): void {
     retweeterIsCurrentUser: retweeter.isCurrentUser,
     settings, activeFilterRules: getActiveFilterRules(), protectedKeywords: getProtectedKeywords(), profile, tweetText,
     pageType: getPageType(),
+    isDetailAuthor: getDetailAuthorHandle() === handle.toLowerCase(),
   });
   const authorHidden = applyTweetResult(tweetEl, result, handle, retweeter.isRetweet, statusPath, settings);
   let quoteHidden = false;
@@ -202,7 +203,7 @@ function processQuoteBlock(
     if (statusPath && getExpandedSet().has(statusPath)) {
       showExpandedTweet(tweetEl, context, trackExpandedTweet);
     } else {
-      hideTweet(tweetEl, settings.hideMode, context, trackExpandedTweet);
+      hideTweet(tweetEl, resolveHideMode(settings, getPageType()), context, trackExpandedTweet);
     }
     return true;
   }

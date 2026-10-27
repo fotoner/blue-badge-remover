@@ -1,6 +1,6 @@
 // tests/content/page-utils.test.ts
 import { describe, it, expect, beforeEach } from 'vitest';
-import { isProfilePage, getPageType, getAccountHandleFromDOM } from '../../src/content/page-utils';
+import { isProfilePage, getPageType, getAccountHandleFromDOM, getDetailAuthorHandle } from '../../src/content/page-utils';
 
 function setPath(path: string): void {
   Object.defineProperty(window, 'location', {
@@ -164,5 +164,21 @@ describe('getAccountHandleFromDOM', () => {
     addProfileLink('/i/flow/login');
     addAccountSwitcher('temi_illust');
     expect(getAccountHandleFromDOM()).toBe('temi_illust');
+  });
+});
+
+// 상세 페이지에서 연 트윗의 작성자 — 그 작성자의 루트·타래 트윗은 숨기지 않는다 (#94)
+describe('getDetailAuthorHandle', () => {
+  it.each([
+    ['/Author_A/status/123', 'author_a'],
+    ['/author_a/status/123/photo/1', 'author_a'],
+  ])('%s → %s', (path, expected) => {
+    setPath(path);
+    expect(getDetailAuthorHandle()).toBe(expected);
+  });
+
+  it.each(['/i/status/123', '/i/web/status/123', '/home', '/author_a', '/search', '/author_a/likes'])('%s → null', (path) => {
+    setPath(path);
+    expect(getDetailAuthorHandle()).toBeNull();
   });
 });

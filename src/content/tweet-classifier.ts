@@ -23,6 +23,8 @@ export interface ClassifyInput {
   profile: ProfileInfo | null;
   tweetText: string;
   pageType: PageType;
+  /** 트윗 상세에서 들어간 트윗의 글쓴이 — 설정이 켜져 있으면 그 글쓴이의 앞뒤 타래는 숨기지 않는다 (#94) */
+  isDetailAuthor: boolean;
 }
 
 export interface ClassifyResult {
@@ -62,6 +64,7 @@ export function classifyTweet(input: ClassifyInput): ClassifyResult {
 
   // 팔로우/화이트리스트 예외
   if (inFollow || isWhitelisted) return { action: 'show', reason: inFollow ? 'follow' : 'whitelist' };
+  if (input.isDetailAuthor && settings.showAuthorThread) return { action: 'show', reason: 'detail-author' };
   if (profile && matchesProtectedKeyword(profile, input.protectedKeywords)) {
     return { action: 'show', reason: 'protected-keyword' };
   }
@@ -108,6 +111,11 @@ export function classifyTweet(input: ClassifyInput): ClassifyResult {
     isFadak: true, handle: `@${handle}`, pageType,
   });
   return hide ? { action: 'hide', reason: 'fadak' } : { action: 'show', reason: 'page-filter-off' };
+}
+
+/** 숨김 방식 — 트윗 상세에서는 설정에 따라 완전 제거 대신 접어 두고 펼쳐볼 수 있게 한다 (#94) */
+export function resolveHideMode(settings: Settings, pageType: PageType): Settings['hideMode'] {
+  return pageType === 'replies' && settings.collapseOnDetail ? 'collapse' : settings.hideMode;
 }
 
 /** 파딱 리트윗 분류 — 필터링 범위가 꺼진 화면이면 리트윗 필터와 무관하게 표시 */
