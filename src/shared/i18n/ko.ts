@@ -80,6 +80,8 @@ export const ko = {
   updateBanner: '새 버전으로 업데이트되었습니다!',
   updateBannerVersion: 'v{version}으로 업데이트되었습니다!',
   dismiss: '닫기',
+  reloadNeeded: '이 탭을 새로고침해야 적용됩니다',
+  reloadTab: '새로고침',
   shareText: '오늘 파딱 트윗 {count}개를 숨겼습니다 🧹\n\n#파딱제거기 #BlueBadgeRemover',
   statsTitle: '통계',
   todayHiddenLabel: '오늘 숨긴 파딱 트윗',

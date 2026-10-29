@@ -4,6 +4,7 @@ import { getTodayStats, getAllTimeTotal } from '@features/stats';
 import { applyTranslations, t } from '@shared/i18n';
 import { STORAGE_KEYS } from '@shared/constants';
 import type { Settings } from '@shared/types';
+import { initReloadPrompt } from './reload-prompt';
 
 const UPDATE_FLAG_KEY = 'bbr-update-available';
 
@@ -33,6 +34,8 @@ async function init(): Promise<void> {
   await renderInfo();
   await renderUpdateBanner();
   bindEvents();
+  // 응답 대기·재시도가 있어 화면 그리기를 막지 않는다
+  void initReloadPrompt();
 }
 
 function renderVersion(): void {

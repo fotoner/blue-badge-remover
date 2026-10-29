@@ -26,3 +26,15 @@ describe('SPA navigation', () => {
     expect(body).not.toContain('feedObserver.disconnect()');
   });
 });
+
+describe('content reload probe', () => {
+  // #121: 팝업의 새로고침 확인에 응답하는 리스너는 초기화의 첫 await보다 앞에서 등록한다
+  it('응답 리스너를 init의 첫 await 앞에서 등록한다', () => {
+    const initStart = source.indexOf('async function init()');
+    const listen = source.indexOf('listenForReloadProbe()', initStart);
+    const firstAwait = source.indexOf('await ', initStart);
+
+    expect(listen).toBeGreaterThan(initStart);
+    expect(listen).toBeLessThan(firstAwait);
+  });
+});
