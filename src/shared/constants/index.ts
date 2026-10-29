@@ -73,6 +73,8 @@ export const TIMINGS = {
   UNFOLLOW_DETECT_DELAY: 2000,
   /** reprocessExistingTweets 프레임당 처리 트윗 수 */
   REPROCESS_CHUNK_SIZE: 10,
+  /** 팝업의 새로고침 확인 재시도 대기 — document_idle 주입이 탭 complete보다 조금 늦을 수 있다 (#121) */
+  RELOAD_PROBE_RETRY: 1000,
 } as const;
 
 export const MESSAGE_TYPES = {
@@ -81,4 +83,18 @@ export const MESSAGE_TYPES = {
   CONTENT_READY: 'BBR_CONTENT_READY',
   OPEN_SETTINGS: 'BBR_OPEN_SETTINGS',
   WHITELIST: 'BBR_WHITELIST',
+  /** 팝업 → content script: 이 탭에서 필터가 동작하는 상태인지 확인 (#121) */
+  RELOAD_PROBE: 'BBR_RELOAD_PROBE',
 } as const;
+
+/** MAIN world 스크립트가 시작 시점을 <html>에 남기는 data 속성 — ISOLATED가 읽어 팝업에 알린다 (#121) */
+export const MAIN_WORLD_START = {
+  READY_STATE_ATTR: 'data-bbr-main-ready-state',
+  VERSION_ATTR: 'data-bbr-main-version',
+} as const;
+
+/** content script가 붙는 호스트 — entrypoints/content.ts의 matches와 같아야 한다 (tests/popup이 확인) */
+export const X_CONTENT_HOSTS = ['x.com', 'twitter.com'] as const;
+
+/** 팝업이 탭으로 열릴 때(Firefox Android) 클릭한 탭 ID를 싣는 쿼리 이름 (#121) */
+export const POPUP_SOURCE_TAB_PARAM = 'sourceTabId';

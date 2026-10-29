@@ -16,6 +16,7 @@ import { loadFilterRules } from './filter-pipeline';
 import { processTweet, restoreHiddenTweets, reprocessExistingTweets, applyCurrentUserFallback } from './tweet-orchestrator';
 import { listenForMessages, reprocessTweetsByHandles } from './message-handler';
 import { listenForSettingsChanges } from './storage-listener';
+import { listenForReloadProbe } from './reload-probe';
 import { startStatsFlush, flushStats, setOnFlush } from '@features/stats';
 import { checkMilestone } from './milestone-banner';
 import { HoverCardObserver, mergeHoverCardBio, shouldObserveHoverCards } from './hover-card-observer';
@@ -158,6 +159,7 @@ async function finishInitialSetup(): Promise<void> {
 }
 
 async function init(): Promise<void> {
+  listenForReloadProbe();
   const [settings, whitelist] = await Promise.all([loadSettings(), getWhitelist()]);
   setSettings(settings);
   await loadFilterRules();

@@ -80,6 +80,8 @@ export const ja: Translations = {
   updateBanner: '新しいバージョンに更新されました！',
   updateBannerVersion: 'v{version}に更新されました！',
   dismiss: '閉じる',
+  reloadNeeded: 'このタブを再読み込みすると適用されます',
+  reloadTab: '再読み込み',
   shareText: '今日{count}件の課金バッジツイートを非表示にしました 🧹\n\n#BlueBadgeRemover',
   statsTitle: '統計',
   todayHiddenLabel: '今日非表示にした課金バッジツイート',
