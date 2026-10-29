@@ -3,7 +3,7 @@
 import { MESSAGE_TYPES, X_HANDLE_PATTERN } from '@shared/constants';
 import { logger } from '@shared/utils/logger';
 import { profileCache, collectorBuffer, getSettings, getFollowSet, getProtectedKeywords, getCurrentUserHandle } from './state';
-import { extractRetweeterHandle, extractTweetAuthor } from './tweet-processing';
+import { extractRetweeterHandle, extractTweetAuthor, findQuoteBlock, extractQuoteAuthor } from './tweet-processing';
 import { processTweet } from './tweet-orchestrator';
 import { saveFollowHandles, removeFollowHandles, isRecentlyFollowed, getMyHandle, type FollowCollectorDeps } from './follow-collector';
 import { removeFadakBanner } from './fadak-banner';
@@ -45,13 +45,26 @@ export function scheduleFollowReprocess(handles: Iterable<string>): void {
   }, 0);
 }
 
+function extractQuotedHandle(tweet: HTMLElement): string | undefined {
+  const quoteBlock = findQuoteBlock(tweet);
+  return quoteBlock ? extractQuoteAuthor(quoteBlock)?.handle.toLowerCase() : undefined;
+}
+
+// 작성자·재게시한 사람·인용 카드 작성자 중 하나라도 대상이면 다시 판정한다.
+function isAffectedByHandles(tweet: HTMLElement, author: string, handles: Set<string>): boolean {
+  if (handles.has(author)) return true;
+  const retweeter = extractRetweeterHandle(tweet)?.toLowerCase();
+  if (retweeter && handles.has(retweeter)) return true;
+  const quoted = extractQuotedHandle(tweet);
+  return quoted !== undefined && handles.has(quoted);
+}
+
 export function reprocessTweetsByHandles(handles: Set<string>): void {
   const settings = getSettings();
   const feed = document.querySelector('main') ?? document.body;
   feed.querySelectorAll<HTMLElement>('article[data-testid="tweet"]').forEach((tweet) => {
     const author = extractTweetAuthor(tweet)?.handle.toLowerCase();
-    const retweeter = extractRetweeterHandle(tweet)?.toLowerCase();
-    if (!author || (!handles.has(author) && (!retweeter || !handles.has(retweeter)))) return;
+    if (!author || !isAffectedByHandles(tweet, author, handles)) return;
     tweet.querySelector('[data-bbr-debug]')?.remove();
     try {
       processTweet(tweet);

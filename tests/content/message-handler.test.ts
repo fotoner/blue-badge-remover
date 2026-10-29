@@ -37,9 +37,13 @@ vi.mock('@shared/utils/logger', () => ({
 
 const mockExtractTweetAuthor = vi.fn();
 const mockExtractRetweeterHandle = vi.fn();
+const mockFindQuoteBlock = vi.fn();
+const mockExtractQuoteAuthor = vi.fn();
 vi.mock('../../src/content/tweet-processing', () => ({
   extractTweetAuthor: (...args: unknown[]) => mockExtractTweetAuthor(...args),
   extractRetweeterHandle: (...args: unknown[]) => mockExtractRetweeterHandle(...args),
+  findQuoteBlock: (...args: unknown[]) => mockFindQuoteBlock(...args),
+  extractQuoteAuthor: (...args: unknown[]) => mockExtractQuoteAuthor(...args),
 }));
 
 const mockProcessTweet = vi.fn();
@@ -119,6 +123,8 @@ describe('message-handler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    mockFindQuoteBlock.mockReturnValue(null);
+    mockExtractQuoteAuthor.mockReturnValue(null);
     setSettings({ ...DEFAULT_SETTINGS });
     setFollowSet(new Set<string>());
     setCurrentUserHandle('myaccount');
@@ -674,6 +680,85 @@ describe('message-handler', () => {
 
         expect(mockProcessTweet).toHaveBeenCalledOnce();
         expect(mockProcessTweet).toHaveBeenCalledWith(tweet);
+      });
+    });
+
+    describe('인용 카드 작성자 재판정 (#100)', () => {
+      function appendTweet(author: string, quoted: string | null): HTMLElement {
+        const tweet = document.createElement('article');
+        tweet.dataset.testid = 'tweet';
+        tweet.dataset.author = author;
+        if (quoted) tweet.dataset.quoted = quoted;
+        document.body.appendChild(tweet);
+        return tweet;
+      }
+
+      beforeEach(() => {
+        mockExtractTweetAuthor.mockImplementation((element: HTMLElement) => ({ handle: element.dataset.author }));
+        mockExtractRetweeterHandle.mockReturnValue(null);
+        mockFindQuoteBlock.mockImplementation((element: HTMLElement) => (element.dataset.quoted ? element : null));
+        mockExtractQuoteAuthor.mockImplementation((block: HTMLElement) => ({ handle: block.dataset.quoted, displayName: null }));
+      });
+
+      it('작성자·리포스터가 달라도 인용 카드 작성자가 대상이면 다시 판정한다', () => {
+        const quoting = appendTweet('plain', 'Someone');
+        const unrelated = appendTweet('plain2', 'stranger');
+        const noQuote = appendTweet('plain3', null);
+
+        scheduleFollowReprocess(['someone']);
+        vi.runAllTimers();
+
+        expect(mockProcessTweet).toHaveBeenCalledTimes(1);
+        expect(mockProcessTweet).toHaveBeenCalledWith(quoting);
+        expect(mockProcessTweet).not.toHaveBeenCalledWith(unrelated);
+        expect(mockProcessTweet).not.toHaveBeenCalledWith(noQuote);
+      });
+
+      it('인용 작성자와 작성자가 모두 대상이어도 트윗은 한 번만 다시 판정한다', () => {
+        const tweet = appendTweet('someone', 'someone');
+
+        scheduleFollowReprocess(['someone']);
+        vi.runAllTimers();
+
+        expect(mockProcessTweet).toHaveBeenCalledTimes(1);
+        expect(mockProcessTweet).toHaveBeenCalledWith(tweet);
+      });
+
+      it('인용 작성자를 읽지 못한 카드는 건너뛴다', () => {
+        appendTweet('plain', 'someone');
+        mockExtractQuoteAuthor.mockReturnValue(null);
+
+        scheduleFollowReprocess(['someone']);
+        vi.runAllTimers();
+
+        expect(mockProcessTweet).not.toHaveBeenCalled();
+      });
+
+      it('api-not-following으로 목록에서 빠진 핸들의 인용 카드를 다시 판정한다', () => {
+        setFollowSet(new Set(['polluted']));
+        const quoting = appendTweet('plain', 'polluted');
+
+        dispatchMessage({
+          type: MESSAGE_TYPES.FOLLOW_DATA,
+          source: 'api-not-following',
+          handles: ['polluted'],
+        });
+        vi.runAllTimers();
+
+        expect(mockProcessTweet).toHaveBeenCalledWith(quoting);
+      });
+
+      it('팔로우가 새로 확인된 핸들의 인용 카드를 다시 판정한다', () => {
+        const quoting = appendTweet('plain', 'someone');
+
+        dispatchMessage({
+          type: MESSAGE_TYPES.FOLLOW_DATA,
+          source: 'inline',
+          handles: ['someone'],
+        });
+        vi.runAllTimers();
+
+        expect(mockProcessTweet).toHaveBeenCalledWith(quoting);
       });
     });
 
