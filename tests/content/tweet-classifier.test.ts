@@ -208,16 +208,16 @@ describe('classifyTweet', () => {
     expect(result.reason).toBe('retweet');
   });
 
-  // --- A6: 리트위터 팔로우/화이트리스트 예외 ---
+  // --- #120: 리트위터 예외는 화이트리스트·본인만 — 팔로우 리트위터는 '파딱 리트윗 숨기기' 설정을 따른다 ---
 
-  it('리트윗 + 리트위터 팔로우 = show (retweeter-follow)', () => {
+  it('리트윗 + 리트위터 팔로우 = hide (팔로우 리트위터는 예외가 아니다)', () => {
     const result = classifyTweet(makeInput({
       isRetweet: true,
       retweeterHandle: 'rt_user',
       retweeterInFollow: true,
     }));
-    expect(result.action).toBe('show');
-    expect(result.reason).toBe('retweeter-follow');
+    expect(result.action).toBe('hide');
+    expect(result.reason).toBe('retweet');
   });
 
   it('리트윗 + 리트위터 화이트리스트 = show (retweeter-whitelist)', () => {
@@ -239,7 +239,7 @@ describe('classifyTweet', () => {
     expect(result.reason).toBe('retweet');
   });
 
-  it('리트위터 팔로우는 키워드 필터 ON + 매칭 룰이 있어도 show', () => {
+  it('리트위터 팔로우 + 키워드 필터 ON + 매칭 룰 = hide (reason retweet, 매칭 룰 포함)', () => {
     const result = classifyTweet(makeInput({
       isRetweet: true,
       retweeterHandle: 'rt_user',
@@ -249,8 +249,62 @@ describe('classifyTweet', () => {
       profile: { handle: 'fadak_user', displayName: '파딱유저', bio: '비트코인 전문가' },
       tweetText: '',
     }));
+    expect(result.action).toBe('hide');
+    expect(result.reason).toBe('retweet');
+    expect(result.matchedRule).toBe('비트코인');
+  });
+
+  it('리트위터 팔로우 + 키워드 필터 ON + 매칭 안 됨 = show (선별 모드에서 조건 불일치)', () => {
+    const result = classifyTweet(makeInput({
+      isRetweet: true,
+      retweeterHandle: 'rt_user',
+      retweeterInFollow: true,
+      settings: { ...defaultSettings, keywordFilterEnabled: true },
+      activeFilterRules: [{ type: 'keyword', value: '없는키워드' }],
+    }));
     expect(result.action).toBe('show');
-    expect(result.reason).toBe('retweeter-follow');
+    expect(result.reason).toBe('keyword-not-matched');
+  });
+
+  it('리트위터 팔로우 + 리트윗 필터 OFF = show', () => {
+    const result = classifyTweet(makeInput({
+      isRetweet: true,
+      retweeterInFollow: true,
+      settings: { ...defaultSettings, retweetFilter: false },
+    }));
+    expect(result.action).toBe('show');
+    expect(result.reason).toBe('retweet-filter-off');
+  });
+
+  it('리트위터 팔로우 + 필터링 범위가 꺼진 화면 = show (page-filter-off)', () => {
+    const result = classifyTweet(makeInput({
+      isRetweet: true,
+      retweeterInFollow: true,
+      pageType: 'bookmarks',
+    }));
+    expect(result.action).toBe('show');
+    expect(result.reason).toBe('page-filter-off');
+  });
+
+  it('리트위터 팔로우 + 보호 키워드 매칭 = show (protected-keyword)', () => {
+    const result = classifyTweet(makeInput({
+      isRetweet: true,
+      retweeterInFollow: true,
+      protectedKeywords: ['파딱유저'],
+    }));
+    expect(result.action).toBe('show');
+    expect(result.reason).toBe('protected-keyword');
+  });
+
+  it('팔로우한 파딱이 자기 트윗을 리트윗해도 표시한다 (글쓴이 팔로우가 먼저)', () => {
+    const result = classifyTweet(makeInput({
+      isRetweet: true,
+      inFollow: true,
+      retweeterHandle: 'fadak_user',
+      retweeterInFollow: true,
+    }));
+    expect(result.action).toBe('show');
+    expect(result.reason).toBe('follow');
   });
 
   it('isRetweet=false이면 retweeterInFollow=true여도 일반 경로로 hide', () => {
@@ -377,13 +431,14 @@ describe('classifyQuote', () => {
     expect(result.reason).toBe('self-quote-whitelisted');
   });
 
-  it('인용 파딱 + quoteMode=entire + 부모 팔로우 = hide-quote로 다운그레이드', () => {
+  // #120: '트윗 전체 숨기기'는 인용자가 팔로우여도 사용자가 고른 대로 전체를 숨긴다
+  it('인용 파딱 + quoteMode=entire + 부모 팔로우 = hide-entire (팔로우 인용자는 다운그레이드 대상이 아니다)', () => {
     const result = classifyQuote(makeQuoteInput({
       parentInFollow: true,
       settings: { ...defaultSettings, quoteMode: 'entire' },
     }));
-    expect(result.action).toBe('hide-quote');
-    expect(result.reason).toBe('quote-fadak-parent-exempt');
+    expect(result.action).toBe('hide-entire');
+    expect(result.reason).toBe('quote-fadak');
   });
 
   it('인용 파딱 + quoteMode=entire + 부모 화이트리스트 = hide-quote로 다운그레이드', () => {
@@ -407,7 +462,7 @@ describe('classifyQuote', () => {
     expect(result.action).toBe('hide-quote');
   });
 
-  // --- Defect1: 리트위터 예외(retweeterExempt)도 hide-entire를 다운그레이드해야 함 ---
+  // --- 리트위터 예외(화이트리스트·본인, 오케스트레이터가 넘김)도 hide-entire를 다운그레이드한다 ---
 
   it('인용 파딱 + quoteMode=entire + 부모 비예외 + 리트위터 예외 = hide-quote로 다운그레이드', () => {
     const result = classifyQuote(makeQuoteInput({
@@ -429,6 +484,57 @@ describe('classifyQuote', () => {
     }));
     expect(result.action).toBe('hide-entire');
     expect(result.reason).toBe('quote-fadak');
+  });
+
+  // --- #120: 셀프 인용 표시는 팔로우·화이트리스트 인용자 모두 유지 ---
+
+  const entireSettings: Settings = { ...defaultSettings, quoteMode: 'entire' };
+
+  it('팔로우 파딱의 셀프 인용 + quoteMode=entire = show (self-quote-followed)', () => {
+    const result = classifyQuote(makeQuoteInput({
+      quotedHandle: 'same_user', parentHandle: 'same_user', parentInFollow: true, settings: entireSettings,
+    }));
+    expect(result).toEqual({ action: 'show', reason: 'self-quote-followed' });
+  });
+
+  it('화이트리스트 파딱의 셀프 인용 + quoteMode=entire = show (self-quote-whitelisted)', () => {
+    const result = classifyQuote(makeQuoteInput({
+      quotedHandle: 'same_user', parentHandle: 'same_user', parentIsWhitelisted: true, settings: entireSettings,
+    }));
+    expect(result).toEqual({ action: 'show', reason: 'self-quote-whitelisted' });
+  });
+
+  it('표시 이름에 @핸들이 섞인 팔로우 파딱(名前@C105)의 셀프 인용 + quoteMode=entire = show', () => {
+    const result = classifyQuote(makeQuoteInput({
+      quotedHandle: 'C105', parentHandle: 'C105', parentInFollow: true, settings: entireSettings,
+    }));
+    expect(result).toEqual({ action: 'show', reason: 'self-quote-followed' });
+  });
+
+  it('인용 파딱 + quoteMode=entire + 부모 화이트리스트 = hide-quote (quote-fadak-parent-exempt)', () => {
+    const result = classifyQuote(makeQuoteInput({ parentIsWhitelisted: true, settings: entireSettings }));
+    expect(result).toEqual({ action: 'hide-quote', reason: 'quote-fadak-parent-exempt' });
+  });
+
+  it('인용 파딱 + quoteMode=entire + 부모 팔로우+화이트리스트 = hide-quote (화이트리스트가 다운그레이드)', () => {
+    const result = classifyQuote(makeQuoteInput({ parentInFollow: true, parentIsWhitelisted: true, settings: entireSettings }));
+    expect(result).toEqual({ action: 'hide-quote', reason: 'quote-fadak-parent-exempt' });
+  });
+
+  it('인용 파딱 + quoteMode=entire + 팔로우 인용자 + 선별 필터 ON(불일치) = hide-entire (인용 판정은 선별 모드를 보지 않는다)', () => {
+    const result = classifyQuote(makeQuoteInput({
+      parentInFollow: true,
+      settings: { ...entireSettings, keywordFilterEnabled: true, aggressorFilterEnabled: true },
+    }));
+    expect(result.action).toBe('hide-entire');
+    expect(result.reason).toBe('quote-fadak');
+  });
+
+  it('인용 파딱 + quoteMode=entire + 상세 글쓴이 + 팔로우 인용자 = hide-quote (quote-fadak-detail-author)', () => {
+    const result = classifyQuote(makeQuoteInput({
+      parentInFollow: true, parentIsDetailAuthor: true, settings: entireSettings, pageType: 'replies',
+    }));
+    expect(result).toEqual({ action: 'hide-quote', reason: 'quote-fadak-detail-author' });
   });
 
   // 필터링 범위 토글이 꺼진 화면에서는 인용 숨김도 적용하지 않는다

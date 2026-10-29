@@ -50,6 +50,7 @@ interface RetweeterContext {
   inFollow: boolean;
   isWhitelisted: boolean;
   isCurrentUser: boolean;
+  /** 인용 판정에 넘기는 리트위터 예외 — 화이트리스트·본인만 (팔로우 리트위터는 설정을 따른다, #120) */
   exempt: boolean;
 }
 
@@ -82,7 +83,7 @@ function getRetweeterContext(
     inFollow,
     isWhitelisted,
     isCurrentUser,
-    exempt: inFollow || isWhitelisted || isCurrentUser,
+    exempt: isWhitelisted || isCurrentUser,
   };
 }
 
