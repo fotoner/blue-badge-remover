@@ -7,7 +7,7 @@ export const ko = {
   filtering: '필터링',
   filterScope: '필터링 범위',
   filterScopeDesc: '파딱 트윗을 숨길 영역을 선택합니다',
-  homeTimeline: '홈 타임라인',
+  homeTimeline: '홈 타임라인 (추천·팔로잉)',
   tweetDetailReplies: '트윗 상세 / 답글',
   showAuthorThread: '글쓴이 타래 보기',
   showAuthorThreadHint: '트윗 상세에서 들어간 트윗 글쓴이의 앞뒤 타래는 숨기지 않습니다',
