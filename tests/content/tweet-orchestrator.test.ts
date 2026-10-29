@@ -411,6 +411,24 @@ describe('processTweet', () => {
     expect(mockHideQuoteBlock).not.toHaveBeenCalled();
   });
 
+  it('팔로우 파딱(표시 이름 名前@C105)의 셀프 인용 + hide-entire → 인용 카드 DOM에서 실제 핸들을 읽어 숨기지 않는다 (#110·#120)', () => {
+    setFollowSet(new Set(['jp_artist']));
+    vi.mocked(getQuoteAction).mockReturnValue('hide-entire');
+    mockDetectBadgeSvg.mockReturnValue(true);
+    const tweet = createTweetEl('jp_artist', { badge: true });
+    const wrapper = doc.createElement('div');
+    const label = doc.createElement('span');
+    label.textContent = '인용';
+    wrapper.appendChild(label);
+    const quote = doc.createElement('div');
+    quote.innerHTML = `<div data-testid="UserAvatar-Container-jp_artist"></div><div data-testid="User-Name"><span>名前@C105</span>${BADGE_SVG}<span>@jp_artist</span></div>`;
+    wrapper.appendChild(quote);
+    tweet.appendChild(wrapper);
+    processTweet(tweet);
+    expect(mockHideTweet).not.toHaveBeenCalled();
+    expect(mockHideQuoteBlock).not.toHaveBeenCalled();
+  });
+
   it('quote-entire로 숨겨진 트윗 + 부모 화이트리스트 → showTweet 후 hideQuoteBlock (entire→quote 복원)', () => {
     setWhitelistSet(new Set(['@parent_user']));
     vi.mocked(getQuoteAction).mockReturnValue('hide-entire');
