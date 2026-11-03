@@ -7,7 +7,7 @@ export const ja: Translations = {
   filtering: 'フィルタリング',
   filterScope: 'フィルタ範囲',
   filterScopeDesc: '課金バッジのツイートを非表示にする範囲を選択します',
-  homeTimeline: 'ホームタイムライン',
+  homeTimeline: 'ホームタイムライン（おすすめ・フォロー中）',
   tweetDetailReplies: 'ツイート詳細 / リプライ',
   showAuthorThread: '投稿者のスレッドを表示',
   showAuthorThreadHint: 'ツイート詳細では、そのツイートの投稿者が前後に続けた投稿を非表示にしません',

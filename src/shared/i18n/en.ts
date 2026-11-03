@@ -7,7 +7,7 @@ export const en: Translations = {
   filtering: 'Filtering',
   filterScope: 'Filter Scope',
   filterScopeDesc: 'Select areas to hide paid badge tweets',
-  homeTimeline: 'Home Timeline',
+  homeTimeline: 'Home Timeline (For you · Following)',
   tweetDetailReplies: 'Tweet Detail / Replies',
   showAuthorThread: "Show the author's thread",
   showAuthorThreadHint: "On a tweet's page, the author's earlier and later posts in the thread stay visible",
