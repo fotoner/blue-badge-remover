@@ -1,6 +1,8 @@
 // src/content/tweet-processing.ts
 // DOM-level tweet parsing utilities used by processTweet in content/index.ts
 
+import { X_HANDLE_PATTERN } from '@shared/constants';
+
 const SOCIAL_CONTEXT_SELECTOR = '[data-testid="socialContext"]';
 
 /**
@@ -124,11 +126,40 @@ export interface QuoteAuthorInfo {
   displayName: string | null;
 }
 
+const QUOTE_AVATAR_TESTID_PREFIX = 'UserAvatar-Container-';
+const QUOTE_AVATAR_SELECTOR = `[data-testid^="${QUOTE_AVATAR_TESTID_PREFIX}"]`;
+const UNKNOWN_AVATAR_HANDLE = 'unknown';
+const USER_NAME_SELECTOR = '[data-testid="User-Name"]';
+const AT_HANDLE_TEXT_PATTERN = /^@([A-Za-z0-9_]{1,15})$/;
+const QUOTE_TEXT_AUTHOR_PATTERN = /^(.+?)@([A-Za-z0-9_]+)/;
+
+/** 인용 카드 아바타의 testid(UserAvatar-Container-{handle})에서 핸들을 읽는다 — 표시 이름과 무관 */
+function readQuoteHandleFromAvatar(quoteBlock: HTMLElement): string | null {
+  const testId = quoteBlock.querySelector(QUOTE_AVATAR_SELECTOR)?.getAttribute('data-testid');
+  const handle = testId?.slice(QUOTE_AVATAR_TESTID_PREFIX.length);
+  if (!handle || !X_HANDLE_PATTERN.test(handle) || handle.toLowerCase() === UNKNOWN_AVATAR_HANDLE) return null;
+  return handle.toLowerCase();
+}
+
+/** User-Name 안에서 텍스트가 정확히 @handle인 span을 읽는다. 표시 이름이 @로 시작할 수 있어 마지막 일치를 쓴다 */
+function readQuoteHandleFromUserName(quoteBlock: HTMLElement): string | null {
+  let handle: string | null = null;
+  for (const span of quoteBlock.querySelectorAll(`${USER_NAME_SELECTOR} span`)) {
+    const match = span.textContent?.trim().match(AT_HANDLE_TEXT_PATTERN);
+    if (match?.[1]) handle = match[1].toLowerCase();
+  }
+  return handle;
+}
+
 export function extractQuoteAuthor(quoteBlock: HTMLElement): QuoteAuthorInfo | null {
   const text = quoteBlock.textContent ?? '';
-  const match = text.match(/^(.+?)@([A-Za-z0-9_]+)/);
+  const match = text.match(QUOTE_TEXT_AUTHOR_PATTERN);
+  const displayName = match?.[1]?.trim() || null;
+  // 표시 이름에 @가 들어갈 수 있으므로(예: 名前@C105) 텍스트 정규식은 DOM 신호가 없을 때만 핸들 폴백으로 쓴다 (#110)
+  const domHandle = readQuoteHandleFromAvatar(quoteBlock) ?? readQuoteHandleFromUserName(quoteBlock);
+  if (domHandle) return { handle: domHandle, displayName };
   if (match?.[1] && match[2]) {
-    return { handle: match[2].toLowerCase(), displayName: match[1].trim() || null };
+    return { handle: match[2].toLowerCase(), displayName };
   }
   const links = quoteBlock.querySelectorAll('a[href^="/"]');
   for (const link of links) {

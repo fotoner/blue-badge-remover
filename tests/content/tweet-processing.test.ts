@@ -329,6 +329,57 @@ describe('extractQuoteAuthor', () => {
     const el = html(`<div></div>`);
     expect(extractQuoteAuthor(el)).toBeNull();
   });
+
+  // 인용 카드 구조 (2026-10 실측 축약) — 표시 이름과 핸들 사이에 공백 텍스트가 없다
+  function quoteCard(displayName: string, handle: string, avatarHandle: string | null): HTMLElement {
+    const avatar = avatarHandle === null
+      ? ''
+      : `<div data-testid="Tweet-User-Avatar"><div data-testid="UserAvatar-Container-${avatarHandle}"></div></div>`;
+    return html(
+      `<div role="link" tabindex="0">${avatar}<div data-testid="User-Name">`
+      + `<div dir="ltr"><span><span>${displayName}</span></span></div>`
+      + `<div><div dir="ltr"><span>@${handle}</span></div></div></div></div>`,
+    );
+  }
+
+  const ATSIGN_DISPLAY_NAMES = ['名前@C105', 'Name@NYC', '닉@마감'];
+
+  it.each(ATSIGN_DISPLAY_NAMES)('표시 이름 %s: UserAvatar-Container testid에서 핸들을 읽는다 (#110)', (displayName) => {
+    expect(extractQuoteAuthor(quoteCard(displayName, 'user_2', 'user_2'))?.handle).toBe('user_2');
+  });
+
+  it.each(ATSIGN_DISPLAY_NAMES)('표시 이름 %s: testid가 없으면 User-Name의 정확한 @handle span에서 읽는다 (#110)', (displayName) => {
+    expect(extractQuoteAuthor(quoteCard(displayName, 'user_2', null))?.handle).toBe('user_2');
+  });
+
+  it('testid 핸들은 소문자로 돌려준다', () => {
+    expect(extractQuoteAuthor(quoteCard('표시 이름', 'User_2', 'User_2'))?.handle).toBe('user_2');
+  });
+
+  it('testid 값이 unknown이면 User-Name span으로 폴백한다', () => {
+    expect(extractQuoteAuthor(quoteCard('名前@C105', 'user_2', 'unknown'))?.handle).toBe('user_2');
+  });
+
+  it.each(['user-2', 'abcdefghijklmnop', ''])('testid 값 "%s"가 핸들 형식 밖이면 User-Name span으로 폴백한다', (avatarHandle) => {
+    expect(extractQuoteAuthor(quoteCard('Name@NYC', 'user_2', avatarHandle))?.handle).toBe('user_2');
+  });
+
+  it('표시 이름 자체가 @other_name 모양이어도 마지막 @handle span을 핸들로 본다', () => {
+    expect(extractQuoteAuthor(quoteCard('@other_name', 'user_2', null))?.handle).toBe('user_2');
+  });
+
+  it('testid도 정확한 @handle span도 없으면 텍스트 정규식으로 폴백한다', () => {
+    const el = html(
+      `<div><div data-testid="UserAvatar-Container-unknown"></div>`
+      + `<div data-testid="User-Name"><span>표시이름</span><span>@quoted_handle님</span></div></div>`,
+    );
+    expect(extractQuoteAuthor(el)?.handle).toBe('quoted_handle');
+  });
+
+  it('DOM 신호로 핸들을 읽어도 표시 이름은 기존 텍스트 규칙을 따른다', () => {
+    const result = extractQuoteAuthor(quoteCard('표시이름', 'user_2', 'user_2'));
+    expect(result).toEqual({ handle: 'user_2', displayName: '표시이름' });
+  });
 });
 
 // --- extractTweetText ---

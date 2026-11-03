@@ -62,6 +62,15 @@ describe('실측 X DOM 픽스처', () => {
       expect(detectBadgeSvg(quote as HTMLElement)).toBe(true);
     });
 
+    it('인용된 계정의 표시 이름에 @가 들어 있어도 testid의 실제 핸들을 읽는다 (#110)', () => {
+      const quote = findQuoteBlock(tweet()) as HTMLElement;
+      const nameSpan = quote.querySelector('[data-testid="User-Name"] span span');
+      if (!nameSpan) throw new Error('fixture quote card has no display name span');
+      nameSpan.textContent = '名前@C105';
+
+      expect(extractQuoteAuthor(quote)?.handle).toBe('user_2');
+    });
+
     it('인용 카드의 파딱 배지를 작성자 것으로 보지 않는다 (#35)', () => {
       expect(extractTweetAuthor(tweet())?.handle).toBe('user_1');
       expect(findAuthorBadge(tweet())).toBeNull();
