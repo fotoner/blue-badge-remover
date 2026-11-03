@@ -6,6 +6,7 @@ import { cleanupOldStats } from '@features/stats';
 import { handleWhitelistRequest } from '@features/settings/whitelist-storage';
 import { initLanguageOnInstall } from '@features/settings';
 import { removeLegacyFollowData } from '@features/settings/follow-list-reset';
+import { buildPopupUrl } from '@shared/utils/popup-source-tab';
 
 const UPDATE_NOTI_FLAG = 'bbr-update-available';
 
@@ -45,8 +46,9 @@ export default defineBackground(() => {
   // Firefox for Android: 팝업 대신 새 탭으로 열기
   if (isFirefoxAndroid && actionApi) {
     actionApi.setPopup({ popup: '' });
-    actionApi.onClicked.addListener(() => {
-      void browser.tabs.create({ url: browser.runtime.getURL('/popup.html') });
+    // 팝업이 탭으로 열려 활성 탭이 팝업 자신이 되므로, 클릭한 탭 ID를 넘겨 팝업이 그 탭을 확인하게 한다 (#121)
+    actionApi.onClicked.addListener((tab) => {
+      void browser.tabs.create({ url: buildPopupUrl(browser.runtime.getURL('/popup.html'), tab?.id) });
     });
   }
 });

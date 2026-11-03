@@ -29,3 +29,14 @@ describe('background follow list reset wiring', () => {
     expect(source).toContain("if (details.reason === 'install' || details.reason === 'update') void removeLegacyFollowData()");
   });
 });
+
+describe('background popup source tab wiring', () => {
+  // #121: Firefox Android는 팝업을 탭으로 열어 활성 탭이 팝업 자신이 된다 — 클릭한 탭 ID를 넘긴다
+  it('Firefox Android 아이콘 클릭 때 클릭한 탭 ID를 팝업 주소에 싣는다', () => {
+    const source = readFileSync(resolve(process.cwd(), 'entrypoints/background.ts'), 'utf8');
+
+    expect(source).toContain("import { buildPopupUrl } from '@shared/utils/popup-source-tab'");
+    expect(source).toContain('actionApi.onClicked.addListener((tab) =>');
+    expect(source).toContain("buildPopupUrl(browser.runtime.getURL('/popup.html'), tab?.id)");
+  });
+});

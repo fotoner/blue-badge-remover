@@ -80,6 +80,8 @@ export const en: Translations = {
   updateBanner: 'Updated to a new version!',
   updateBannerVersion: 'Updated to v{version}!',
   dismiss: 'Dismiss',
+  reloadNeeded: 'Reload this tab to apply',
+  reloadTab: 'Reload',
   shareText: 'Hid {count} paid badge tweets today 🧹\n\n#BlueBadgeRemover',
   statsTitle: 'Stats',
   todayHiddenLabel: 'Paid badge tweets hidden today',
