@@ -314,13 +314,18 @@ describe('processTweet', () => {
     expect(mockShowTweet).toHaveBeenCalled();
   });
 
-  // --- A6: 리트위터 팔로우/화이트리스트 예외 ---
+  // --- #120: 리트위터 예외는 화이트리스트·본인만 — 팔로우 리트위터는 '파딱 리트윗 숨기기' 설정을 따른다 ---
 
-  it('팔로우한 유저가 재게시한 파딱 트윗은 숨기지 않는다', () => {
+  it('팔로우한 유저가 재게시한 파딱 트윗도 리트윗 숨기기 설정대로 reason retweet으로 숨긴다', () => {
     setFollowSet(new Set(['rt_user']));
     const tweet = createTweetEl('fadak_author', { retweet: true, retweeterHandle: 'rt_user', badge: true });
     processTweet(tweet);
-    expect(mockHideTweet).not.toHaveBeenCalled();
+    expect(mockHideTweet).toHaveBeenCalledWith(
+      tweet,
+      'remove',
+      expect.objectContaining({ reason: 'retweet', handle: '@fadak_author' }),
+      expect.any(Function),
+    );
   });
 
   it('화이트리스트에 있는 유저의 재게시는 숨기지 않는다', () => {
@@ -330,12 +335,19 @@ describe('processTweet', () => {
     expect(mockHideTweet).not.toHaveBeenCalled();
   });
 
-  it('팔로우한 유저 재게시 + 이전에 숨겨진 트윗은 showTweet으로 복원', () => {
-    setFollowSet(new Set(['rt_user']));
+  it('화이트리스트 유저 재게시 + 이전에 숨겨진 트윗은 showTweet으로 복원', () => {
+    setWhitelistSet(new Set(['@rt_user']));
     const tweet = createTweetEl('fadak_author', { retweet: true, retweeterHandle: 'rt_user', badge: true });
     tweet.setAttribute('data-bbr-original', 'hidden');
     processTweet(tweet);
     expect(mockShowTweet).toHaveBeenCalledWith(tweet);
+    expect(mockHideTweet).not.toHaveBeenCalled();
+  });
+
+  it('팔로우한 파딱이 자기 트윗을 리트윗해도 숨기지 않는다 (글쓴이 팔로우)', () => {
+    setFollowSet(new Set(['fadak_author']));
+    const tweet = createTweetEl('fadak_author', { retweet: true, retweeterHandle: 'fadak_author', badge: true });
+    processTweet(tweet);
     expect(mockHideTweet).not.toHaveBeenCalled();
   });
 
@@ -361,8 +373,24 @@ describe('processTweet', () => {
 
   // --- A2: 예외 부모의 quote-entire 다운그레이드 + reason 게이팅 ---
 
-  it('부모 팔로우 + 인용 파딱 + hide-entire 설정 → hideTweet 대신 hideQuoteBlock (다운그레이드)', () => {
+  it('부모 팔로우 + 인용 파딱 + hide-entire 설정 → 전체 숨김 (팔로우 인용자는 다운그레이드 대상이 아님)', () => {
     setFollowSet(new Set(['parent_user']));
+    vi.mocked(getQuoteAction).mockReturnValue('hide-entire');
+    mockDetectBadgeSvg.mockReturnValue(true);
+    const tweet = createTweetEl('parent_user');
+    appendQuoteBlock(tweet, { badge: true });
+    processTweet(tweet);
+    expect(mockHideTweet).toHaveBeenCalledWith(
+      tweet,
+      'remove',
+      expect.objectContaining({ reason: 'quote-entire', handle: '@quoted_user' }),
+      expect.any(Function),
+    );
+    expect(mockHideQuoteBlock).not.toHaveBeenCalled();
+  });
+
+  it('부모 화이트리스트 + 인용 파딱 + hide-entire 설정 → hideTweet 대신 hideQuoteBlock (다운그레이드)', () => {
+    setWhitelistSet(new Set(['@parent_user']));
     vi.mocked(getQuoteAction).mockReturnValue('hide-entire');
     mockDetectBadgeSvg.mockReturnValue(true);
     const tweet = createTweetEl('parent_user');
@@ -370,6 +398,35 @@ describe('processTweet', () => {
     processTweet(tweet);
     expect(mockHideTweet).not.toHaveBeenCalled();
     expect(mockHideQuoteBlock).toHaveBeenCalledWith(quote, expect.objectContaining({ handle: '@quoted_user' }));
+  });
+
+  it('팔로우 파딱의 셀프 인용 + hide-entire 설정 → 인용 카드도 숨기지 않는다', () => {
+    setFollowSet(new Set(['quoted_user']));
+    vi.mocked(getQuoteAction).mockReturnValue('hide-entire');
+    mockDetectBadgeSvg.mockReturnValue(true);
+    const tweet = createTweetEl('quoted_user', { badge: true });
+    appendQuoteBlock(tweet, { badge: true });
+    processTweet(tweet);
+    expect(mockHideTweet).not.toHaveBeenCalled();
+    expect(mockHideQuoteBlock).not.toHaveBeenCalled();
+  });
+
+  it('팔로우 파딱(표시 이름 名前@C105)의 셀프 인용 + hide-entire → 인용 카드 DOM에서 실제 핸들을 읽어 숨기지 않는다 (#110·#120)', () => {
+    setFollowSet(new Set(['jp_artist']));
+    vi.mocked(getQuoteAction).mockReturnValue('hide-entire');
+    mockDetectBadgeSvg.mockReturnValue(true);
+    const tweet = createTweetEl('jp_artist', { badge: true });
+    const wrapper = doc.createElement('div');
+    const label = doc.createElement('span');
+    label.textContent = '인용';
+    wrapper.appendChild(label);
+    const quote = doc.createElement('div');
+    quote.innerHTML = `<div data-testid="UserAvatar-Container-jp_artist"></div><div data-testid="User-Name"><span>名前@C105</span>${BADGE_SVG}<span>@jp_artist</span></div>`;
+    wrapper.appendChild(quote);
+    tweet.appendChild(wrapper);
+    processTweet(tweet);
+    expect(mockHideTweet).not.toHaveBeenCalled();
+    expect(mockHideQuoteBlock).not.toHaveBeenCalled();
   });
 
   it('quote-entire로 숨겨진 트윗 + 부모 화이트리스트 → showTweet 후 hideQuoteBlock (entire→quote 복원)', () => {
@@ -420,12 +477,29 @@ describe('processTweet', () => {
     expect(mockShowTweet).not.toHaveBeenCalled();
   });
 
-  // --- Defect1: 리트위터 예외가 quote 파이프라인에도 전파되어야 함 ---
-  // followed user F가 non-exempt author A의 (파딱 Q를 인용한) 트윗을 재게시 → A6 예외로 show지만
-  // 기존에는 processQuoteBlock이 retweeterExempt를 몰라 hide-entire로 전체를 숨겼음(모순).
+  // --- 리트위터 예외(화이트리스트·본인)는 quote 파이프라인에도 전파된다 ---
+  // 화이트리스트 유저 F가 non-exempt author A의 (파딱 Q를 인용한) 트윗을 재게시 → 리트윗 예외로 show지만
+  // processQuoteBlock이 이를 몰라 hide-entire로 전체를 숨기면 모순이므로 인용 카드만 접는다.
+  // 팔로우 리트위터는 예외가 아니다 — 사용자가 고른 대로 전체를 숨긴다 (#120).
 
-  it('(a) 리트위터 팔로우 + 부모 비예외 + quoteMode=entire → hide-entire 대신 hide-quote, article은 안 숨겨짐', () => {
+  it('(a) 리트위터 팔로우 + 부모 비예외 + quoteMode=entire → 전체 숨김 (팔로우 리트위터는 다운그레이드 대상이 아님)', () => {
     setFollowSet(new Set(['rt_user']));
+    vi.mocked(getQuoteAction).mockReturnValue('hide-entire');
+    mockDetectBadgeSvg.mockReturnValue(true);
+    const tweet = createTweetEl('author_a', { retweet: true, retweeterHandle: 'rt_user' });
+    appendQuoteBlock(tweet, { badge: true });
+    processTweet(tweet);
+    expect(mockHideTweet).toHaveBeenCalledWith(
+      tweet,
+      'remove',
+      expect.objectContaining({ reason: 'quote-entire', handle: '@quoted_user' }),
+      expect.any(Function),
+    );
+    expect(mockHideQuoteBlock).not.toHaveBeenCalled();
+  });
+
+  it('(b) 리트위터 화이트리스트 + 부모 비예외 + quoteMode=entire → hide-entire 대신 hide-quote, article은 안 숨겨짐', () => {
+    setWhitelistSet(new Set(['@rt_user']));
     vi.mocked(getQuoteAction).mockReturnValue('hide-entire');
     mockDetectBadgeSvg.mockReturnValue(true);
     const tweet = createTweetEl('author_a', { retweet: true, retweeterHandle: 'rt_user' });
@@ -435,11 +509,11 @@ describe('processTweet', () => {
     expect(mockHideQuoteBlock).toHaveBeenCalledWith(quote, expect.objectContaining({ handle: '@quoted_user' }));
   });
 
-  it('(b) 리트위터 화이트리스트 + 부모 비예외 + quoteMode=entire → hide-entire 대신 hide-quote, article은 안 숨겨짐', () => {
-    setWhitelistSet(new Set(['@rt_user']));
+  it('(b2) 리트위터가 본인 + 부모 비예외 + quoteMode=entire → hide-quote, article은 안 숨겨짐', () => {
+    setCurrentUserHandle('myhandle');
     vi.mocked(getQuoteAction).mockReturnValue('hide-entire');
     mockDetectBadgeSvg.mockReturnValue(true);
-    const tweet = createTweetEl('author_a', { retweet: true, retweeterHandle: 'rt_user' });
+    const tweet = createTweetEl('author_a', { retweet: true, retweeterHandle: 'myhandle' });
     const quote = appendQuoteBlock(tweet, { badge: true });
     processTweet(tweet);
     expect(mockHideTweet).not.toHaveBeenCalled();
@@ -569,8 +643,23 @@ describe('processTweet — 리트위터 링크가 socialContext를 감싼 DOM', 
     return article;
   }
 
-  it('팔로우한 사람이 재게시한 파딱 트윗은 숨기지 않는다', () => {
+  it('팔로우한 사람이 재게시한 파딱 트윗도 리트윗 숨기기 설정대로 숨긴다', () => {
     setFollowSet(new Set(['friend']));
+    const tweet = createWrappedRepost('fadak_author', 'friend');
+    doc.querySelector('main')!.appendChild(tweet);
+
+    processTweet(tweet);
+
+    expect(mockHideTweet).toHaveBeenCalledWith(
+      tweet,
+      'remove',
+      expect.objectContaining({ reason: 'retweet' }),
+      expect.any(Function),
+    );
+  });
+
+  it('화이트리스트에 있는 사람이 재게시한 파딱 트윗은 숨기지 않는다', () => {
+    setWhitelistSet(new Set(['@friend']));
     const tweet = createWrappedRepost('fadak_author', 'friend');
     doc.querySelector('main')!.appendChild(tweet);
 
