@@ -15,7 +15,7 @@ describe('background language wiring', () => {
   it('새로 설치할 때만 브라우저 언어를 저장한다', () => {
     const source = readFileSync(resolve(process.cwd(), 'entrypoints/background.ts'), 'utf8');
 
-    expect(source).toContain("if (details.reason === 'install') void initLanguageOnInstall()");
+    expect(source).toContain("if (reason === 'install') await initLanguageOnInstall()");
     expect(source).not.toContain('keepLegacyLanguageOnUpdate');
   });
 });
@@ -38,5 +38,22 @@ describe('background popup source tab wiring', () => {
     expect(source).toContain("import { buildPopupUrl } from '@shared/utils/popup-source-tab'");
     expect(source).toContain('actionApi.onClicked.addListener((tab) =>');
     expect(source).toContain("buildPopupUrl(browser.runtime.getURL('/popup.html'), tab?.id)");
+  });
+});
+
+describe('background reload notice wiring', () => {
+  // #121: 설치·업데이트 직후 이미 열린 X 탭에는 새 content script가 없다 — 그 탭 화면에 새로고침 안내를 넣는다
+  it('설치·업데이트 때 열린 X 탭에 안내를 넣는다', () => {
+    const source = readFileSync(resolve(process.cwd(), 'entrypoints/background.ts'), 'utf8');
+
+    expect(source).toContain("import { showReloadToast } from '../src/content/reload-toast'");
+    expect(source).toContain("if (details.reason === 'install' || details.reason === 'update') void showReloadNotice(details.reason)");
+    expect(source).toContain('await notifyOpenXTabs(buildReloadToastText(reason, language), showReloadToast)');
+  });
+
+  it('설치 안내는 언어를 정한 뒤에 설정을 읽는다', () => {
+    const source = readFileSync(resolve(process.cwd(), 'entrypoints/background.ts'), 'utf8');
+
+    expect(source.indexOf('await initLanguageOnInstall()')).toBeLessThan(source.indexOf('await getSettings()'));
   });
 });

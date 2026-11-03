@@ -82,6 +82,8 @@ export const en: Translations = {
   dismiss: 'Dismiss',
   reloadNeeded: 'Reload this tab to apply',
   reloadTab: 'Reload',
+  reloadToastUpdated: 'Reload to apply the Blue Badge Remover update',
+  reloadToastInstalled: 'Reload to start using Blue Badge Remover',
   shareText: 'Hid {count} paid badge tweets today 🧹\n\n#BlueBadgeRemover',
   statsTitle: 'Stats',
   todayHiddenLabel: 'Paid badge tweets hidden today',

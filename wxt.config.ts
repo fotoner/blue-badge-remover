@@ -4,11 +4,13 @@ import { resolve } from 'path';
 export default defineConfig({
   srcDir: '.',
   outDir: 'dist',
-  manifest: {
+  manifest: ({ browser }) => ({
     name: '__MSG_extName__',
     description: '__MSG_extDescription__',
     default_locale: 'ko',
-    permissions: ['storage', 'unlimitedStorage'],
+    // scripting: 설치·업데이트 직후 이미 열린 X 탭에 새로고침 안내를 넣는다 (#121).
+    // Firefox는 열린 탭에 content script를 다시 넣어 주므로 권한을 늘리지 않는다
+    permissions: browser === 'firefox' ? ['storage', 'unlimitedStorage'] : ['storage', 'unlimitedStorage', 'scripting'],
     host_permissions: [
       'https://x.com/*',
       'https://twitter.com/*',
@@ -34,7 +36,7 @@ export default defineConfig({
       // 없으면 AMO가 데스크톱 전용으로 올려 Firefox Android에서 설치 버튼이 꺼진다 (#87)
       gecko_android: {},
     },
-  },
+  }),
   zip: {
     // AMO 소스 ZIP에서 로컬 전용 산출물 제외 (숨김 파일·node_modules·테스트·outDir은 WXT 기본 제외)
     excludeSources: ['dist-firefox/**', 'graphify-out/**', 'test-results/**', 'release/**'],

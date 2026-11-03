@@ -82,6 +82,8 @@ export const ko = {
   dismiss: '닫기',
   reloadNeeded: '이 탭을 새로고침해야 적용됩니다',
   reloadTab: '새로고침',
+  reloadToastUpdated: '새로고침하면 Blue Badge Remover 업데이트가 적용됩니다',
+  reloadToastInstalled: '새로고침하면 Blue Badge Remover가 동작합니다',
   shareText: '오늘 파딱 트윗 {count}개를 숨겼습니다 🧹\n\n#파딱제거기 #BlueBadgeRemover',
   statsTitle: '통계',
   todayHiddenLabel: '오늘 숨긴 파딱 트윗',
