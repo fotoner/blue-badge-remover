@@ -82,6 +82,8 @@ export const ja: Translations = {
   dismiss: '閉じる',
   reloadNeeded: 'このタブを再読み込みすると適用されます',
   reloadTab: '再読み込み',
+  reloadToastUpdated: '再読み込みすると Blue Badge Remover の更新が反映されます',
+  reloadToastInstalled: '再読み込みすると Blue Badge Remover が有効になります',
   shareText: '今日{count}件の課金バッジツイートを非表示にしました 🧹\n\n#BlueBadgeRemover',
   statsTitle: '統計',
   todayHiddenLabel: '今日非表示にした課金バッジツイート',

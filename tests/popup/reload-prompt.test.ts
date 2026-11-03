@@ -25,7 +25,8 @@ vi.mock('wxt/browser', () => ({
   },
 }));
 
-const { isSupportedXUrl, resolveTargetTab, checkTabNeedsReload, initReloadPrompt } = await import('../../src/popup/reload-prompt');
+const { isSupportedXUrl, checkTabNeedsReload } = await import('../../src/features/reload-notice');
+const { resolveTargetTab, initReloadPrompt } = await import('../../src/popup/reload-prompt');
 
 type TabArg = Parameters<typeof checkTabNeedsReload>[0];
 

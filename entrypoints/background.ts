@@ -4,11 +4,20 @@ import { logger } from '@shared/utils/logger';
 import { MESSAGE_TYPES } from '@shared/constants';
 import { cleanupOldStats } from '@features/stats';
 import { handleWhitelistRequest } from '@features/settings/whitelist-storage';
-import { initLanguageOnInstall } from '@features/settings';
+import { getSettings, initLanguageOnInstall } from '@features/settings';
+import { buildReloadToastText, notifyOpenXTabs, type ReloadNoticeReason } from '@features/reload-notice';
 import { removeLegacyFollowData } from '@features/settings/follow-list-reset';
 import { buildPopupUrl } from '@shared/utils/popup-source-tab';
+import { showReloadToast } from '../src/content/reload-toast';
 
 const UPDATE_NOTI_FLAG = 'bbr-update-available';
+
+/** 이미 열린 X 탭에 새로고침 안내를 넣는다 (#121). 설치면 브라우저 언어를 저장한 뒤 그 언어로 띄운다 */
+async function showReloadNotice(reason: ReloadNoticeReason): Promise<void> {
+  if (reason === 'install') await initLanguageOnInstall();
+  const { language } = await getSettings();
+  await notifyOpenXTabs(buildReloadToastText(reason, language), showReloadToast);
+}
 
 export default defineBackground(() => {
   logger.info('Blue Badge Remover installed');
@@ -20,8 +29,8 @@ export default defineBackground(() => {
 
   // 확장 업데이트 감지
   browser.runtime.onInstalled.addListener((details) => {
-    if (details.reason === 'install') void initLanguageOnInstall();
     if (details.reason === 'install' || details.reason === 'update') void removeLegacyFollowData();
+    if (details.reason === 'install' || details.reason === 'update') void showReloadNotice(details.reason);
     if (details.reason === 'update' && !isFirefoxAndroid) {
       void browser.storage.local.set({ [UPDATE_NOTI_FLAG]: true });
     }
