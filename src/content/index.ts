@@ -14,7 +14,7 @@ import { setSettings, setFollowSet, setWhitelistSet, setProtectedKeywords, setCu
 import { flushCollector } from './collector-buffer';
 import { loadFilterRules } from './filter-pipeline';
 import { processTweet, restoreHiddenTweets, reprocessExistingTweets, applyCurrentUserFallback } from './tweet-orchestrator';
-import { listenForMessages, reprocessTweetsByHandles } from './message-handler';
+import { listenForMessages, reprocessTweetsByHandles, scheduleFollowReprocess } from './message-handler';
 import { listenForSettingsChanges } from './storage-listener';
 import { startStatsFlush, flushStats, setOnFlush } from '@features/stats';
 import { checkMilestone } from './milestone-banner';
@@ -43,7 +43,8 @@ const followCollectorDeps = {
   getCurrentSettings: () => getSettings(),
   setFollowSet: (set: Set<string>) => { setFollowSet(set); },
   getFollowSet: () => getFollowSet(),
-  onFollowed: () => { removeFadakBanner(); },
+  // 같은 탭 팔로우 클릭은 storage 쓰기 전에 메모리 Set에 먼저 넣어서 storage 리스너의 added에 잡히지 않는다 — 여기서 재판정을 예약한다 (#100)
+  onFollowed: (handle: string) => { removeFadakBanner(); scheduleFollowReprocess([handle]); },
   onUnfollowed: () => { showFadakProfileBanner(fadakBannerDeps); },
 };
 

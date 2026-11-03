@@ -97,15 +97,19 @@ function handleFollowListChange(newFollowList: string[], oldFollowList: string[]
 
   // Defect 3 수정: 팔로우 버튼 클릭이나 다른 탭에서의 팔로우로 STORAGE_KEYS.FOLLOW_LIST가
   // 바뀐 경우, 이전에는 Set만 재구성하고 끝나서 이미 숨겨진 트윗이 복원되지 않았다.
-  // added(새로 추가된 핸들)가 있을 때만 공유 디바운스로 restore+reprocess를 예약한다 —
-  // 삭제만 있는 변경(언팔로우)은 재처리가 필요 없다.
+  // 추가된 핸들은 공유 디바운스로 해당 트윗만 다시 판정하도록 예약한다.
+  // 삭제된 핸들(언팔로우)도 같이 넘긴다 — 그 계정의 파딱 트윗·인용 카드가 다시 숨겨져야 한다.
+  // 삭제분은 storage의 oldValue − newValue로 구한다. 같은 탭 언팔로우는 storage에 쓰기 전에
+  // 메모리 Set에서 먼저 지우므로(follow-collector) 메모리 Set과 비교하면 놓친다.
   const oldSet = new Set((oldFollowList ?? []).map((h) => h.toLowerCase()));
+  const newSet = new Set(newFollowList.map((h) => h.toLowerCase()));
   const added = newFollowList.filter((h) => {
     const normalized = h.toLowerCase();
     return !oldSet.has(normalized) && !knownBeforeStorageEvent.has(normalized);
   });
-  if (added.length > 0) {
-    scheduleFollowReprocess(added);
+  const removed = [...oldSet].filter((h) => !newSet.has(h));
+  if (added.length > 0 || removed.length > 0) {
+    scheduleFollowReprocess([...added, ...removed]);
   }
 }
 

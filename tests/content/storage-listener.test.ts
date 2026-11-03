@@ -157,9 +157,41 @@ describe('storage-listener', () => {
       expect(mockScheduleFollowReprocess).toHaveBeenCalledTimes(1);
     });
 
-    it('제거만 있는 변경(언팔로우)은 scheduleFollowReprocess를 호출하지 않는다', () => {
+    it('제거만 있는 변경(언팔로우)도 제거된 핸들을 scheduleFollowReprocess에 넘긴다', () => {
       dispatchChanges({
         [STORAGE_KEYS.FOLLOW_LIST]: { oldValue: ['alice', 'bob'], newValue: ['alice'] },
+      });
+
+      expect(mockScheduleFollowReprocess).toHaveBeenCalledTimes(1);
+      expect([...mockScheduleFollowReprocess.mock.calls[0]![0] as string[]]).toEqual(['bob']);
+    });
+
+    it('같은 탭 언팔로우는 메모리 Set에서 먼저 지운 뒤 storage 이벤트가 와도 제거된 핸들을 넘긴다', () => {
+      setFollowSet(new Set(['alice', 'bob']));
+      // follow-collector의 언팔로우 처리 순서: 메모리 Set에서 먼저 지우고 storage에 쓴다
+      getFollowSet().delete('bob');
+
+      dispatchChanges({
+        [STORAGE_KEYS.FOLLOW_LIST]: { oldValue: ['alice', 'bob'], newValue: ['alice'] },
+      });
+
+      expect(mockScheduleFollowReprocess).toHaveBeenCalledTimes(1);
+      expect([...mockScheduleFollowReprocess.mock.calls[0]![0] as string[]]).toEqual(['bob']);
+    });
+
+    it('추가와 제거가 함께 있으면 둘 다 한 번의 스케줄로 넘긴다 (대소문자 무시)', () => {
+      dispatchChanges({
+        [STORAGE_KEYS.FOLLOW_LIST]: { oldValue: ['Alice', 'bob'], newValue: ['alice', 'carol'] },
+      });
+
+      expect(mockScheduleFollowReprocess).toHaveBeenCalledTimes(1);
+      expect([...(mockScheduleFollowReprocess.mock.calls[0]![0] as string[])].map((h) => h.toLowerCase()).sort())
+        .toEqual(['bob', 'carol']);
+    });
+
+    it('oldValue가 없으면 제거분은 없다', () => {
+      dispatchChanges({
+        [STORAGE_KEYS.FOLLOW_LIST]: { newValue: [] },
       });
 
       expect(mockScheduleFollowReprocess).not.toHaveBeenCalled();
