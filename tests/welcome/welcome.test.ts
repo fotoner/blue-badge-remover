@@ -105,6 +105,28 @@ describe('새로고침 버튼 — 확인 실패', () => {
     expect(el('reload-tabs').textContent).toBe(t('welcomeReloadButton', 'ko', { count: '1' }));
     expect(currentStepId()).toBe('step-reload');
   });
+
+  it('누른 때 확인이 1.5초 안에 끝나지 않으면 다시 누를 수 있고, 다시 누르면 새로고침한다', async () => {
+    vi.useFakeTimers();
+    mocks.findTabsNeedingReload
+      .mockResolvedValueOnce([{ id: 1 }])
+      .mockReturnValueOnce(new Promise(() => {}))
+      .mockResolvedValueOnce([{ id: 1 }]);
+    await initWelcome(document, DESKTOP);
+
+    el('reload-tabs').click();
+    expect(el<HTMLButtonElement>('reload-tabs').disabled).toBe(true);
+    await vi.advanceTimersByTimeAsync(1500);
+
+    expect(el<HTMLButtonElement>('reload-tabs').disabled).toBe(false);
+    expect(mocks.reloadTabs).not.toHaveBeenCalled();
+
+    el('reload-tabs').click();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(mocks.reloadTabs).toHaveBeenCalledWith([{ id: 1 }]);
+    expect(el('reload-tabs').textContent).toBe(t('welcomeReloadDone', 'ko'));
+  });
 });
 
 describe('팔로잉 페이지 버튼', () => {
