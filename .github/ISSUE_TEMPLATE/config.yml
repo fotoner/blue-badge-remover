@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 이슈 규칙
+    url: https://github.com/fotoner/blue-badge-remover/blob/dev/docs/issues.md
+    about: 제목·라벨·본문 규칙

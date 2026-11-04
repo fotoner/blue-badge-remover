@@ -25,6 +25,10 @@ jobs:
       - name: TypeScript check
         run: npx tsc --noEmit --skipLibCheck
 
+      # 파일 300줄·함수 50줄·console·의존성 방향을 강제하는 유일한 도구라 CI 게이트로 둔다
+      - name: Lint
+        run: npm run lint
+
       - name: Run tests
         run: npm test
 

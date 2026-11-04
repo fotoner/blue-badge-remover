@@ -1,0 +1,24 @@
+name: PR 본문
+
+# AGENTS.md "저장소 규칙": PR 본문에 확인 절(실행한 명령과 결과)이 있어야 한다.
+# 검사 없는 PR 템플릿은 점점 어긋나서, 필수 절 하나만 기계로 본다. 포크에서 온 외부 기여 PR은 보지 않는다.
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: 확인 절 검사
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if ! printf '%s\n' "$BODY" | grep -Eq '^#{2,3} 확인'; then
+            echo "::error::PR 본문에 '### 확인' 절이 없습니다. .github/pull_request_template.md를 따르세요"
+            exit 1
+          fi

@@ -15,7 +15,7 @@ Feature-Based Architecture
 
 ```
 entrypoints/  (WXT 진입점)
-├── background.ts         Service Worker
+├── background.ts         Service Worker (설치·업데이트 처리, 열린 X 탭 새로고침 안내)
 ├── content.ts            Content Script (ISOLATED world)
 ├── injected.content.ts   Content Script (MAIN world, fetch 인터셉트)
 ├── popup/                Popup UI
@@ -41,26 +41,31 @@ src/
 │   ├── collector-buffer.ts   키워드 수집기 버퍼
 │   ├── page-utils.ts         페이지 유형 판별
 │   ├── settings-shortcut.ts  사이드바 설정 바로가기 주입
-│   └── fadak-banner.ts       프로필/상세 경고 배너
+│   ├── fadak-banner.ts       프로필/상세 경고 배너
+│   ├── reload-probe.ts       팝업의 새로고침 확인 메시지에 응답
+│   └── reload-toast.ts       열린 X 탭에 넣는 새로고침 안내 (background가 주입)
 ├── features/
 │   ├── badge-detection/      D1: SVG 뱃지 감지
 │   ├── content-filter/       D2: 콘텐츠 필터링 (숨김 판정 + DOM 조작)
 │   ├── keyword-filter/       D5: 키워드 필터 (매칭, 파서, 캐시)
 │   ├── keyword-collector/    키워드 수집기 스토리지
 │   ├── filter-pack/          필터 팩 관리 (로더 + 스토리지)
+│   ├── reload-notice/        설치·업데이트 직후 열린 탭 확인 + 안내 주입
 │   ├── stats/                숨김 통계 수집/저장
 │   └── settings/             D4: 설정 관리
 ├── shared/
 │   ├── types/                공통 타입 (Settings, FilterRule, etc.)
-│   ├── utils/                로거
-│   ├── constants/            메시지 타입, 스토리지 키
-│   └── i18n.ts               다국어 (ko/en/ja)
+│   ├── utils/                로거, 팝업 원래 탭 ID, 새로고침 확인 응답 검증
+│   ├── constants/            기본 설정, 메시지 타입, 스토리지 키
+│   └── i18n/                 다국어 (ko/en/ja, 키는 세 언어가 같다)
+├── popup/ dashboard/ options/ whitelist/ collector/   화면별 로직·스타일 (HTML은 entrypoints/)
 └── injected/
     ├── fetch-interceptor.ts      MAIN world에서 X API fetch/XHR 인터셉트
     ├── data-extractors.ts        API 응답 데이터 추출
     ├── fiber-follow-observer.ts  React fiber 팔로우 감지
     ├── follow-bridge.ts          팔로우 핸들 큐잉 (계정 확정 후 전송)
-    └── profile-batches.ts        프로필 메시지 배치 분할
+    ├── profile-batches.ts        프로필 메시지 배치 분할
+    └── main-world-start.ts       MAIN world 시작 시점 기록 (늦게 들어왔는지 판별)
 ```
 
 ## 의존성 규칙
@@ -73,7 +78,7 @@ src/
 
 ### 프로젝트 특화 규칙
 
-4. **Cross-import 금지**: feature 간 직접 import 금지. shared 레이어를 통해서만 공유
+4. **Cross-import 금지**: feature 간 직접 import 금지. shared 레이어를 통해서만 공유. 강제: `eslint.config.js`의 `no-restricted-imports`(shared·features·injected의 import 방향)
 5. **Public API**: 각 feature는 `index.ts`를 통해서만 export
 6. **브라우저 API 격리**: 브라우저 API 직접 호출은 entrypoint, content 오케스트레이션, 기능별 storage adapter에서만 허용. 순수 판정 모듈에서는 호출 금지
 7. **DOM 조작 격리**: DOM 직접 조작은 content/ 모듈과 content-filter feature에서만 허용

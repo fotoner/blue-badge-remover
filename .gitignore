@@ -40,3 +40,13 @@ data/
 logs/
 .gstack/
 .context/
+
+# 에이전트 개인 설정·로컬 도구 산출물 (.claude/rules/harness.md HAR-4)
+.claude/settings.local.json
+.claude/worktrees/
+CLAUDE.local.md
+graphify-out/
+.graphifyignore
+.omm/
+.playwright-mcp/
+test-results/
