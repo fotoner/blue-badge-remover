@@ -79,7 +79,7 @@ npx tsc --noEmit --skipLibCheck
 - **Chrome / Edge**: `chrome://extensions` 또는 `edge://extensions`에서 개발자 모드를 켜고, 해당 빌드 폴더를 **압축 해제된 확장 로드**로 선택합니다.
 - **Firefox 개발 빌드**: `about:debugging#/runtime/this-firefox` → **임시 부가 기능 로드**에서 `dist/firefox-mv2/manifest.json`을 선택합니다. 임시 설치는 브라우저를 종료하면 해제됩니다.
 
-코드 구조는 [아키텍처](docs/ARCHITECTURE.md), 작업 규칙은 [컨벤션](docs/CONVENTIONS.md)을 참고하세요.
+코드 구조는 [아키텍처](docs/ARCHITECTURE.md), 작업 규칙은 [AGENTS.md](AGENTS.md)를 참고하세요.
 
 ## 데이터 처리
 
