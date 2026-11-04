@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { t, type Language, type TranslationKey } from '@shared/i18n';
 
 // 영어/일본어 브라우저에서 고급 필터·화이트리스트·수집기 화면이 한국어로만 보이던 문제
-const PAGES = ['popup', 'dashboard', 'options', 'whitelist', 'collector'] as const;
+const PAGES = ['popup', 'dashboard', 'options', 'whitelist', 'collector', 'welcome'] as const;
 const HANGUL = /[ㄱ-ㆎ가-힣]/;
 const LANGUAGES: Language[] = ['ko', 'en', 'ja'];
 
