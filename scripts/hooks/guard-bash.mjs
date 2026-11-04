@@ -16,12 +16,12 @@ export const RULES = [
   },
   {
     id: 'push-all-tags',
-    test: (cmd) => GIT_PUSH.test(cmd) && /\s--(tags|follow-tags)\b/.test(cmd),
-    reason: '--tags·--follow-tags는 정식 릴리스 태그까지 올릴 수 있습니다(SAFE-4). 태그는 이름으로 하나씩 푸시하세요.',
+    test: (cmd) => GIT_PUSH.test(cmd) && /\s--(tags|follow-tags|mirror)\b/.test(cmd),
+    reason: '--tags·--follow-tags·--mirror는 정식 릴리스 태그까지 올릴 수 있습니다(SAFE-4). 태그는 이름으로 하나씩 푸시하세요.',
   },
   {
     id: 'push-main',
-    test: (cmd) => GIT_PUSH.test(cmd) && /(\s|:)(refs\/heads\/)?main(?=\s|$)/.test(cmd),
+    test: (cmd) => GIT_PUSH.test(cmd) && /(\s|:)(refs\/heads\/)?main(?=\s|$)|\s--all\b/.test(cmd),
     reason: 'main에는 직접 푸시하지 않습니다(SAFE-5). release/* 브랜치에서 PR로 합칩니다(docs/releasing.md).',
   },
   {

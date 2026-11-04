@@ -57,6 +57,11 @@ if [[ "$mode" == full ]]; then
 fi
 
 # --changed: 기준은 origin/dev와의 merge-base. 못 구하면 조용히 좁히지 않고 전체 시험으로 넓힌다
+# 받은 --base가 없는 리비전이면 변경 목록이 비어 검사가 좁아지므로 멈춘다
+if [[ -n "$base" ]] && ! git rev-parse --verify --quiet "$base^{commit}" > /dev/null; then
+  echo "기준 리비전을 찾지 못했습니다: $base" >&2
+  exit 2
+fi
 widen=''
 if [[ -z "$base" ]]; then
   base="$(git merge-base HEAD origin/dev 2>/dev/null || true)"

@@ -20,6 +20,8 @@ describe('guard-bash 훅', () => {
     ['git -C /repo push origin main', 'push-main'],
     ['git push --follow-tags origin release/v1.8.2', 'push-all-tags'],
     ['git push origin --tags', 'push-all-tags'],
+    ['git push --mirror origin', 'push-all-tags'],
+    ['git push --all origin', 'push-main'],
     ['git push origin main', 'push-main'],
     ['git push origin HEAD:main', 'push-main'],
     ['npm run submit', 'store-submit'],
