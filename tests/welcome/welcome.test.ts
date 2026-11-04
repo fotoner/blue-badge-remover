@@ -60,11 +60,11 @@ describe('환영 페이지 단계', () => {
     expect(currentStepId()).toBe('step-reload');
   });
 
-  it('탭 확인이 끝나지 않아도 3초 뒤에는 단계 01 없이 그린다', async () => {
+  it('탭 확인이 끝나지 않아도 1.5초 뒤에는 단계 01 없이 그린다', async () => {
     vi.useFakeTimers();
     mocks.findTabsNeedingReload.mockReturnValue(new Promise(() => {}));
     const pending = initWelcome(document, DESKTOP);
-    await vi.advanceTimersByTimeAsync(3000);
+    await vi.advanceTimersByTimeAsync(1500);
     await pending;
 
     expect(el('step-reload').hidden).toBe(true);
@@ -90,6 +90,20 @@ describe('새로고침 버튼', () => {
     expect(el<HTMLButtonElement>('reload-tabs').disabled).toBe(true);
     expect(el('reload-status').textContent).toBe(t('welcomeReloadDone', 'ko'));
     expect(currentStepId()).toBe('step-follow');
+  });
+});
+
+describe('새로고침 버튼 — 확인 실패', () => {
+  it('누른 때 탭을 확인하지 못하면 완료로 표시하지 않고 다시 누를 수 있게 둔다', async () => {
+    mocks.findTabsNeedingReload.mockResolvedValueOnce([{ id: 1 }]).mockRejectedValueOnce(new Error('tabs.query failed'));
+    await initWelcome(document, DESKTOP);
+
+    el('reload-tabs').click();
+    await vi.waitFor(() => expect(el<HTMLButtonElement>('reload-tabs').disabled).toBe(false));
+
+    expect(mocks.reloadTabs).not.toHaveBeenCalled();
+    expect(el('reload-tabs').textContent).toBe(t('welcomeReloadButton', 'ko', { count: '1' }));
+    expect(currentStepId()).toBe('step-reload');
   });
 });
 

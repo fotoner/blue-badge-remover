@@ -187,7 +187,7 @@ export const en: Translations = {
   welcomeOptional: '(optional)',
   welcomeFollowDesc: 'Accounts you follow are never hidden, even with a paid badge. The list builds up automatically as you use X, and scrolling to the end of your Following page fills it at once.',
   welcomePinTitle: 'Pin the icon',
-  welcomePinDesc: 'Pin Blue Badge Remover from the puzzle icon in the toolbar to turn it on or off with one click.',
+  welcomePinDesc: 'Pin Blue Badge Remover from the puzzle icon in the toolbar to turn it on or off right from the toolbar.',
   welcomeFaqTitle: 'FAQ',
   welcomeFaqForYouQ: 'Does it hide tweets in the For you tab too?',
   welcomeFaqForYouA: "Yes. It hides them in both the For you and Following tabs on Home. You can choose where to hide them under 'Filter Scope' in the settings.",

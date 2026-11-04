@@ -13,11 +13,8 @@ const UPDATE_NOTI_FLAG = 'bbr-update-available';
 /** 새로 설치하면 브라우저 언어를 저장한 뒤 환영 페이지를 연다 — 페이지가 저장된 언어로 그려지게 순서를 지킨다.
  *  언어 저장이 실패해도 페이지는 연다(기본 언어로 그려진다) (#121) */
 async function welcomeOnInstall(): Promise<void> {
-  try {
-    await initLanguageOnInstall();
-  } finally {
-    await browser.tabs.create({ url: browser.runtime.getURL('/welcome.html') });
-  }
+  await initLanguageOnInstall().catch((error: unknown) => logger.warn('설치 언어 저장 실패', { error: String(error) }));
+  await browser.tabs.create({ url: browser.runtime.getURL('/welcome.html') });
 }
 
 export default defineBackground(() => {

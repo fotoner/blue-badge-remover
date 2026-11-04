@@ -44,7 +44,7 @@ body {
 
 h1 {
   margin: 14px 0 4px;
-  font: 600 20px/1.35 var(--font-display), var(--font-body);
+  font: 600 20px/1.35 'Space Grotesk', 'IBM Plex Sans KR', sans-serif;
   color: var(--text-primary);
 }
 
@@ -115,7 +115,7 @@ button:focus-visible, summary:focus-visible, a:focus-visible {
 /* FAQ */
 .faq-title {
   margin: 32px 0 8px;
-  font: 700 11px/1 var(--font-display), var(--font-body);
+  font: 700 11px/1 'Space Grotesk', 'IBM Plex Sans KR', sans-serif;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -137,8 +137,8 @@ summary {
 
 summary::-webkit-details-marker { display: none; }
 /* 펼침 표시는 장식이다 — 스크린리더가 "플러스"로 읽지 않게 대체 텍스트를 비운다 */
-summary::after { content: '+' / ''; font: 400 14px/20px var(--font-mono); color: var(--text-muted); }
-details[open] summary::after { content: '−' / ''; }
+summary::after { content: '+'; content: '+' / ''; font: 400 14px/20px var(--font-mono); color: var(--text-muted); }
+details[open] summary::after { content: '−'; content: '−' / ''; }
 
 details p { padding: 0 12px 14px 13px; color: var(--text-muted); }
 
@@ -162,10 +162,10 @@ details p { padding: 0 12px 14px 13px; color: var(--text-muted); }
 }
 
 /* 번역 전 한국어 원문이 깜빡이지 않게 — applyTranslations가 data-i18n-ready를 붙이면 보인다.
-   이 페이지는 열린 X 탭 확인(최대 3초)을 마친 뒤 번역하므로, 스크립트가 실패해도 3.5초 뒤에는 보이게 되돌린다 */
+   이 페이지는 열린 X 탭 확인(최대 1.5초)을 마친 뒤 번역하므로, 스크립트가 실패해도 2초 뒤에는 보이게 되돌린다 */
 html:not([data-i18n-ready]) body {
   visibility: hidden;
-  animation: bbr-i18n-reveal 0s 3.5s forwards;
+  animation: bbr-i18n-reveal 0s 2s forwards;
 }
 
 @keyframes bbr-i18n-reveal {
