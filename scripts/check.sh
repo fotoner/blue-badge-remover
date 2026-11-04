@@ -64,7 +64,7 @@ if [[ -z "$base" ]]; then
 fi
 changed=()
 if [[ -n "$base" ]]; then
-  while IFS= read -r file; do [[ -n "$file" && -e "$file" ]] && changed+=("$file"); done \
+  while IFS= read -r file; do [[ -n "$file" ]] && changed+=("$file"); done \
     < <( { git diff --name-only "$base"; git ls-files --others --exclude-standard; } | sort -u)
 fi
 echo "기준: ${base:-없음} · 바뀐 파일 ${#changed[@]}개"
@@ -74,6 +74,10 @@ for file in "${changed[@]+"${changed[@]}"}"; do
   case "$file" in
     package.json|package-lock.json|tsconfig*.json|vitest.config.ts|wxt.config.ts|eslint.config.js|playwright.config.ts|scripts/check.sh|.github/*)
       widen="${widen:-설정·검사 스크립트·CI 변경($file)}" ;;
+  esac
+  # 지운 소스는 남은 import를 깨뜨릴 수 있다. 관련 시험으로는 못 찾으므로 넓힌다
+  case "$file" in
+    src/*|entrypoints/*|tests/*|e2e/*|scripts/*) [[ -e "$file" ]] || widen="${widen:-소스 삭제($file)}" ;;
   esac
   case "$file" in
     src/*.ts|entrypoints/*.ts|tests/*.ts|e2e/*.ts) code_files+=("$file") ;;

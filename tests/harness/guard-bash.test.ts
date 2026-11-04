@@ -15,6 +15,9 @@ describe('guard-bash 훅', () => {
     ['git push origin v1.8.2', 'release-tag-push'],
     ['git push origin refs/tags/v1.9.0', 'release-tag-push'],
     ['cd repo && git push -q origin v2.0.0 && echo done', 'release-tag-push'],
+    ['git -C /repo push origin v1.8.2', 'release-tag-push'],
+    ['git push origin "v1.8.2"', 'release-tag-push'],
+    ['git -C /repo push origin main', 'push-main'],
     ['git push --follow-tags origin release/v1.8.2', 'push-all-tags'],
     ['git push origin --tags', 'push-all-tags'],
     ['git push origin main', 'push-main'],
@@ -31,6 +34,7 @@ describe('guard-bash 훅', () => {
 
   it.each([
     'git push origin v1.8.2-test',
+    'git push origin v1.8.2-test && git log main --oneline',
     'git push -u origin release/v1.8.2',
     'git push -u origin feat/121-reload-toast',
     'git push origin fix/main-menu-label',
