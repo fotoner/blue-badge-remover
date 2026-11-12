@@ -116,6 +116,23 @@ describe('extractProfileEntries', () => {
     }]);
   });
 
+  it('legacy가 없는 새 사용자 형식에서도 생성일·팔로워 통계·자기소개를 추출한다 (#131)', () => {
+    // 2026-11 HomeTimeline·TweetDetail 응답의 사용자 객체 모양(값은 지어냄)
+    const response = { data: { tweet_results: { result: { core: { user_results: { result: {
+      __typename: 'User', rest_id: '42', is_blue_verified: true,
+      core: { screen_name: 'NewUser', name: 'New User', created_at: 'Wed Apr 01 00:00:00 +0000 2026' },
+      profile_bio: { description: 'bio', entities: {} },
+      relationship_counts: { followers: 2_000, following: 100 },
+      relationship_perspectives: { following: false },
+    } } } } } } };
+    const users: Array<Record<string, unknown>> = [];
+    findUserObjects(response, users);
+    expect(extractProfileEntries(users)).toEqual([{
+      userId: '42', handle: 'NewUser', displayName: 'New User', bio: 'bio',
+      createdAt: 'Wed Apr 01 00:00:00 +0000 2026', followersCount: 2_000, followingCount: 100,
+    }]);
+  });
+
   it('필수 식별자가 없는 사용자와 잘못된 통계 타입을 안전하게 처리한다', () => {
     expect(extractProfileEntries([{ legacy: { screen_name: 'missing-id' } }])).toEqual([]);
     expect(extractProfileEntries([{
