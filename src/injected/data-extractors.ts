@@ -34,17 +34,20 @@ export function extractProfileEntries(users: Array<Record<string, unknown>>): Pr
     if (typeof userId !== 'string') continue;
     const legacy = user['legacy'] as Record<string, unknown> | null | undefined;
     const core = user['core'] as Record<string, unknown> | null | undefined;
+    // 2026-11 새 형식에는 legacy가 없다 — 생성일은 core, 자기소개는 profile_bio, 통계는 relationship_counts (#131)
+    const profileBio = user['profile_bio'] as Record<string, unknown> | null | undefined;
+    const counts = user['relationship_counts'] as Record<string, unknown> | null | undefined;
     const handle = optionalString(legacy?.['screen_name']) ?? optionalString(core?.['screen_name']);
     if (!handle) continue;
     const profile: ProfileEntry = {
       userId,
       handle,
       displayName: optionalString(legacy?.['name']) ?? optionalString(core?.['name']) ?? '',
-      bio: optionalString(legacy?.['description']) ?? '',
+      bio: optionalString(legacy?.['description']) ?? optionalString(profileBio?.['description']) ?? '',
     };
-    const createdAt = optionalString(legacy?.['created_at']);
-    const followersCount = optionalNumber(legacy?.['followers_count']);
-    const followingCount = optionalNumber(legacy?.['friends_count']);
+    const createdAt = optionalString(legacy?.['created_at']) ?? optionalString(core?.['created_at']);
+    const followersCount = optionalNumber(legacy?.['followers_count']) ?? optionalNumber(counts?.['followers']);
+    const followingCount = optionalNumber(legacy?.['friends_count']) ?? optionalNumber(counts?.['following']);
     if (createdAt !== undefined) profile.createdAt = createdAt;
     if (followersCount !== undefined) profile.followersCount = followersCount;
     if (followingCount !== undefined) profile.followingCount = followingCount;
@@ -64,6 +67,8 @@ export function findUserObjects(obj: unknown, result: Array<Record<string, unkno
       verified_type: record['verified_type'],
       legacy: record['legacy'],
       core: record['core'],
+      profile_bio: record['profile_bio'],
+      relationship_counts: record['relationship_counts'],
       following: record['following'],
       relationship_perspectives: record['relationship_perspectives'],
     });
