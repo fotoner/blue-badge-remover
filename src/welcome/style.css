@@ -1,0 +1,173 @@
+/* 설치 직후 환영 페이지 (#121) — docs/DESIGN.md 토큰을 그대로 쓴다 */
+:root {
+  --bg: #0E1418;
+  --surface-2: #18232B;
+  --surface-3: #21303A;
+  --text-primary: #F5F9FC;
+  --text-secondary: #D7E1E8;
+  --text-muted: #8C9AA5;
+  --accent: #1d9bf0;
+  --accent-soft: rgba(29, 155, 240, 0.14);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'IBM Plex Sans KR', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  background: var(--bg);
+}
+
+.page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 700 11px/1 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.brand img { width: 20px; height: 20px; border-radius: 4px; }
+
+h1 {
+  margin: 14px 0 4px;
+  font: 600 20px/1.35 'Space Grotesk', 'IBM Plex Sans KR', sans-serif;
+  color: var(--text-primary);
+}
+
+.lead { margin-bottom: 24px; color: var(--text-muted); }
+
+/* 단계 — 번호는 counter라 숨긴 단계를 건너뛰고 다시 매긴다 */
+.steps {
+  list-style: none;
+  border-top: 1px solid var(--border-subtle);
+  counter-reset: step;
+}
+
+.step {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  gap: 12px;
+  align-items: start;
+  padding: 16px 12px 16px 13px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.step[hidden] { display: none; }
+
+.step::before {
+  content: counter(step, decimal-leading-zero);
+  font: 500 12px/20px var(--font-mono);
+  color: var(--text-muted);
+}
+
+/* 신호 라인 — 지금 할 단계 */
+.step.now {
+  border-left: 3px solid var(--accent);
+  padding-left: 10px;
+  background: var(--accent-soft);
+}
+
+.step.now::before { color: var(--accent); }
+
+.step h3 {
+  margin-bottom: 2px;
+  font: 600 14px/20px var(--font-body);
+  color: var(--text-primary);
+}
+
+.optional { margin-left: 4px; font-weight: 400; color: var(--text-muted); }
+
+/* border 없는 버튼 — radius 4px */
+button {
+  font: 500 12px/1 var(--font-body);
+  border: 0;
+  border-radius: 4px;
+  padding: 9px 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn-primary { background: var(--accent); color: white; }
+.btn-secondary { background: var(--surface-2); color: var(--text-secondary); }
+.btn-secondary:hover { background: var(--surface-3); }
+button:disabled { cursor: default; background: var(--surface-2); color: var(--text-muted); }
+
+button:focus-visible, summary:focus-visible, a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* FAQ */
+.faq-title {
+  margin: 32px 0 8px;
+  font: 700 11px/1 'Space Grotesk', 'IBM Plex Sans KR', sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+details { border-bottom: 1px solid var(--border-subtle); }
+.faq-title + details { border-top: 1px solid var(--border-subtle); }
+
+summary {
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 12px 12px 13px;
+  font: 500 13px/20px var(--font-body);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+summary::-webkit-details-marker { display: none; }
+/* 펼침 표시는 장식이다 — 스크린리더가 "플러스"로 읽지 않게 대체 텍스트를 비운다 */
+summary::after { content: '+'; content: '+' / ''; font: 400 14px/20px var(--font-mono); color: var(--text-muted); }
+details[open] summary::after { content: '−'; content: '−' / ''; }
+
+details p { padding: 0 12px 14px 13px; color: var(--text-muted); }
+
+.links { display: flex; gap: 16px; margin-top: 20px; font-size: 12px; }
+.links a { color: var(--accent); text-decoration: none; }
+.links a:hover { text-decoration: underline; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .page { padding: 24px 16px 40px; }
+  .step { grid-template-columns: 28px 1fr; }
+  .step button { grid-column: 2; justify-self: start; }
+}
+
+/* 번역 전 한국어 원문이 깜빡이지 않게 — applyTranslations가 data-i18n-ready를 붙이면 보인다.
+   이 페이지는 열린 X 탭 확인(최대 1.5초)을 마친 뒤 번역하므로, 스크립트가 실패해도 2초 뒤에는 보이게 되돌린다 */
+html:not([data-i18n-ready]) body {
+  visibility: hidden;
+  animation: bbr-i18n-reveal 0s 2s forwards;
+}
+
+@keyframes bbr-i18n-reveal {
+  to { visibility: visible; }
+}
