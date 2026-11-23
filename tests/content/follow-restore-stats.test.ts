@@ -106,14 +106,15 @@ async function flushedHiddenCount(): Promise<number> {
   return saved?.totalHidden ?? 0;
 }
 
-describe('팔로우·화이트리스트 변경으로 복원된 트윗은 숨김 통계에서 뺀다 (#142 리뷰 r4 S1-1)', () => {
-  beforeAll(() => {
-    const deps: FollowCollectorDeps = { getCurrentSettings: () => DEFAULT_SETTINGS, setFollowSet, getFollowSet };
-    listenForSettingsChanges(vi.fn());
-    changesListener = mockAddListener.mock.calls[0]![0] as ChangesListener;
-    listenForMessages(deps);
-  });
+// 저장소·메시지 리스너는 파일 전체에서 한 번만 단다 — 어느 시험 묶음만 골라 돌려도 리스너가 있게 한다 (#142 리뷰 r6 S6-3)
+beforeAll(() => {
+  const deps: FollowCollectorDeps = { getCurrentSettings: () => DEFAULT_SETTINGS, setFollowSet, getFollowSet };
+  listenForSettingsChanges(vi.fn());
+  changesListener = mockAddListener.mock.calls[0]![0] as ChangesListener;
+  listenForMessages(deps);
+});
 
+describe('팔로우·화이트리스트 변경으로 복원된 트윗은 숨김 통계에서 뺀다 (#142 리뷰 r4 S1-1)', () => {
   beforeEach(async () => {
     vi.useFakeTimers();
     history.replaceState({}, '', '/home');

@@ -123,16 +123,18 @@ describe('FollowBridge', () => {
       expect(emit).toHaveBeenCalledWith(['alice'], undefined, 'myaccount');
     });
 
-    it('명시적인 팔로우 안 함도 대기 중인 출처 없는 팔로우 목록을 지우지 않는다', () => {
+    // #142 리뷰 r6 S6-2: 오래된 본인 팔로잉 목록이 먼저 나가면 content 쪽이 그 핸들을 최근 팔로우로 표시해,
+    // 뒤이은 팔로우 안 함의 삭제를 건너뛴다. 나중에 확인한 명시적 팔로우 안 함은 앞선 목록에서 그 핸들을 지운다
+    it('뒤이어 들어온 명시적인 팔로우 안 함은 대기 중인 출처 없는 목록에서 그 핸들을 지운다', () => {
       const emit = vi.fn();
       const bridge = new FollowBridge(emit);
 
-      bridge.send(['alice'], undefined);
+      bridge.send(['alice', 'bob'], undefined);
       bridge.send(['alice'], 'api-not-following');
       bridge.markReady('myaccount');
 
       expect(emit.mock.calls).toEqual([
-        [['alice'], undefined, 'myaccount'],
+        [['bob'], undefined, 'myaccount'],
         [['alice'], 'api-not-following', 'myaccount'],
       ]);
     });
