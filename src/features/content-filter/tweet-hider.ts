@@ -285,9 +285,14 @@ function buildHideLabel(context?: HideContext): string {
     case 'fadak':
       label = t('hiddenTweetFadak', currentLanguage, { handle });
       break;
-    case 'retweet':
-      label = t('hiddenTweetRetweet', currentLanguage, { handle, retweetedBy: context.retweetedBy ?? '' });
+    case 'retweet': {
+      // 리트위터 이름을 읽지 못하면 주어가 빈 문구가 되므로 파딱 작성자 문구로 대신한다 (#111)
+      const retweetedBy = context.retweetedBy?.trim();
+      label = retweetedBy
+        ? t('hiddenTweetRetweet', currentLanguage, { handle, retweetedBy })
+        : t('hiddenTweetFadak', currentLanguage, { handle });
       break;
+    }
     case 'quote-entire':
       label = t('hiddenTweetQuoteEntire', currentLanguage, { handle, quotedBy: context.quotedBy ?? '' });
       break;

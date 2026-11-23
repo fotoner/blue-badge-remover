@@ -6,13 +6,16 @@ import { resolve } from 'node:path';
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   extractTweetAuthor,
+  extractDisplayName,
   extractRetweeterHandle,
+  extractRetweeterName,
   findQuoteBlock,
   extractQuoteAuthor,
   findAuthorBadge,
 } from '../../src/content/tweet-processing';
 import { detectBadgeSvg, isBlueBadgeElement } from '@features/badge-detection/svg-fallback';
 import { getAccountHandleFromDOM } from '../../src/content/page-utils';
+import { FOLLOW_BUTTON_SELECTOR, readFollowButton } from '../../src/content/follow-button';
 
 function loadFixture(name: string): void {
   document.body.innerHTML = readFileSync(resolve(process.cwd(), 'tests/fixtures/x-dom', `${name}.html`), 'utf8');
@@ -38,6 +41,14 @@ describe('실측 X DOM 픽스처', () => {
     it('리트위터와 작성자를 구분한다', () => {
       expect(extractRetweeterHandle(tweet())).toBe('user_1');
       expect(extractTweetAuthor(tweet())?.handle).toBe('user_2');
+    });
+
+    it('리트위터 이름은 문구("님이 재게시함")를 빼고 이름 span만 읽는다 (#111)', () => {
+      expect(extractRetweeterName(tweet())).toBe('표시 이름');
+    });
+
+    it('작성자 표시 이름은 User-Name 링크에서 읽는다 (#111)', () => {
+      expect(extractDisplayName(tweet(), 'user_2')).toBe('표시 이름');
     });
 
     it('작성자 배지는 파딱으로, 인용 카드의 금색 배지는 파딱이 아닌 것으로 본다', () => {
@@ -74,6 +85,25 @@ describe('실측 X DOM 픽스처', () => {
     it('인용 카드의 파딱 배지를 작성자 것으로 보지 않는다 (#35)', () => {
       expect(extractTweetAuthor(tweet())?.handle).toBe('user_1');
       expect(findAuthorBadge(tweet())).toBeNull();
+    });
+  });
+
+  // 2026-11-23 한국어 화면 실측. 실제 DOM은 UserCell button 안에 팔로우 button이 중첩되지만 HTML 파서가 펼친다 (#111)
+  describe('사용자 셀의 팔로우 버튼', () => {
+    function followButton(): Element {
+      const button = document.querySelector(FOLLOW_BUTTON_SELECTOR);
+      if (!button) throw new Error('fixture has no follow button');
+      return button;
+    }
+
+    it('팔로우 전 버튼(testid -follow)은 팔로우 중이 아닌 것으로 읽는다', () => {
+      loadFixture('user-cell-follow');
+      expect(readFollowButton(followButton())).toEqual({ handle: 'user_1', following: false });
+    });
+
+    it('팔로잉 목록의 버튼(testid -unfollow)은 팔로우 중으로 읽는다', () => {
+      loadFixture('user-cell-following');
+      expect(readFollowButton(followButton())).toEqual({ handle: 'user_1', following: true });
     });
   });
 });

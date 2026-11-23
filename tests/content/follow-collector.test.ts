@@ -1,5 +1,5 @@
 // tests/content/follow-collector.test.ts
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { browser } from 'wxt/browser';
 import { STORAGE_KEYS, DEFAULT_SETTINGS } from '../../src/shared/constants';
 
@@ -31,6 +31,7 @@ const {
   disconnectFollowObserver,
   getMyHandle,
   isRecentlyFollowed,
+  listenForFollowButtonClicks,
   removeFollowHandle,
   removeFollowHandles,
   resolveAccountSwitchFollows,
@@ -173,6 +174,8 @@ describe('collectFollowsFromDOM - guard: myHandle !== pathUser', () => {
     collectFollowsFromDOM(deps);
 
     const button = document.createElement('button');
+    // 팔로우 상태는 testid 접미사로 판정한다 (#111). 라벨만 있는 버튼은 수집하지 않는다
+    button.setAttribute('data-testid', '1-unfollow');
     button.setAttribute('aria-label', 'Following @Alice');
     document.body.append(button, document.createElement('div'));
     await Promise.resolve();
@@ -191,12 +194,32 @@ describe('collectFollowsFromDOM - guard: myHandle !== pathUser', () => {
     collectFollowsFromDOM(deps);
 
     const button = document.createElement('button');
+    // 팔로우 상태는 testid 접미사로 판정한다 (#111). 라벨만 있는 버튼은 수집하지 않는다
+    button.setAttribute('data-testid', '1-unfollow');
     button.setAttribute('aria-label', 'Following @Alice');
     document.body.appendChild(button);
     await Promise.resolve();
     await vi.advanceTimersByTimeAsync(500);
 
     expect(browser.storage.local.set).not.toHaveBeenCalled();
+  });
+
+  it('일본어 화면의 /following에서도 -unfollow 버튼의 @handle만 수집한다 (손으로 만든 DOM, 실측 아님) (#111)', async () => {
+    for (const key of Object.keys(mockChromeStorage)) delete mockChromeStorage[key];
+    createProfileLink('myhandle');
+    setPath('/myhandle/following');
+    document.body.innerHTML += [
+      '<button data-testid="11-unfollow" aria-label="@Aliceさんをフォロー中"></button>',
+      '<button data-testid="12-unfollow" aria-label="@bob_2さんをフォロー中"></button>',
+      '<button data-testid="13-follow" aria-label="@carolさんをフォロー"></button>',
+      '<button aria-label="Following @dave"></button>',
+    ].join('');
+    deps.getFollowSet = () => new Set<string>();
+
+    collectFollowsFromDOM(deps);
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(deps.setFollowSet).toHaveBeenCalledWith(new Set(['alice', 'bob_2']));
   });
 
   it('disconnect 시 예약된 DOM 수집 타이머도 취소한다', async () => {
@@ -206,6 +229,8 @@ describe('collectFollowsFromDOM - guard: myHandle !== pathUser', () => {
     collectFollowsFromDOM(deps);
 
     const button = document.createElement('button');
+    // 팔로우 상태는 testid 접미사로 판정한다 (#111). 라벨만 있는 버튼은 수집하지 않는다
+    button.setAttribute('data-testid', '1-unfollow');
     button.setAttribute('aria-label', 'Following @Alice');
     document.body.appendChild(button);
     await Promise.resolve();
@@ -422,5 +447,84 @@ describe('saveFollowHandles concurrency (Defect 2)', () => {
     expect(isRecentlyFollowed('FRESH', before + 59_000)).toBe(true);
     expect(isRecentlyFollowed('fresh', Date.now() + 60_000)).toBe(false);
     expect(isRecentlyFollowed('never_saved')).toBe(false);
+  });
+});
+
+// 손으로 만든 DOM이다(실측 아님). testid 규약은 2026-11-23 한국어 화면 실측 픽스처로 고정, 일본어 aria-label 형태는 미실측이다 (#111)
+describe('listenForFollowButtonClicks - 화면 언어와 무관한 판정 (#111)', () => {
+  const followSet = new Set<string>();
+  const onFollowed = vi.fn();
+  const onUnfollowed = vi.fn();
+
+  beforeAll(() => {
+    listenForFollowButtonClicks({
+      getCurrentSettings: () => DEFAULT_SETTINGS,
+      setFollowSet: vi.fn(),
+      getFollowSet: () => followSet,
+      onFollowed,
+      onUnfollowed,
+    });
+  });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+    followSet.clear();
+    document.body.innerHTML = '';
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function addButton(testId: string | null, label: string): HTMLElement {
+    const el = document.createElement('button');
+    if (testId) el.setAttribute('data-testid', testId);
+    el.setAttribute('aria-label', label);
+    el.appendChild(document.createElement('span'));
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function click(el: HTMLElement): void {
+    (el.firstElementChild ?? el).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  }
+
+  it('일본어 화면에서 팔로우 버튼을 누르면 핸들을 소문자로 팔로우 목록에 더하고 알린다', () => {
+    click(addButton('21-follow', '@Aliceさんをフォロー'));
+
+    expect(followSet.has('alice')).toBe(true);
+    expect(onFollowed).toHaveBeenCalledWith('alice');
+  });
+
+  it('일본어 화면에서 언팔로우하면 지연 뒤 같은 버튼 testid가 -follow로 바뀐 것을 보고 알린다', async () => {
+    followSet.add('alice');
+    const button = addButton('21-unfollow', '@Aliceさんをフォロー中');
+    click(button);
+
+    button.setAttribute('data-testid', '21-follow');
+    button.setAttribute('aria-label', '@Aliceさんをフォロー');
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(followSet.has('alice')).toBe(false);
+    expect(onUnfollowed).toHaveBeenCalledWith('alice');
+  });
+
+  it('언팔로우 확인을 취소해 testid가 -unfollow 그대로면 팔로우 목록을 유지한다', async () => {
+    followSet.add('alice');
+    click(addButton('21-unfollow', '@Aliceさんをフォロー中'));
+
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(followSet.has('alice')).toBe(true);
+    expect(onUnfollowed).not.toHaveBeenCalled();
+  });
+
+  it('testid가 없는 버튼은 라벨이 "Follow @alice"여도 판정하지 않는다 (화면 문구로 되돌아가지 않음)', () => {
+    click(addButton(null, 'Follow @alice'));
+    click(addButton(null, '팔로우 @alice'));
+
+    expect(followSet.size).toBe(0);
+    expect(onFollowed).not.toHaveBeenCalled();
   });
 });

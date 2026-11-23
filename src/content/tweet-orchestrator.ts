@@ -87,11 +87,17 @@ function getRetweeterContext(
   };
 }
 
+/** 접힘 문구에 쓸 리트위터 이름. 이름 span을 못 읽으면 화면 언어와 무관한 핸들(@handle)로 대신한다 (#111) */
+function retweeterLabel(tweetEl: HTMLElement, retweeter: RetweeterContext): string | undefined {
+  if (!retweeter.isRetweet) return undefined;
+  return extractRetweeterName(tweetEl) ?? (retweeter.handle ? `@${retweeter.handle}` : undefined);
+}
+
 function applyTweetResult(
   tweetEl: HTMLElement,
   result: ClassifyResult,
   handle: string,
-  isRetweet: boolean,
+  retweeter: RetweeterContext,
   statusPath: string | null,
   settings: ReturnType<typeof getSettings>,
 ): boolean {
@@ -100,11 +106,10 @@ function applyTweetResult(
     return false;
   }
   if (result.action !== 'hide') return false;
-  const retweeterName = isRetweet ? (extractRetweeterName(tweetEl) ?? '') : undefined;
   const context = {
     reason: result.reason ?? 'fadak',
     handle: `@${handle}`,
-    retweetedBy: retweeterName || undefined,
+    retweetedBy: retweeterLabel(tweetEl, retweeter),
     category: result.category,
     matchedRule: result.matchedRule,
     onWhitelist: () => addToWhitelist(`@${handle}`),
@@ -156,7 +161,7 @@ export function processTweet(tweetEl: HTMLElement): void {
     pageType: getPageType(),
     isDetailAuthor,
   });
-  const authorHidden = applyTweetResult(tweetEl, result, handle, retweeter.isRetweet, statusPath, settings);
+  const authorHidden = applyTweetResult(tweetEl, result, handle, retweeter, statusPath, settings);
   let quoteHidden = false;
   if (settings.enabled) {
     quoteHidden = processQuoteBlock(tweetEl, { handle, inFollow, isDetailAuthor }, retweeter.exempt, settings, userLabel, statusPath);

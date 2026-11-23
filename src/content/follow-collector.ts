@@ -3,6 +3,7 @@ import { browser } from 'wxt/browser';
 import { STORAGE_KEYS, TIMINGS } from '@shared/constants';
 import type { Settings } from '@shared/types';
 import { logger } from '@shared/utils/logger';
+import { FOLLOW_BUTTON_SELECTOR, readFollowButton, readFollowState } from './follow-button';
 import { getAccountHandleFromDOM } from './page-utils';
 
 export interface FollowCollectorDeps {
@@ -164,14 +165,12 @@ async function doRemoveFollowHandles(
   if (settings.debugMode) logger.info('Follow handles removed', { count: targets.size, totalCount: filtered.length });
 }
 
+// 팔로우 중(-unfollow) 버튼의 핸들만 모은다. 화면 문구가 아니라 testid로 판정한다 (#111)
 function extractHandlesFromDOM(): string[] {
   const handles: string[] = [];
-  document.querySelectorAll('button[aria-label]').forEach((btn) => {
-    const label = btn.getAttribute('aria-label') ?? '';
-    const match = label.match(/팔로잉\s*@(\S+)/i) ?? label.match(/Following\s*@(\S+)/i);
-    if (match?.[1]) {
-      handles.push(match[1].toLowerCase());
-    }
+  document.querySelectorAll(FOLLOW_BUTTON_SELECTOR).forEach((btn) => {
+    const state = readFollowButton(btn);
+    if (state?.following) handles.push(state.handle.toLowerCase());
   });
   return handles;
 }
@@ -243,16 +242,15 @@ export function disconnectFollowObserver(): void {
 
 export function listenForFollowButtonClicks(deps: FollowCollectorDeps): void {
   document.addEventListener('click', (e) => {
-    const target = e.target as HTMLElement;
-    const button = target.closest('button[aria-label]');
-    if (!button) return;
-    const label = button.getAttribute('aria-label') ?? '';
+    // 화면 언어와 무관하게 testid 접미사로 판정한다. testid가 없는 버튼은 판정하지 않는다 (#111)
+    const button = (e.target as Element).closest(FOLLOW_BUTTON_SELECTOR);
+    const state = button ? readFollowButton(button) : null;
+    if (!button || !state) return;
+    const handle = state.handle.toLowerCase();
     const followSet = deps.getFollowSet?.() ?? new Set<string>();
 
-    // 팔로우: "팔로우 @handle" / "Follow @handle"
-    const followMatch = label.match(/^(?:팔로우|Follow)\s+@(\S+)$/i);
-    if (followMatch?.[1]) {
-      const handle = followMatch[1].toLowerCase();
+    // 클릭 시점이 아직 팔로우 전(-follow)이면 이 클릭이 팔로우다
+    if (!state.following) {
       if (!followSet.has(handle)) {
         followSet.add(handle);
         void saveFollowHandles([handle], deps);
@@ -261,18 +259,13 @@ export function listenForFollowButtonClicks(deps: FollowCollectorDeps): void {
       return;
     }
 
-    // 언팔: "팔로잉 @handle" / "Following @handle"
-    const unfollowMatch = label.match(/^(?:팔로잉|Following)\s+@(\S+)$/i);
-    if (unfollowMatch?.[1]) {
-      const handle = unfollowMatch[1].toLowerCase();
-      setTimeout(() => {
-        const updatedLabel = button.getAttribute('aria-label') ?? '';
-        if (/^(?:팔로우|Follow)\s+@/i.test(updatedLabel)) {
-          followSet.delete(handle);
-          void removeFollowHandle(handle, deps);
-          deps.onUnfollowed?.(handle);
-        }
-      }, TIMINGS.UNFOLLOW_DETECT_DELAY);
-    }
+    // 팔로우 중(-unfollow)에서 눌렀다. 확인을 마치면 같은 버튼 testid가 -follow로 바뀐다
+    setTimeout(() => {
+      if (readFollowState(button) === false) {
+        followSet.delete(handle);
+        void removeFollowHandle(handle, deps);
+        deps.onUnfollowed?.(handle);
+      }
+    }, TIMINGS.UNFOLLOW_DETECT_DELAY);
   }, true);
 }
