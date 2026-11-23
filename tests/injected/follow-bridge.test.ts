@@ -139,4 +139,31 @@ describe('FollowBridge', () => {
       ]);
     });
   });
+
+  // #142 리뷰 r7 S7-2: 초기 데이터처럼 먼저 도착한 값보다 오래된 출처는 대기열에 이미 있는 핸들을 건드리지 않는다
+  describe('대기열에 없는 핸들만 더하기 (#142 리뷰 r7 S7-2)', () => {
+    it('계정 확정 전에는 어느 출처로든 대기 중인 핸들을 빼고 나머지만 쌓는다', () => {
+      const emit = vi.fn();
+      const bridge = new FollowBridge(emit);
+
+      bridge.send(['alice'], undefined);
+      bridge.sendIfUnqueued(['Alice', 'carol'], 'api-not-following');
+      bridge.markReady('myaccount');
+
+      expect(emit.mock.calls).toEqual([
+        [['alice'], undefined, 'myaccount'],
+        [['carol'], 'api-not-following', 'myaccount'],
+      ]);
+    });
+
+    it('계정이 확정된 뒤에는 그대로 바로 보낸다', () => {
+      const emit = vi.fn();
+      const bridge = new FollowBridge(emit);
+      bridge.markReady('myaccount');
+
+      bridge.sendIfUnqueued(['alice'], 'api-timeline');
+
+      expect(emit).toHaveBeenCalledWith(['alice'], 'api-timeline', 'myaccount');
+    });
+  });
 });

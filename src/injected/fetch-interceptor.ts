@@ -242,10 +242,12 @@ function postTimelineFollowData(
     );
   }
   // 팔로우 안 함으로 확인된 핸들도 보내 오염된 목록을 정리한다 — content 측은 followSet에 있는 것만 지운다
-  followBridge.send(notFollowing, 'api-not-following', account);
+  // 초기 데이터는 대기열에 이미 있는 핸들을 건드리지 않는다 (#142 리뷰 r7 S7-2)
+  const send = fromInitialData ? followBridge.sendIfUnqueued.bind(followBridge) : followBridge.send.bind(followBridge);
+  send(notFollowing, 'api-not-following', account);
   if (handles.length === 0) return;
   fiberFollowObserver.markReported(handles);
-  followBridge.send(handles, 'api-timeline', account);
+  send(handles, 'api-timeline', account);
 }
 
 // extractViewerUserId / findViewerId 제거됨 — 수신 리스너 없는 죽은 코드

@@ -375,6 +375,24 @@ describe('fetch-interceptor — 준비 전에 같은 사용자의 값이 거듭 
     expect(profilesOf('Same_Fadak')).toEqual([{ userId: '11', handle: 'Same_Fadak', displayName: '파딱', bio: '새 소개', followersCount: 7 }]);
   });
 
+  // #142 리뷰 r7 S7-2: 본인 팔로잉 목록 응답의 사용자 객체에는 팔로우 여부 필드가 없을 수 있다. 그래도 목록이 먼저 왔으면 초기 데이터가 지우지 않는다
+  it('S7-2: DOM 준비 전 팔로잉 목록 응답에 든 핸들은 초기 데이터의 팔로우 안 함이 지우지 않는다', async () => {
+    setInitialData(userNode({ relationship_perspectives: { following: false } }));
+    const readyState = vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
+    await loadInterceptor({ data: { user: { entries: [{ user_results: { result: { core: { screen_name: 'Same_Fadak' } } } }] } } });
+    await callFetch('https://api.x.com/graphql/hash123/Following');
+    readyState.mockReturnValue('interactive');
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+
+    contentReady('my_handle');
+
+    const listed = messagesOf('BBR_FOLLOW_DATA')
+      .filter((message) => message['source'] === undefined)
+      .flatMap((message) => message['handles'] as string[]);
+    expect(listed).toEqual(['same_fadak']);
+    expect(followMessages('api-not-following')).toEqual([]);
+  });
+
   it('S5-1: 응답으로 받지 않은 사용자는 초기 데이터에서 그대로 읽는다', async () => {
     setInitialData({ ...userNode({ relationship_perspectives: { following: true } }), rest_id: '13', core: { name: '처음', screen_name: 'Only_Initial' } });
     const readyState = vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
