@@ -8,15 +8,16 @@ import { logger } from '@shared/utils/logger';
 import { showFadakProfileBanner, showFadakDetailBanner, removeFadakBanner } from './fadak-banner';
 import { listenForNavigation, setOnNavigate } from './navigation';
 import { collectFollowsFromDOM, disconnectFollowObserver, listenForFollowButtonClicks, getMyHandle, switchFollowAccount } from './follow-collector';
-import { isProfilePage, getAccountHandleFromDOM } from './page-utils';
+import { isProfilePage, getAccountHandle } from './page-utils';
 import { observeSettingsShortcut } from './settings-shortcut';
 import { setSettings, setFollowSet, setWhitelistSet, setProtectedKeywords, setCurrentUserHandle, getSettings, getFollowSet, getProtectedKeywords, getCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, isCurrentUserHandle, profileCache, collectorBuffer } from './state';
 import { flushCollector } from './collector-buffer';
 import { loadFilterRules } from './filter-pipeline';
 import { processTweet, restoreHiddenTweets, reprocessExistingTweets, applyCurrentUserFallback } from './tweet-orchestrator';
-import { listenForMessages, reprocessTweetsByHandles, scheduleFollowReprocess } from './message-handler';
+import { listenForMessages, listenForViewerHandle, reprocessTweetsByHandles, scheduleFollowReprocess } from './message-handler';
 import { listenForSettingsChanges } from './storage-listener';
 import { listenForReloadProbe } from './reload-probe';
+import { resetFollowGrace } from './follow-grace';
 import { startStatsFlush, flushStats, setOnFlush } from '@features/stats';
 import { checkMilestone } from './milestone-banner';
 import { HoverCardObserver, mergeHoverCardBio, shouldObserveHoverCards } from './hover-card-observer';
@@ -25,6 +26,8 @@ let feedObserver: FeedObserver;
 let accountSwitchTimerId: ReturnType<typeof setInterval> | null = null;
 let collectorFlushTimerId: ReturnType<typeof setInterval> | null = null;
 let contentReadyAccount: string | null = null;
+// 초기 계정 판정(loadInitialAccountState)이 끝났는지. 그 전에 온 힌트는 그 판정이 getAccountHandle로 직접 읽는다 (#142)
+let initialAccountSettled = false;
 const hoverCardObserver = new HoverCardObserver(handleHoverCardBio);
 
 function setDebugFlag(enabled: boolean): void {
@@ -50,13 +53,16 @@ const followCollectorDeps = {
 };
 
 async function detectAndHandleAccountSwitch(): Promise<boolean> {
-  const currentHandle = getAccountHandleFromDOM();
+  const currentHandle = getAccountHandle();
   if (!currentHandle) return false;
 
-  const switched = await switchFollowAccount(currentHandle);
+  // 저장소가 이미 이 계정이어도 이 탭의 메모리 계정이 다르면 따라간다. 다른 탭이 먼저 계정을 저장하면 이 탭에 이전 계정이 남는다 (#142)
+  const switched = await switchFollowAccount(currentHandle, getCurrentUserHandle());
   if (switched) {
     setFollowSet(new Set(switched.follows));
     setCurrentUserHandle(currentHandle);
+    // 이전 계정이 있다가 바뀐 것이면 새 계정의 첫 방문으로 다시 센다. 계정을 처음 알게 된 경우는 이미 돌고 있는 유예를 이어 간다 (#142)
+    if (switched.from) resetFollowGrace();
     const settings = getSettings();
     if (settings.debugMode) logger.info('Account switched', { from: switched.from, to: currentHandle, cachedFollows: switched.follows.length });
     restoreHiddenTweets();
@@ -75,11 +81,23 @@ function signalContentReady(): void {
   window.postMessage({ type: MESSAGE_TYPES.CONTENT_READY, account }, window.location.origin);
 }
 
+// xweb: MAIN world가 초기 데이터의 본인 계정을 알려 주면 그 값으로 계정을 판정한다 (#142)
+// 초기 계정 판정 전에 온 힌트는 여기서 다루지 않는다. 판정이 힌트를 직접 읽고 끝에서 바로 준비 신호를 보낸다.
+function handleViewerHandle(): void {
+  if (!initialAccountSettled) return;
+  void detectAndHandleAccountSwitch().then(() => signalContentReady());
+}
+
+// 계정을 아직 못 찾았으면 메시지 수신 시작을 MAIN world에 알린다. 힌트가 아직 없을 때의 대체 경로다 — MAIN world가 본인 계정을 다시 보낸다 (#142)
+function announceListening(): void {
+  window.postMessage({ type: MESSAGE_TYPES.CONTENT_READY }, window.location.origin);
+}
+
 function startAccountSwitchWatcher(): void {
   if (accountSwitchTimerId !== null) clearInterval(accountSwitchTimerId);
-  let lastHandle = getAccountHandleFromDOM();
+  let lastHandle = getAccountHandle();
   accountSwitchTimerId = setInterval(() => {
-    const handle = getAccountHandleFromDOM();
+    const handle = getAccountHandle();
     if (handle && handle !== lastHandle) {
       lastHandle = handle;
       void detectAndHandleAccountSwitch().then(() => signalContentReady());
@@ -161,12 +179,15 @@ async function finishInitialSetup(): Promise<void> {
 
 async function init(): Promise<void> {
   listenForReloadProbe();
+  // 비동기 대기보다 앞에서 등록한다. MAIN world가 DOM 준비 때 보낸 본인 계정 힌트를 초기 계정 판정 전에 받기 위해서다 (#142)
+  listenForViewerHandle(handleViewerHandle);
   // 화이트리스트는 저장소에서 바로 읽는다. background 응답을 기다리면 background가 응답하지 않을 때(예: iOS Orion 제보) 숨김이 시작되지 않는다 (#135)
   const [settings, whitelist] = await Promise.all([loadSettings(), getStoredWhitelist()]);
   setSettings(settings);
   await loadFilterRules();
 
   const accountResolved = await loadInitialAccountState(whitelist);
+  initialAccountSettled = true;
 
   setTweetHiderLanguage(settings.language);
   setDebugFlag(settings.debugMode);
@@ -181,6 +202,7 @@ async function init(): Promise<void> {
   });
 
   if (accountResolved) signalContentReady();
+  else announceListening();
 
   feedObserver = new FeedObserver(processTweet);
   startObserving();

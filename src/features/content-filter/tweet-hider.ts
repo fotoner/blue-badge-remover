@@ -143,7 +143,8 @@ export function showExpandedTweet(
 }
 
 function insertExpandedActions(element: HTMLElement, actions: HTMLDivElement): void {
-  const replyButton = element.querySelector('[data-testid="reply"]');
+  // 새 웹 앱(xweb)의 반응 버튼은 testid 없이 data-engagement-action이다 (#142)
+  const replyButton = element.querySelector('[data-testid="reply"], [data-engagement-action="reply"]');
   const nativeActions = replyButton?.closest<HTMLElement>('[role="group"]');
   if (nativeActions) {
     nativeActions.insertAdjacentElement('beforebegin', actions);

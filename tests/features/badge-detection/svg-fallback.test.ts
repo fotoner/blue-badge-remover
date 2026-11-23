@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectBadgeSvg } from '@features/badge-detection/svg-fallback';
+import { detectBadgeSvg, isBlueBadgeElement } from '@features/badge-detection/svg-fallback';
 
 /** 현행 detectBadgeSvg 로직 (2026-04 기준):
  *  linearGradient 없음 + path 1개 + fill 속성 없음 = 파딱(true)
@@ -81,5 +81,49 @@ describe('detectBadgeSvg', () => {
       <g><path d="M20 11Z"></path><path d="M11 1Z"></path></g>
     </svg>`;
     expect(detectBadgeSvg(el)).toBe(false);
+  });
+});
+
+// xweb(2026-11-23 실측): 배지는 path 모양이 아니라 심볼 이름(use[href])으로 종류를 가른다 (#142)
+describe('xweb 배지 심볼', () => {
+  function xwebBadge(symbol: string): string {
+    return `<span role="button"><svg viewBox="0 0 24 24" role="img"><use href="#icon-verified-${symbol}"></use></svg></span>`;
+  }
+
+  it.each([
+    ['premium-color', true],
+    ['business-color', false],
+    ['government-color', false],
+    ['unknown-future-color', false],
+  ])('use 요소 #icon-verified-%s → 파딱 %s', (symbol, expected) => {
+    const host = document.createElement('div');
+    host.innerHTML = xwebBadge(symbol);
+    const use = host.querySelector('use');
+    if (!use) throw new Error('badge use element missing');
+
+    expect(isBlueBadgeElement(use)).toBe(expected);
+  });
+
+  it('svg 요소를 받아도 안의 심볼로 판정한다', () => {
+    const host = document.createElement('div');
+    host.innerHTML = xwebBadge('premium-color');
+
+    expect(isBlueBadgeElement(host.querySelector('svg') as Element)).toBe(true);
+  });
+
+  it('detectBadgeSvg는 요소 안 xweb 파딱 배지를 찾는다', () => {
+    const host = document.createElement('div');
+    host.innerHTML = xwebBadge('premium-color');
+    expect(detectBadgeSvg(host)).toBe(true);
+
+    host.innerHTML = xwebBadge('business-color');
+    expect(detectBadgeSvg(host)).toBe(false);
+  });
+
+  it('배지가 없는 요소는 파딱이 아니다', () => {
+    const host = document.createElement('div');
+    host.innerHTML = '<svg viewBox="0 0 24 24"><use href="#icon-reply"></use></svg>';
+
+    expect(detectBadgeSvg(host)).toBe(false);
   });
 });

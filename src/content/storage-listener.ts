@@ -115,6 +115,7 @@ function handleFollowListChange(newFollowList: string[], oldFollowList: string[]
 
 function handleWhitelistChange(newWhitelist: string[]): void {
   setWhitelistSet(new Set(newWhitelist.map((h) => h.toLowerCase())));
-  restoreHiddenTweets();
+  // 화이트리스트로 복원된 트윗은 숨김 통계에서 뺀다. 계속 숨기는 트윗은 재판정이 다시 센다 (#142 리뷰 r4 S1-1)
+  restoreHiddenTweets({ uncountHides: true });
   reprocessExistingTweets();
 }

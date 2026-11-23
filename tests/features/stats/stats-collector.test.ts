@@ -42,7 +42,7 @@ vi.mock('@features/stats/stats-storage', () => ({
   incrementTotal: (...args: unknown[]) => mockIncrementTotal(...args),
 }));
 
-const { recordHide, flushStats, setOnFlush } = await import('@features/stats/stats-collector');
+const { recordHide, unrecordHide, flushStats, setOnFlush } = await import('@features/stats/stats-collector');
 
 function makeElement(): HTMLElement {
   const el = document.createElement('div');
@@ -143,6 +143,105 @@ describe('recordHide', () => {
     expect(mockSaveDayStats).toHaveBeenCalledWith(
       expect.objectContaining({ totalHidden: 5002 }),
     );
+  });
+});
+
+// #142 리뷰 r4 S1-1: 팔로우·화이트리스트 변경으로 복원된 트윗은 아직 저장소로 흘려보내지 않은 집계 버퍼에서 한 건 되돌린다
+describe('unrecordHide', () => {
+  const dayWith = (totalHidden: number) => ({ date: '2026-04-05', totalHidden, totalShown: 0, byCategory: {}, byPack: {} });
+
+  it('flush 전에 되돌리면 집계에서 빠진다', async () => {
+    const el = makeElement();
+    recordHide(el, 'spam', 'pack-a', '/undo/status/301');
+
+    unrecordHide(el, '/undo/status/301');
+    await flushStats();
+
+    expect(mockSaveDayStats).not.toHaveBeenCalled();
+  });
+
+  it('그 트윗 한 건만 되돌리고 분류·팩 집계도 함께 줄인다', async () => {
+    recordHide(makeElement(), 'spam', 'pack-a', '/undo/status/311');
+    const second = makeElement();
+    recordHide(second, 'spam', 'pack-a', '/undo/status/312');
+    recordHide(makeElement(), 'politics', undefined, '/undo/status/313');
+
+    unrecordHide(second, '/undo/status/312');
+    await flushStats();
+
+    expect(mockSaveDayStats).toHaveBeenCalledWith(expect.objectContaining({
+      totalHidden: 2,
+      byCategory: { spam: 1, politics: 1 },
+      byPack: { 'pack-a': 1 },
+    }));
+  });
+
+  it('statusPath 없이 요소로 센 숨김도 되돌린다', async () => {
+    const el = makeElement();
+    recordHide(el);
+    expect(el.hasAttribute('data-bbr-counted')).toBe(true);
+
+    unrecordHide(el);
+    await flushStats();
+
+    expect(mockSaveDayStats).not.toHaveBeenCalled();
+    expect(el.hasAttribute('data-bbr-counted')).toBe(false);
+  });
+
+  it('재활용된 DOM 노드로 불러도 같은 statusPath의 집계를 되돌린다', async () => {
+    recordHide(makeElement(), undefined, undefined, '/undo/status/321');
+
+    unrecordHide(makeElement(), '/undo/status/321');
+    await flushStats();
+
+    expect(mockSaveDayStats).not.toHaveBeenCalled();
+  });
+
+  it('되돌린 뒤 같은 트윗이 다시 숨겨지면 다시 센다', async () => {
+    const el = makeElement();
+    recordHide(el, 'spam', undefined, '/undo/status/331');
+    unrecordHide(el, '/undo/status/331');
+
+    recordHide(el, 'spam', undefined, '/undo/status/331');
+    await flushStats();
+
+    expect(mockSaveDayStats).toHaveBeenCalledWith(expect.objectContaining({ totalHidden: 1 }));
+  });
+
+  it('센 적 없는 트윗은 아무것도 바꾸지 않는다', async () => {
+    unrecordHide(makeElement(), '/undo/status/341');
+    await flushStats();
+
+    expect(mockSaveDayStats).not.toHaveBeenCalled();
+  });
+
+  it('이미 저장소로 흘려보낸 숨김은 건드리지 않고 이후 집계도 음수로 만들지 않는다', async () => {
+    // flush마다 새 일별 객체를 돌려줘야 앞 flush가 병합한 값이 다음 flush에 남지 않는다
+    mockGetTodayStats.mockImplementation(async () => dayWith(0));
+    const el = makeElement();
+    recordHide(el, 'spam', undefined, '/undo/status/351');
+    await flushStats();
+    mockSaveDayStats.mockClear();
+
+    unrecordHide(el, '/undo/status/351');
+    recordHide(makeElement(), 'spam', undefined, '/undo/status/352');
+    await flushStats();
+
+    expect(mockSaveDayStats).toHaveBeenCalledTimes(1);
+    expect(mockSaveDayStats).toHaveBeenCalledWith(expect.objectContaining({ totalHidden: 1 }));
+  });
+
+  it('저장에 실패해 버퍼로 되돌아온 숨김은 다시 되돌릴 수 있다', async () => {
+    mockGetTodayStats.mockResolvedValue(dayWith(0));
+    mockSaveDayStats.mockRejectedValueOnce(new Error('quota'));
+    const el = makeElement();
+    recordHide(el, 'spam', undefined, '/undo/status/361');
+    await flushStats();
+
+    unrecordHide(el, '/undo/status/361');
+    await flushStats();
+
+    expect(mockSaveDayStats).toHaveBeenCalledTimes(1);
   });
 });
 

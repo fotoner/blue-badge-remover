@@ -34,6 +34,9 @@ src/
 │   ├── tweet-orchestrator.ts processTweet + 숨김/표시
 │   ├── tweet-classifier.ts   순수 함수 판정 로직
 │   ├── tweet-processing.ts   트윗 DOM 데이터 추출
+│   ├── xweb-dom.ts           새 웹 앱(xweb) 트윗 DOM 읽기 (작성자·배지·인용·상태 경로·본문, #142)
+│   ├── follow-grace.ts       xweb 첫 방문 숨김 유예 상태·타이머 (작성자의 팔로우 여부를 알 때까지, 최대 2초, #142)
+│   ├── tweet-rejudge.ts      팔로우·화이트리스트 변경 재판정 대상(<main> 밖 숨긴 트윗 포함)·복원 시 숨김 통계 되돌림 (#142)
 │   ├── follow-collector.ts   DOM 팔로우 수집
 │   ├── hover-card-observer.ts 호버 카드 바이오 수집
 │   ├── filter-pipeline.ts    필터 규칙 로드 (내장+커스텀+팩 병합)
@@ -61,10 +64,10 @@ src/
 │   └── i18n/                 다국어 (ko/en/ja, 키는 세 언어가 같다)
 ├── popup/ dashboard/ options/ whitelist/ collector/   화면별 로직·스타일 (HTML은 entrypoints/)
 └── injected/
-    ├── fetch-interceptor.ts      MAIN world에서 X API fetch/XHR 인터셉트
+    ├── fetch-interceptor.ts      MAIN world에서 X API fetch/XHR 인터셉트 (xweb은 첫 화면 데이터의 사용자·본인 계정도 읽음)
     ├── data-extractors.ts        API 응답 데이터 추출
     ├── fiber-follow-observer.ts  React fiber 팔로우 감지
-    ├── follow-bridge.ts          팔로우 핸들 큐잉 (계정 확정 후 전송)
+    ├── follow-bridge.ts          팔로우 핸들 큐잉 (계정 확정 후 전송, 준비 전에는 같은 핸들의 나중 값이 앞선 값을 대체)
     ├── profile-batches.ts        프로필 메시지 배치 분할
     └── main-world-start.ts       MAIN world 시작 시점 기록 (늦게 들어왔는지 판별)
 ```

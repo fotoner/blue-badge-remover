@@ -529,6 +529,16 @@ describe('extractTweetText', () => {
     const el = html(`<article><div>다른 내용</div></article>`);
     expect(extractTweetText(el)).toBe('');
   });
+
+  // 기존 앱의 미디어만 있는 트윗에는 tweetText가 없다. 작성자 영역의 div[dir="auto"](표시 이름)를 본문으로 읽지 않는다 (#142)
+  it('기존 앱 트윗은 tweetText가 없으면 표시 이름이 있어도 빈 문자열', () => {
+    const el = html(`
+      <article data-testid="tweet">
+        <div data-testid="User-Name"><a href="/alice" role="link"><div dir="auto"><span>표시 이름</span></div></a></div>
+      </article>
+    `);
+    expect(extractTweetText(el)).toBe('');
+  });
 });
 
 // --- extractDisplayName ---

@@ -1,4 +1,8 @@
+import { XWEB_BADGE_SELECTOR } from '@shared/constants';
+
 const VERIFIED_BADGE_SELECTOR = '[data-testid="icon-verified"]';
+// 새 웹 앱(xweb, 2026-11-23 실측): 배지는 path 모양이 아니라 svg > use의 심볼 이름으로 종류를 가른다 (#142)
+const XWEB_PREMIUM_BADGE_HREF = '#icon-verified-premium-color';
 
 /**
  * SVG 폴백: 트윗 요소 내 뱃지를 확인하여 파딱(파란 뱃지) 여부를 반환.
@@ -12,16 +16,20 @@ const VERIFIED_BADGE_SELECTOR = '[data-testid="icon-verified"]';
  * getComputedStyle 호출하지 않음 (reflow 방지).
  */
 export function detectBadgeSvg(tweetElement: Element): boolean {
-  const badge = tweetElement.querySelector(VERIFIED_BADGE_SELECTOR);
+  const badge = tweetElement.querySelector(`${VERIFIED_BADGE_SELECTOR}, ${XWEB_BADGE_SELECTOR}`);
   return badge !== null && isBlueBadgeElement(badge);
 }
 
 /**
- * [data-testid="icon-verified"] 요소를 직접 받아 파딱 여부 판정.
+ * [data-testid="icon-verified"] 요소(xweb은 use[href^="#icon-verified-"] 또는 그 svg)를 직접 받아 파딱 여부 판정.
  * 호출자가 이미 뱃지를 스코프/탐색해 둔 경우 사용 (예: 작성자 영역 한정 판정).
  */
 export function isBlueBadgeElement(badge: Element): boolean {
   const svg = badge.closest('svg') ?? badge;
+
+  // xweb: 심볼 이름이 파딱(premium)일 때만 파딱. business·government 등 다른 심볼은 모두 아니다 (#142)
+  const xwebUse = badge.matches(XWEB_BADGE_SELECTOR) ? badge : svg.querySelector(XWEB_BADGE_SELECTOR);
+  if (xwebUse) return xwebUse.getAttribute('href') === XWEB_PREMIUM_BADGE_HREF;
 
   // 금딱/회딱: linearGradient 있으면 즉시 false
   if (svg.querySelector('linearGradient')) return false;

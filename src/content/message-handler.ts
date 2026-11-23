@@ -1,10 +1,12 @@
 // src/content/message-handler.ts
 // MAIN world(fetch-interceptor)에서 postMessage로 전달되는 데이터 수신 처리.
-import { MESSAGE_TYPES, X_HANDLE_PATTERN } from '@shared/constants';
+import { MESSAGE_TYPES, TWEET_ARTICLE_SELECTOR, X_HANDLE_PATTERN } from '@shared/constants';
 import { logger } from '@shared/utils/logger';
-import { profileCache, collectorBuffer, getSettings, getFollowSet, getProtectedKeywords, getCurrentUserHandle } from './state';
+import { profileCache, collectorBuffer, getSettings, getFollowSet, getProtectedKeywords, getCurrentUserHandle, getViewerHandleHint, setViewerHandleHint } from './state';
 import { extractRetweeterHandle, extractTweetAuthor, findQuoteBlock, extractQuoteAuthor } from './tweet-processing';
-import { processTweet } from './tweet-orchestrator';
+import { processTweet, rejudgeTweets } from './tweet-orchestrator';
+import { markFollowKnown } from './follow-grace';
+import { collectTweetsToRejudge, uncountHiddenTweet } from './tweet-rejudge';
 import { saveFollowHandles, removeFollowHandles, isRecentlyFollowed, getMyHandle, type FollowCollectorDeps } from './follow-collector';
 import { removeFadakBanner } from './fadak-banner';
 import type { ProfileInfo } from '@shared/types';
@@ -61,11 +63,13 @@ function isAffectedByHandles(tweet: HTMLElement, author: string, handles: Set<st
 
 export function reprocessTweetsByHandles(handles: Set<string>): void {
   const settings = getSettings();
-  const feed = document.querySelector('main') ?? document.body;
-  feed.querySelectorAll<HTMLElement>('article[data-testid="tweet"]').forEach((tweet) => {
+  // <main> 안뿐 아니라 문서 전체의 숨긴 트윗도 다시 판정한다. 시한에 숨긴 <main> 밖(대화상자) 트윗도 늦은 팔로우 응답으로 복원된다 (#142 리뷰 r4 S4-3)
+  collectTweetsToRejudge().forEach((tweet) => {
     const author = extractTweetAuthor(tweet)?.handle.toLowerCase();
     if (!author || !isAffectedByHandles(tweet, author, handles)) return;
     tweet.querySelector('[data-bbr-debug]')?.remove();
+    // 복원되면 숨김 통계에서 빠진 채로 남고, 계속 숨기면 processTweet이 다시 센다 (#142 리뷰 r4 S1-1)
+    uncountHiddenTweet(tweet);
     try {
       processTweet(tweet);
     } catch (error) {
@@ -140,6 +144,33 @@ function isFollowDataPayload(data: unknown): data is { handles: unknown[]; accou
     && (source === undefined || source === 'inline' || source === 'api-timeline' || source === 'api-not-following');
 }
 
+/**
+ * MAIN world가 xweb 초기 데이터에서 읽어 보낸 본인 계정 핸들 (#142). 형식이 맞을 때만 힌트로 받는다(CNT-7).
+ * 값이 바뀐 경우에만 true — 같은 값이 다시 오면 계정 판정을 다시 돌리지 않는다.
+ */
+function acceptViewerHandle(data: unknown): boolean {
+  const handle = (data as Record<string, unknown> | null)?.['handle'];
+  if (typeof handle !== 'string' || !X_HANDLE_PATTERN.test(handle)) return false;
+  const normalized = handle.toLowerCase();
+  if (getViewerHandleHint() === normalized) return false;
+  setViewerHandleHint(normalized);
+  return true;
+}
+
+/**
+ * 본인 계정 힌트만 받는 리스너 (#142). init의 첫 await보다 앞에서 등록한다 —
+ * MAIN world가 DOM 준비 때 보낸 힌트를 초기 계정 판정 전에 받아야 첫 준비 신호에 계정이 실린다.
+ * 나머지 메시지는 설정·필터 규칙을 읽은 뒤 등록하는 listenForMessages가 받는다.
+ */
+export function listenForViewerHandle(onViewerHandle: () => void): void {
+  window.addEventListener('message', (event) => {
+    if (event.source !== window || event.origin !== window.location.origin) return;
+    if (event.data?.type === MESSAGE_TYPES.VIEWER_HANDLE && acceptViewerHandle(event.data)) onViewerHandle();
+  });
+  // content script는 document_idle에 시작해 MAIN world가 DOM 준비 때 보낸 핸들을 이미 놓쳤을 수 있다. 등록 직후 다시 요청한다
+  window.postMessage({ type: MESSAGE_TYPES.VIEWER_HANDLE_REQUEST }, window.location.origin);
+}
+
 export function listenForMessages(followCollectorDeps: FollowCollectorDeps): void {
   window.addEventListener('message', (event) => {
     if (event.source !== window || event.origin !== window.location.origin) return;
@@ -181,7 +212,7 @@ function handleProfileData(data: { profiles: ProfilePayload[] }): void {
   if (settings.keywordFilterEnabled || settings.aggressorFilterEnabled || getProtectedKeywords().length > 0) {
     const updatedHandles = new Set(data.profiles.map((p) => p.handle.toLowerCase()));
     const feed = document.querySelector('main') ?? document.body;
-    feed.querySelectorAll('article[data-testid="tweet"]').forEach((tweet) => {
+    feed.querySelectorAll(TWEET_ARTICLE_SELECTOR).forEach((tweet) => {
       const author = extractTweetAuthor(tweet as HTMLElement);
       if (author && updatedHandles.has(author.handle.toLowerCase())) {
         tweet.querySelector('[data-bbr-debug]')?.remove();
@@ -203,6 +234,8 @@ function handleFollowData(data: { handles: unknown[]; account: string; source?: 
 
   if (data.source === 'api-not-following') {
     removeNotFollowing(handles, followCollectorDeps, data.account);
+    // 팔로우 안 함이 확인된 작성자의 건너뛴 트윗을 다시 판정한다. 오염된 목록 정리를 마친 뒤라 최종 팔로우 집합으로 판정한다 (#142)
+    rejudgeTweets(markFollowKnown(handles, false));
     return;
   }
   if (data.source === 'inline' || data.source === 'api-timeline') {
@@ -218,10 +251,13 @@ function handleFollowData(data: { handles: unknown[]; account: string; source?: 
         newCount: newHandles.length,
       });
     }
-    if (newHandles.length === 0) return;
     for (const h of newHandles) {
       followSet.add(h);
     }
+    // xweb 첫 방문 유예: 팔로우 여부가 알려진 작성자의 건너뛴 트윗만 팔로우 집합에 넣은 뒤 다시 판정한다 (#142).
+    // 이번에 집합에 새로 넣은 핸들(newHandles)만 이 탭이 받은 팔로우로 알린다. 저장된 캐시와 구별해야 캐시 있는 계정이 첫 방문으로 오인되지 않는다
+    rejudgeTweets(markFollowKnown(handles, true, newHandles));
+    if (newHandles.length === 0) return;
     void saveFollowHandles(newHandles, followCollectorDeps, data.account);
     const pathHandle = window.location.pathname.split('/')[1]?.toLowerCase();
     if (pathHandle && followSet.has(pathHandle)) {

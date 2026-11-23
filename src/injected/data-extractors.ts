@@ -56,15 +56,39 @@ export function extractProfileEntries(users: Array<Record<string, unknown>>): Pr
   return profiles;
 }
 
+// 같은 사용자 ID로 거듭 온 프로필을 합친다 (#142 리뷰 r4 S4-2). 후속 값이 있는 필드는 갱신하고, 후속 값에 없는 필드는 앞선 값을 지킨다.
+// 이름·자기소개는 값이 없으면 빈 문자열로 오므로 빈 문자열을 "없음"으로 본다 — 초기 데이터가 준 이름과 자기소개를 빈 값이 지우지 않게 한다
+export function mergeProfileEntry(earlier: ProfileEntry | undefined, later: ProfileEntry): ProfileEntry {
+  if (!earlier) return later;
+  const merged: ProfileEntry = {
+    ...earlier,
+    userId: later.userId,
+    handle: later.handle,
+    displayName: later.displayName || earlier.displayName,
+    bio: later.bio || earlier.bio,
+  };
+  if (later.createdAt !== undefined) merged.createdAt = later.createdAt;
+  if (later.followersCount !== undefined) merged.followersCount = later.followersCount;
+  if (later.followingCount !== undefined) merged.followingCount = later.followingCount;
+  return merged;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+}
+
 export function findUserObjects(obj: unknown, result: Array<Record<string, unknown>>): void {
   if (obj === null || typeof obj !== 'object') return;
 
   const record = obj as Record<string, unknown>;
-  if ('rest_id' in record && 'is_blue_verified' in record) {
+  // xweb(2026-11-23 실측)은 파딱 여부가 최상위 is_blue_verified가 아니라 verification 안에 중첩된다 (#142)
+  const verification = asRecord(record['verification']);
+  const hasTopLevelBlue = 'is_blue_verified' in record;
+  if ('rest_id' in record && (hasTopLevelBlue || typeof verification?.['is_blue_verified'] === 'boolean')) {
     result.push({
       rest_id: record['rest_id'],
-      is_blue_verified: record['is_blue_verified'],
-      verified_type: record['verified_type'],
+      is_blue_verified: hasTopLevelBlue ? record['is_blue_verified'] : verification?.['is_blue_verified'],
+      verified_type: record['verified_type'] ?? verification?.['verified_type'],
       legacy: record['legacy'],
       core: record['core'],
       profile_bio: record['profile_bio'],
@@ -153,6 +177,37 @@ export function extractFollowingListHandles(data: unknown): string[] {
   findUserObjects(data, users);
   const notFollowing = new Set(extractNotFollowingFromUsers(users));
   return [...new Set(handles.map((handle) => handle.toLowerCase()))].filter((handle) => !notFollowing.has(handle));
+}
+
+// 가로챌 GraphQL 요청인지 본다. 기존 앱은 x.com·twitter.com의 /i/api/graphql/·/i/api/2/, 새 앱(xweb)은 api.x.com·api.twitter.com의 /graphql/<해시>/<오퍼레이션>이다 (#142).
+// 상대 주소는 페이지 주소로 해석한 뒤 호스트와 pathname으로 가른다. 주소 문자열에 경로가 들어 있는지만 보면
+// 외부 주소의 쿼리·해시나 다른 호스트의 같은 경로(api.x.com.evil.example, ?next=/i/api/graphql/)도 잡힌다.
+// 사본: @shared/constants의 X_GRAPHQL_ENDPOINTS·X_API_GRAPHQL_HOSTS
+const PAGE_HOSTS = ['x.com', 'twitter.com'];
+const PAGE_API_PATHS = ['/i/api/graphql/', '/i/api/2/'];
+const XWEB_API_HOSTS = ['api.x.com', 'api.twitter.com'];
+const XWEB_API_PATH = '/graphql/';
+
+export function isGraphqlRequestUrl(url: string): boolean {
+  try {
+    const { hostname, pathname } = new URL(url, location.href);
+    if (PAGE_HOSTS.includes(hostname)) return PAGE_API_PATHS.some((prefix) => pathname.startsWith(prefix));
+    return XWEB_API_HOSTS.includes(hostname) && pathname.startsWith(XWEB_API_PATH);
+  } catch {
+    return false;
+  }
+}
+
+// xweb 첫 화면 데이터(window.__INITIAL_DATA__). 기존 앱에는 없어 null이다 (#142)
+export function readInitialData(win: object): Record<string, unknown> | null {
+  return asRecord((win as Record<string, unknown>)['__INITIAL_DATA__']);
+}
+
+// 첫 화면 데이터의 viewerScreenName — 화면에 계정 전환 링크가 없어 본인 계정을 알 수 있는 유일한 곳이다 (#142).
+// 형식 검증은 받는 쪽(content script)이 한다. 여기서는 문자열 여부만 본다
+export function readViewerHandle(win: object): string | null {
+  const handle = readInitialData(win)?.['viewerScreenName'];
+  return typeof handle === 'string' && handle.length > 0 ? handle : null;
 }
 
 // GraphQL 오퍼레이션 이름(쿼리스트링 앞 경로의 마지막 세그먼트)이 정확히 Following인지 본다.

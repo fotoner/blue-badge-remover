@@ -1,13 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   findUserObjects,
   findFollowedHandles,
   extractFollowingFromUsers,
   dedupeFollowHandles,
   extractProfileEntries,
+  mergeProfileEntry,
   extractNotFollowingFromUsers,
   extractFollowingListHandles,
   isFollowingEndpoint,
+  isGraphqlRequestUrl,
+  readViewerHandle,
   type FollowingUserMatch,
 } from '../../src/injected/data-extractors';
 
@@ -485,5 +488,206 @@ describe('extractFollowingListHandles', () => {
       ],
     };
     expect(extractFollowingListHandles(data)).toEqual(['friend', 'norelation']);
+  });
+});
+
+// xweb(2026-11-23 실측 #138): 사용자 객체에 최상위 is_blue_verified가 없고 verification 안에 중첩된다.
+// legacy도 없고 가입일 필드도 없다 (#142)
+const XWEB_HOME_USER = {
+  __typename: 'User',
+  id: 'VXNlcjox',
+  rest_id: '1',
+  core: { name: '이름', screen_name: 'Fadak_One' },
+  verification: { is_blue_verified: true },
+  relationship_perspectives: { blocking: false, followed_by: false, following: true, muting: false },
+  relationship_counts: { followers: 5000, following: 30 },
+  profile_bio: { description: '자기소개' },
+};
+
+describe('xweb 사용자 객체 (#142)', () => {
+  it('findUserObjects: verification.is_blue_verified만 있는 사용자도 잡고 파딱 여부를 최상위로 올린다', () => {
+    const result: Array<Record<string, unknown>> = [];
+    findUserObjects({ data: { home: { entries: [{ result: XWEB_HOME_USER }] } } }, result);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!['rest_id']).toBe('1');
+    expect(result[0]!['is_blue_verified']).toBe(true);
+    expect(result[0]!['relationship_perspectives']).toEqual(XWEB_HOME_USER.relationship_perspectives);
+  });
+
+  it('findUserObjects: verification.is_blue_verified가 false여도 사용자로 잡는다', () => {
+    const result: Array<Record<string, unknown>> = [];
+    findUserObjects({ ...XWEB_HOME_USER, verification: { is_blue_verified: false } }, result);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!['is_blue_verified']).toBe(false);
+  });
+
+  it('findUserObjects: verification에 boolean이 없으면 사용자로 보지 않는다', () => {
+    const result: Array<Record<string, unknown>> = [];
+    findUserObjects({ rest_id: '2', verification: { verified_type: 'Business' } }, result);
+    findUserObjects({ rest_id: '3', verification: null }, result);
+    findUserObjects({ rest_id: '4', verification: { is_blue_verified: 'true' } }, result);
+
+    expect(result).toHaveLength(0);
+  });
+
+  it('findUserObjects: 최상위 is_blue_verified가 있으면 그 값을 우선한다 (기존 앱 모양)', () => {
+    const result: Array<Record<string, unknown>> = [];
+    findUserObjects({ rest_id: '5', is_blue_verified: false, verification: { is_blue_verified: true } }, result);
+
+    expect(result[0]!['is_blue_verified']).toBe(false);
+  });
+
+  it('verified_type도 verification 안에 있으면 최상위로 올린다', () => {
+    const result: Array<Record<string, unknown>> = [];
+    findUserObjects({ rest_id: '6', verification: { is_blue_verified: true, verified_type: 'Business' } }, result);
+
+    expect(result[0]!['verified_type']).toBe('Business');
+  });
+
+  it('프로필: 핸들·이름·팔로워·자기소개를 읽고, 가입일이 없으면 없는 대로 둔다', () => {
+    const users: Array<Record<string, unknown>> = [];
+    findUserObjects(XWEB_HOME_USER, users);
+
+    expect(extractProfileEntries(users)).toEqual([{
+      userId: '1',
+      handle: 'Fadak_One',
+      displayName: '이름',
+      bio: '자기소개',
+      followersCount: 5000,
+      followingCount: 30,
+    }]);
+  });
+
+  it('팔로우: relationship_perspectives.following으로 팔로우·비팔로우를 가른다', () => {
+    const users: Array<Record<string, unknown>> = [];
+    findUserObjects({
+      a: XWEB_HOME_USER,
+      b: { ...XWEB_HOME_USER, rest_id: '2', core: { name: '다른', screen_name: 'Other_Two' }, relationship_perspectives: { following: false } },
+    }, users);
+
+    expect(extractFollowingFromUsers(users)).toEqual([{ handle: 'fadak_one', path: 'relationship_perspectives.following' }]);
+    expect(extractNotFollowingFromUsers(users)).toEqual(['other_two']);
+  });
+});
+
+describe('isGraphqlRequestUrl (#142)', () => {
+  // 상대 주소는 페이지 주소로 해석한다. 시험 환경의 location은 localhost라 X 페이지로 바꿔 둔다
+  beforeEach(() => { vi.stubGlobal('location', new URL('https://x.com/home')); });
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it.each([
+    'https://x.com/i/api/graphql/abc/HomeTimeline?variables=%7B%7D',
+    '/i/api/graphql/abc/UserByScreenName',
+    'https://x.com/i/api/2/timeline/home.json',
+    'https://twitter.com/i/api/graphql/abc/HomeTimeline',
+    'https://twitter.com/i/api/2/timeline/home.json',
+  ])('기존 앱 주소 %s는 가로챈다', (url) => {
+    expect(isGraphqlRequestUrl(url)).toBe(true);
+  });
+
+  it.each([
+    'https://api.x.com/graphql/hash123/HomeTimeline?variables=%7B%7D',
+    'https://api.twitter.com/graphql/hash123/whoToFollowListQuery',
+    'https://api.x.com/graphql/hash123/Following',
+  ])('xweb 주소 %s는 가로챈다', (url) => {
+    expect(isGraphqlRequestUrl(url)).toBe(true);
+  });
+
+  it.each([
+    'https://api.x.com/1.1/jot/client_event.json',
+    'https://x.com/graphql/hash123/HomeTimeline',
+    'https://video.twimg.com/graphql/abc',
+    'https://evil.example/graphql/x',
+    'https://api.x.com.evil.example/graphql/x',
+    'not a url',
+    '',
+  ])('그 밖의 주소 %s는 가로채지 않는다', (url) => {
+    expect(isGraphqlRequestUrl(url)).toBe(false);
+  });
+
+  // 리뷰 r1 S1-6: 경로를 문자열로 포함하는지만 보면 외부 주소의 쿼리·해시·다른 호스트 경로도 잡힌다
+  it.each([
+    'https://evil.example/collect?next=/i/api/graphql/abc/HomeTimeline',
+    'https://evil.example/collect?next=/i/api/2/timeline/home.json',
+    'https://evil.example/i/api/graphql/abc/HomeTimeline',
+    'https://evil.example/#/i/api/graphql/abc/HomeTimeline',
+    'https://x.com/home?redirect=/i/api/graphql/abc/HomeTimeline',
+    'https://x.com/i/api/1.1/graphql/abc',
+    'https://api.x.com/i/api/graphql/abc/HomeTimeline',
+    'https://api.twitter.com/i/api/2/timeline/home.json',
+    'https://api.x.com/graphql-v2/abc/HomeTimeline',
+    'https://api.x.com/?u=/graphql/abc/HomeTimeline',
+  ])('경로가 호스트나 쿼리에 끼어든 주소 %s는 가로채지 않는다', (url) => {
+    expect(isGraphqlRequestUrl(url)).toBe(false);
+  });
+
+  it('상대 주소는 페이지 호스트로 해석하고, X 호스트가 아니면 가로채지 않는다', () => {
+    vi.stubGlobal('location', new URL('https://evil.example/home'));
+
+    expect(isGraphqlRequestUrl('/i/api/graphql/abc/HomeTimeline')).toBe(false);
+  });
+
+  it('xweb 페이지(x.com)의 상대 /graphql/ 주소는 호스트가 x.com이라 가로채지 않는다', () => {
+    expect(isGraphqlRequestUrl('/graphql/hash123/HomeTimeline')).toBe(false);
+  });
+
+  it('xweb Following 오퍼레이션도 팔로잉 목록으로 알아본다', () => {
+    expect(isFollowingEndpoint('https://api.x.com/graphql/hash123/Following?variables=%7B%7D')).toBe(true);
+    expect(isFollowingEndpoint('https://api.x.com/graphql/hash123/HomeTimeline')).toBe(false);
+  });
+});
+
+describe('readViewerHandle (#142)', () => {
+  it('초기 데이터의 viewerScreenName을 읽는다', () => {
+    expect(readViewerHandle({ __INITIAL_DATA__: { viewerScreenName: 'My_Handle', viewerId: '9' } })).toBe('My_Handle');
+  });
+
+  it.each([
+    [{}],
+    [{ __INITIAL_DATA__: null }],
+    [{ __INITIAL_DATA__: {} }],
+    [{ __INITIAL_DATA__: { viewerScreenName: '' } }],
+    [{ __INITIAL_DATA__: { viewerScreenName: 123 } }],
+    [{ __INITIAL_DATA__: 'text' }],
+  ])('읽을 수 없는 모양 %j은 null이다', (win) => {
+    expect(readViewerHandle(win as Record<string, unknown>)).toBeNull();
+  });
+});
+
+// #142 리뷰 r4 S4-2: 준비 신호 때 다시 보내는 프로필 캐시는 사용자 ID 기준으로 합친다.
+// 후속 응답이 값을 가진 필드는 갱신하고, 후속 응답에 없는 필드는 앞선 값을 지킨다
+describe('mergeProfileEntry', () => {
+  const initial = { userId: '1', handle: 'Fadak_One', displayName: '초기 이름', bio: '' };
+
+  it('앞선 프로필이 없으면 후속 프로필을 그대로 쓴다', () => {
+    expect(mergeProfileEntry(undefined, initial)).toEqual(initial);
+  });
+
+  it('앞선 프로필에 없던 자기소개·팔로워 수는 후속 값으로 채운다', () => {
+    const merged = mergeProfileEntry(initial, { ...initial, bio: '자기소개', followersCount: 5000, followingCount: 30 });
+
+    expect(merged).toEqual({ ...initial, bio: '자기소개', followersCount: 5000, followingCount: 30 });
+  });
+
+  it('후속 프로필에 없는 필드는 앞선 값을 지킨다', () => {
+    const earlier = { ...initial, bio: '자기소개', createdAt: '2020-01-01', followersCount: 5000 };
+
+    expect(mergeProfileEntry(earlier, initial)).toEqual({ ...earlier, displayName: '초기 이름' });
+  });
+
+  it('후속 프로필이 값을 가진 필드는 갱신한다', () => {
+    const earlier = { ...initial, displayName: '옛 이름', bio: '옛 소개', followersCount: 10 };
+
+    const merged = mergeProfileEntry(earlier, { ...initial, displayName: '새 이름', bio: '새 소개', followersCount: 20 });
+
+    expect(merged).toEqual({ ...initial, displayName: '새 이름', bio: '새 소개', followersCount: 20 });
+  });
+
+  it('후속 프로필에 이름이 비어 있으면 앞선 이름을 지키고 핸들은 후속 값을 쓴다', () => {
+    const merged = mergeProfileEntry({ ...initial, displayName: '이름' }, { ...initial, handle: 'fadak_one', displayName: '' });
+
+    expect(merged).toEqual({ ...initial, handle: 'fadak_one', displayName: '이름' });
   });
 });

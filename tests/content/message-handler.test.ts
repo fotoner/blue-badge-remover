@@ -49,10 +49,18 @@ vi.mock('../../src/content/tweet-processing', () => ({
 const mockProcessTweet = vi.fn();
 const mockRestoreHiddenTweets = vi.fn();
 const mockReprocessExistingTweets = vi.fn();
+const mockRejudgeTweets = vi.fn();
 vi.mock('../../src/content/tweet-orchestrator', () => ({
   processTweet: (...args: unknown[]) => mockProcessTweet(...args),
   restoreHiddenTweets: (...args: unknown[]) => mockRestoreHiddenTweets(...args),
   reprocessExistingTweets: (...args: unknown[]) => mockReprocessExistingTweets(...args),
+  rejudgeTweets: (...args: unknown[]) => mockRejudgeTweets(...args),
+}));
+
+// follow-grace는 tweet-classifier(→ content-filter)를 끌어오므로 이 시험에서는 가짜로 바꾼다. 실제 동작은 follow-grace.test.ts가 본다
+const mockMarkFollowKnown = vi.fn<(handles: readonly string[], followed: boolean, added?: readonly string[]) => HTMLElement[]>();
+vi.mock('../../src/content/follow-grace', () => ({
+  markFollowKnown: (...args: unknown[]) => mockMarkFollowKnown(...(args as [readonly string[], boolean, (readonly string[])?])),
 }));
 
 const mockSaveFollowHandles = vi.fn<() => Promise<void>>();
@@ -78,8 +86,8 @@ vi.mock('../../src/content/page-utils', () => ({
 
 // --- Import modules after all mocks are registered ---
 
-import { profileCache, collectorBuffer, setSettings, getFollowSet, setFollowSet, setCurrentUserHandle } from '../../src/content/state';
-import { listenForMessages, scheduleFollowReprocess } from '../../src/content/message-handler';
+import { profileCache, collectorBuffer, setSettings, getFollowSet, setFollowSet, setCurrentUserHandle, getViewerHandleHint, setViewerHandleHint } from '../../src/content/state';
+import { listenForMessages, listenForViewerHandle, scheduleFollowReprocess } from '../../src/content/message-handler';
 import { MESSAGE_TYPES } from '../../src/shared/constants';
 import { logger } from '../../src/shared/utils/logger';
 import type { FollowCollectorDeps } from '../../src/content/follow-collector';
@@ -116,6 +124,7 @@ describe('message-handler', () => {
   const deps = createFollowCollectorDeps();
 
   // Register the listener once to avoid accumulating handlers
+  const onViewerHandle = vi.fn();
   beforeAll(() => {
     listenForMessages(deps);
   });
@@ -125,9 +134,11 @@ describe('message-handler', () => {
     vi.useFakeTimers();
     mockFindQuoteBlock.mockReturnValue(null);
     mockExtractQuoteAuthor.mockReturnValue(null);
+    mockMarkFollowKnown.mockReturnValue([]);
     setSettings({ ...DEFAULT_SETTINGS });
     setFollowSet(new Set<string>());
     setCurrentUserHandle('myaccount');
+    setViewerHandleHint(null);
     document.body.innerHTML = '';
     collectorBuffer.clear();
     // Clear singleton cache (mock class exposes clear())
@@ -170,6 +181,69 @@ describe('message-handler', () => {
       window.dispatchEvent(event);
 
       expect(profileCache.has('evil')).toBe(false);
+    });
+  });
+
+  // ── BBR_VIEWER_HANDLE (xweb 초기 데이터의 본인 계정, #142) ───────────────
+
+  // init의 첫 await보다 앞에서 따로 등록하는 리스너다. listenForMessages는 이 메시지를 다루지 않는다 (#142 리뷰 r1)
+  describe('BBR_VIEWER_HANDLE', () => {
+    beforeAll(() => {
+      listenForViewerHandle(onViewerHandle);
+    });
+
+    it('유효한 핸들은 소문자로 힌트에 저장하고 알린다', () => {
+      dispatchMessage({ type: MESSAGE_TYPES.VIEWER_HANDLE, handle: 'My_Handle' });
+
+      expect(getViewerHandleHint()).toBe('my_handle');
+      expect(onViewerHandle).toHaveBeenCalledTimes(1);
+    });
+
+    it('같은 핸들이 다시 오면 다시 알리지 않는다', () => {
+      dispatchMessage({ type: MESSAGE_TYPES.VIEWER_HANDLE, handle: 'my_handle' });
+      dispatchMessage({ type: MESSAGE_TYPES.VIEWER_HANDLE, handle: 'MY_HANDLE' });
+
+      expect(onViewerHandle).toHaveBeenCalledTimes(1);
+    });
+
+    it('핸들이 바뀌면 새 값으로 바꾸고 다시 알린다', () => {
+      dispatchMessage({ type: MESSAGE_TYPES.VIEWER_HANDLE, handle: 'first_one' });
+      dispatchMessage({ type: MESSAGE_TYPES.VIEWER_HANDLE, handle: 'second_one' });
+
+      expect(getViewerHandleHint()).toBe('second_one');
+      expect(onViewerHandle).toHaveBeenCalledTimes(2);
+    });
+
+    it.each([
+      ['공백이 든 문자열', 'bad handle'],
+      ['16자 이상', 'a'.repeat(16)],
+      ['빈 문자열', ''],
+      ['태그 문자열', '<img src=x>'],
+      ['@가 붙은 값', '@handle'],
+      ['숫자', 123],
+      ['undefined', undefined],
+      ['객체', { handle: 'x' }],
+    ])('형식이 맞지 않는 핸들(%s)은 무시한다', (_name, handle) => {
+      dispatchMessage({ type: MESSAGE_TYPES.VIEWER_HANDLE, handle });
+
+      expect(getViewerHandleHint()).toBeNull();
+      expect(onViewerHandle).not.toHaveBeenCalled();
+    });
+
+    it('다른 origin의 메시지는 무시한다', () => {
+      dispatchMessage({ type: MESSAGE_TYPES.VIEWER_HANDLE, handle: 'evil_one' }, { origin: 'https://evil.com' });
+
+      expect(getViewerHandleHint()).toBeNull();
+      expect(onViewerHandle).not.toHaveBeenCalled();
+    });
+
+    it('source가 window가 아닌 메시지는 무시한다', () => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { type: MESSAGE_TYPES.VIEWER_HANDLE, handle: 'evil_one' },
+        origin: savedOrigin,
+      }));
+
+      expect(getViewerHandleHint()).toBeNull();
     });
   });
 
@@ -795,6 +869,83 @@ describe('message-handler', () => {
         expect(mockSaveFollowHandles).toHaveBeenCalledWith([exactly15], deps, 'myaccount');
       });
 
+      // #142 리뷰 r3 S1-1: xweb 첫 방문 유예는 작성자 단위다. 팔로우 여부가 알려진 핸들을 follow-grace에 알리고, 그 작성자를 기다리던 트윗만 다시 판정한다
+      describe('xweb 첫 방문 유예: 작성자의 팔로우 여부가 알려짐', () => {
+        it.each(['inline', 'api-timeline'] as const)('%s 팔로우 데이터를 메모리에 넣은 뒤 팔로우로 알리고, 돌려받은 트윗만 다시 판정한다', (source) => {
+          const waiting = document.createElement('article');
+          let followedWhenRejudged = false;
+          mockMarkFollowKnown.mockReturnValue([waiting]);
+          mockRejudgeTweets.mockImplementation(() => { followedWhenRejudged = getFollowSet().has('alice'); });
+
+          dispatchMessage({ type: MESSAGE_TYPES.FOLLOW_DATA, source, handles: ['Alice', 'bob'] });
+
+          expect(mockMarkFollowKnown).toHaveBeenCalledTimes(1);
+          expect(mockMarkFollowKnown).toHaveBeenCalledWith(['Alice', 'bob'], true, ['alice', 'bob']);
+          expect(mockRejudgeTweets).toHaveBeenCalledWith([waiting]);
+          expect(followedWhenRejudged).toBe(true);
+          expect(mockReprocessExistingTweets).not.toHaveBeenCalled();
+        });
+
+        it('이미 팔로우 집합에 있던 핸들은 새로 넣은 것으로 알리지 않는다 (저장된 캐시로 남게 한다)', () => {
+          setFollowSet(new Set(['alice']));
+
+          dispatchMessage({ type: MESSAGE_TYPES.FOLLOW_DATA, source: 'api-timeline', handles: ['alice', 'bob'] });
+
+          expect(mockMarkFollowKnown).toHaveBeenCalledWith(['alice', 'bob'], true, ['bob']);
+        });
+
+        it('이미 아는 핸들뿐이어도 기다리던 트윗이 있었으면 다시 판정한다', () => {
+          const waiting = document.createElement('article');
+          setFollowSet(new Set(['alice']));
+          mockMarkFollowKnown.mockReturnValue([waiting]);
+
+          dispatchMessage({ type: MESSAGE_TYPES.FOLLOW_DATA, source: 'api-timeline', handles: ['alice'] });
+
+          expect(mockRejudgeTweets).toHaveBeenCalledWith([waiting]);
+          expect(mockSaveFollowHandles).not.toHaveBeenCalled();
+        });
+
+        it('팔로우 안 함 목록(api-not-following)은 그 핸들을 팔로우 아님으로 알리고, 기다리던 트윗을 다시 판정한다', () => {
+          const waiting = document.createElement('article');
+          mockMarkFollowKnown.mockReturnValue([waiting]);
+
+          dispatchMessage({ type: MESSAGE_TYPES.FOLLOW_DATA, source: 'api-not-following', handles: ['Stranger'] });
+
+          expect(mockMarkFollowKnown).toHaveBeenCalledWith(['Stranger'], false);
+          expect(mockRejudgeTweets).toHaveBeenCalledWith([waiting]);
+        });
+
+        it('팔로우 안 함 핸들 중 형식이 틀린 것은 알리지 않는다 (CNT-7)', () => {
+          dispatchMessage({ type: MESSAGE_TYPES.FOLLOW_DATA, source: 'api-not-following', handles: ['stranger', '', 'not a handle!', 42] });
+
+          expect(mockMarkFollowKnown).toHaveBeenCalledWith(['stranger'], false);
+        });
+
+        it('팔로우 안 함 목록이 followSet에서 오염된 핸들을 지운 뒤에 다시 판정한다', () => {
+          setFollowSet(new Set(['stranger']));
+          let stillFollowedWhenRejudged: boolean | null = null;
+          mockMarkFollowKnown.mockReturnValue([document.createElement('article')]);
+          mockRejudgeTweets.mockImplementation(() => { stillFollowedWhenRejudged = getFollowSet().has('stranger'); });
+
+          dispatchMessage({ type: MESSAGE_TYPES.FOLLOW_DATA, source: 'api-not-following', handles: ['stranger'] });
+
+          expect(stillFollowedWhenRejudged).toBe(false);
+        });
+
+        it('핸들이 하나도 유효하지 않은 팔로우 메시지는 알리지 않는다', () => {
+          dispatchMessage({ type: MESSAGE_TYPES.FOLLOW_DATA, source: 'api-timeline', handles: ['', 'not a handle!'] });
+
+          expect(mockMarkFollowKnown).not.toHaveBeenCalled();
+        });
+
+        it('다른 계정의 팔로우 데이터는 알리지 않는다', () => {
+          dispatchMessage({ type: MESSAGE_TYPES.FOLLOW_DATA, account: 'otheraccount', source: 'api-timeline', handles: ['alice'] });
+          dispatchMessage({ type: MESSAGE_TYPES.FOLLOW_DATA, account: 'otheraccount', source: 'api-not-following', handles: ['bob'] });
+
+          expect(mockMarkFollowKnown).not.toHaveBeenCalled();
+        });
+      });
+
       it('메시지당 최대 1000개까지만 처리한다 (1500개 중 앞 1000개)', () => {
         const handles = Array.from({ length: 1500 }, (_, i) => `user${i}`);
         dispatchMessage({
@@ -811,5 +962,15 @@ describe('message-handler', () => {
         expect(passed[999]).toBe('user999');
       });
     });
+  });
+});
+
+// 리스너를 하나 더 붙이므로 다른 시험의 힌트 상태에 끼어들지 않게 파일 맨 끝에 둔다
+describe('listenForViewerHandle: 핸들 재요청 (#142 리뷰 r1)', () => {
+  it('리스너를 등록하면서 MAIN world에 핸들을 다시 요청한다', () => {
+    const postSpy = vi.spyOn(window, 'postMessage');
+    listenForViewerHandle(vi.fn());
+    expect(postSpy).toHaveBeenCalledWith({ type: MESSAGE_TYPES.VIEWER_HANDLE_REQUEST }, window.location.origin);
+    postSpy.mockRestore();
   });
 });

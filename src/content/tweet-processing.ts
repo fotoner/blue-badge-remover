@@ -2,6 +2,8 @@
 // DOM-level tweet parsing utilities used by processTweet in content/index.ts
 
 import { X_HANDLE_PATTERN } from '@shared/constants';
+import { detectBadgeSvg, isBlueBadgeElement } from '@features/badge-detection/svg-fallback';
+import { findXwebAuthorBadge, findXwebQuoteFrame, isXwebQuoteFrame, readXwebAuthor, readXwebStatusPath, readXwebText } from './xweb-dom';
 
 const SOCIAL_CONTEXT_SELECTOR = '[data-testid="socialContext"]';
 
@@ -82,7 +84,9 @@ function fallbackAuthorHandle(tweetEl: HTMLElement): string | null {
 export function extractTweetAuthor(tweetEl: HTMLElement): { handle: string } | null {
   // 주 경로: 작성자 영역(User-Name) 안 링크. 없으면 트윗 전체 링크에서 찾는다
   const userName = findAuthorUserName(tweetEl);
+  // 새 웹 앱(xweb)은 User-Name이 없어 머리글(.x-middot-group)에서 읽는다 (#142)
   const handle = (userName && authorHandleFromLinks(userName.querySelectorAll(AUTHOR_LINK_SELECTOR)))
+    ?? readXwebAuthor(tweetEl)?.handle
     ?? fallbackAuthorHandle(tweetEl);
   return handle ? { handle } : null;
 }
@@ -97,7 +101,7 @@ export function extractTweetStatusPath(tweetEl: HTMLElement): string | null {
     const match = href.match(/\/\w+\/status\/\d+/);
     if (match) return match[0];
   }
-  return null;
+  return readXwebStatusPath(tweetEl);
 }
 
 /**
@@ -129,6 +133,9 @@ export function extractRetweeterHandle(tweetEl: HTMLElement): string | null {
 }
 
 export function findQuoteBlock(tweetEl: HTMLElement): HTMLElement | null {
+  // 새 웹 앱(xweb): 인용은 data-slot="embedded-tweet-frame" 컨테이너다 (#142)
+  const xwebFrame = findXwebQuoteFrame(tweetEl);
+  if (xwebFrame) return xwebFrame;
   // 구조 우선 (로케일 무관): 인용 카드는 User-Name을 품은 div[role="link"] (2026-10 실측)
   for (const card of tweetEl.querySelectorAll<HTMLElement>('div[role="link"]')) {
     if (card.querySelector('[data-testid="User-Name"]')) return card;
@@ -180,6 +187,9 @@ export function findAuthorBadge(tweetEl: HTMLElement): Element | null {
   const userNames = tweetEl.querySelectorAll('[data-testid="User-Name"]');
   const quoteBlock = findQuoteBlock(tweetEl);
   if (userNames.length === 0) {
+    // 새 웹 앱(xweb)은 User-Name 없이 머리글 안 use[href]로 배지를 둔다 (#142)
+    const xwebBadge = findXwebAuthorBadge(tweetEl);
+    if (xwebBadge) return xwebBadge;
     // User-Name이 전혀 없는 예외적 DOM — 인용 카드 내부 뱃지는 여전히 제외해야 오귀속 방지
     const candidates = tweetEl.querySelectorAll('[data-testid="icon-verified"]');
     for (const candidate of candidates) {
@@ -226,7 +236,21 @@ function readQuoteHandleFromUserName(quoteBlock: HTMLElement): string | null {
   return handle;
 }
 
+/**
+ * 인용 카드 작성자의 파딱 여부.
+ * xweb 프레임은 그 프레임의 작성자 머리글 배지만 본다 — 안쪽에 중첩된 프레임의 배지를 인용 작성자 것으로 보지 않는다 (#142).
+ * 기존 앱 카드는 카드 전체에서 판정한다.
+ */
+export function isQuoteAuthorFadak(quoteBlock: HTMLElement): boolean {
+  if (!isXwebQuoteFrame(quoteBlock)) return detectBadgeSvg(quoteBlock);
+  const badge = findXwebAuthorBadge(quoteBlock);
+  return badge !== null && isBlueBadgeElement(badge);
+}
+
 export function extractQuoteAuthor(quoteBlock: HTMLElement): QuoteAuthorInfo | null {
+  // 새 웹 앱(xweb) 인용 프레임은 머리글에서 핸들·표시 이름을 읽는다. 텍스트 정규식은 표시 이름의 @에 속는다 (#110, #142)
+  const xwebAuthor = readXwebAuthor(quoteBlock);
+  if (xwebAuthor) return { handle: xwebAuthor.handle.toLowerCase(), displayName: xwebAuthor.displayName };
   const text = quoteBlock.textContent ?? '';
   const match = text.match(QUOTE_TEXT_AUTHOR_PATTERN);
   const displayName = match?.[1]?.trim() || null;
@@ -254,7 +278,9 @@ export function extractQuoteAuthor(quoteBlock: HTMLElement): QuoteAuthorInfo | n
 }
 
 export function extractTweetText(tweetEl: HTMLElement): string {
-  return tweetEl.querySelector('[data-testid="tweetText"]')?.textContent ?? '';
+  const rwebText = tweetEl.querySelector(TWEET_TEXT_SELECTOR);
+  // 새 웹 앱(xweb)은 tweetText가 없어 머리글 아래 본문 요소를 구조로 읽는다 (#142)
+  return rwebText ? (rwebText.textContent ?? '') : readXwebText(tweetEl);
 }
 
 
@@ -274,7 +300,14 @@ export function extractDisplayName(tweetEl: HTMLElement, handle: string): string
   // 주 경로: 작성자 영역(User-Name) 안 링크라 리트윗 문구 링크와 섞이지 않는다 (#111)
   const userName = findAuthorUserName(tweetEl);
   return (userName && displayNameFromLinks(userName.querySelectorAll('a[role="link"]'), handle))
-    ?? displayNameFromLinks(tweetEl.querySelectorAll('a[role="link"]'), handle);
+    ?? displayNameFromLinks(tweetEl.querySelectorAll('a[role="link"]'), handle)
+    ?? xwebDisplayName(tweetEl, handle);
+}
+
+/** 새 웹 앱(xweb) 머리글의 이름 링크 (#142). 읽은 작성자가 handle과 다르면 쓰지 않는다 */
+function xwebDisplayName(tweetEl: HTMLElement, handle: string): string | null {
+  const author = readXwebAuthor(tweetEl);
+  return author && author.handle.toLowerCase() === handle.toLowerCase() ? author.displayName : null;
 }
 
 /**

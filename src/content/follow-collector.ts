@@ -4,7 +4,7 @@ import { STORAGE_KEYS, TIMINGS } from '@shared/constants';
 import type { Settings } from '@shared/types';
 import { logger } from '@shared/utils/logger';
 import { FOLLOW_BUTTON_SELECTOR, readFollowButton, readFollowState } from './follow-button';
-import { getAccountHandleFromDOM } from './page-utils';
+import { getAccountHandle } from './page-utils';
 
 export interface FollowCollectorDeps {
   getCurrentSettings: () => Settings;
@@ -21,7 +21,7 @@ let followDebounceTimerId: ReturnType<typeof setTimeout> | null = null;
 const SYNC_BANNER_ID = 'bbr-follow-sync-banner';
 
 export function getMyHandle(): string | null {
-  return getAccountHandleFromDOM();
+  return getAccountHandle();
 }
 
 export function resolveAccountSwitchFollows(
@@ -89,8 +89,12 @@ export interface AccountSwitchResult {
   follows: string[];
 }
 
-/** 저장된 계정과 다르면 계정별 팔로우 캐시로 전환한다. 같은 계정이면 null. */
-export function switchFollowAccount(currentHandle: string): Promise<AccountSwitchResult | null> {
+/**
+ * 저장된 계정과 다르면 계정별 팔로우 캐시로 전환한다. 같은 계정이면 null.
+ * memoryHandle: 이 탭이 메모리에 들고 있는 계정. 저장소가 이미 currentHandle이어도(다른 탭이 먼저 저장) 메모리 계정이
+ * 다르면 저장소는 건드리지 않고 그 계정의 팔로우 캐시를 돌려줘 이 탭이 따라가게 한다. 넘기지 않으면 저장소만 본다 (#142)
+ */
+export function switchFollowAccount(currentHandle: string, memoryHandle?: string | null): Promise<AccountSwitchResult | null> {
   return runFollowStorageTask(async () => {
     const stored = await browser.storage.local.get([
       STORAGE_KEYS.CURRENT_USER_ID,
@@ -98,9 +102,12 @@ export function switchFollowAccount(currentHandle: string): Promise<AccountSwitc
       STORAGE_KEYS.FOLLOW_LIST,
     ]);
     const savedHandle = (stored[STORAGE_KEYS.CURRENT_USER_ID] as string | null | undefined) ?? null;
-    if (savedHandle === currentHandle) return null;
-
     const cache = (stored[STORAGE_KEYS.FOLLOW_CACHE] as Record<string, string[]> | undefined) ?? {};
+    if (savedHandle === currentHandle) {
+      if (memoryHandle === undefined || memoryHandle === currentHandle) return null;
+      return { from: memoryHandle, follows: resolveAccountSwitchFollows(cache, currentHandle, currentHandle, []) };
+    }
+
     const pendingFollows = (stored[STORAGE_KEYS.FOLLOW_LIST] as string[] | undefined) ?? [];
     const follows = resolveAccountSwitchFollows(cache, currentHandle, savedHandle, pendingFollows);
     cache[currentHandle] = follows;

@@ -1,4 +1,6 @@
 // tests/features/content-filter/tweet-hider.test.ts
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { hideTweet, hideQuoteBlock, showExpandedTweet, showTweet, showQuoteBlock, setTweetHiderLanguage } from '@features/content-filter/tweet-hider';
 import { t, type Language } from '@shared/i18n';
@@ -303,5 +305,23 @@ describe('hideTweet — 리트위터 표시 이름이 없을 때', () => {
     setTweetHiderLanguage(lang);
     hideTweet(tweetEl, 'collapse', { reason: 'retweet', handle: '@fadakuser', retweetedBy: '@rt_user' });
     expect(collapsedLabel()).toBe(t('hiddenTweetRetweet', lang, { handle: '@fadakuser', retweetedBy: '@rt_user' }));
+  });
+});
+
+// xweb 실측 픽스처(#142): 반응 버튼이 data-testid 없이 data-engagement-action이다.
+// 펼친 트윗의 액션(화이트리스트·접기)은 반응 줄 바로 위에 들어가야 한다. 못 찾으면 내용 가로줄(flex row)에 끼어 옆으로 밀린다
+describe('showExpandedTweet — xweb 트윗 (#142)', () => {
+  it('액션을 반응 줄(role=group) 바로 앞에 넣는다', () => {
+    document.body.innerHTML = readFileSync(resolve(process.cwd(), 'tests/fixtures/x-dom/xweb-quote-tweet.html'), 'utf8');
+    const article = document.querySelector<HTMLElement>('[data-href] > article');
+    if (!article) throw new Error('fixture has no xweb tweet article');
+
+    showExpandedTweet(article, { reason: 'fadak', handle: '@user_1' }, undefined);
+
+    const actions = article.querySelector('[data-bbr-expanded-actions]');
+    const group = article.querySelector('[data-engagement-action="reply"]')?.closest('[role="group"]');
+    expect(actions).not.toBeNull();
+    expect(group).not.toBeNull();
+    expect(actions?.nextElementSibling).toBe(group);
   });
 });

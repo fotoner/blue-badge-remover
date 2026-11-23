@@ -1,5 +1,8 @@
 export type FollowSource = 'inline' | 'api-timeline' | 'api-not-following' | undefined;
 
+// 이 출처로 온 핸들만 팔로우 안 함이고, 나머지 출처는 모두 팔로우 중이라는 뜻이다
+const NOT_FOLLOWING_SOURCE: FollowSource = 'api-not-following';
+
 type FollowEmitter = (handles: string[], source: FollowSource, account: string) => void;
 
 export class FollowBridge {
@@ -17,8 +20,23 @@ export class FollowBridge {
       if (account) this.emit(normalized, source, account);
       return;
     }
+    this.queue(normalized, source);
+  }
+
+  // 계정이 확정되기 전에는 같은 핸들의 팔로우 여부 중 나중에 들어온 값이 앞선 값을 대체한다 (#142 리뷰 r4 S4-1).
+  // 초기 데이터(오래된 false)와 GraphQL(최신 true)이 모두 준비 전에 도착해도 오래된 값이 먼저 적용되지 않게 하기 위해서다.
+  // 같은 여부로 거듭 도착한 핸들은 지금처럼 출처마다 쌓는다.
+  // 출처가 없는 팔로우 목록은 다른 사람의 목록일 수 있어(content 쪽은 본인 목록만 받는다) 대체에 끼지 않는다 (#142 리뷰 r5 S5-2)
+  private queue(handles: string[], source: FollowSource): void {
+    const incomingNotFollowing = source === NOT_FOLLOWING_SOURCE;
+    for (const [queuedSource, queuedHandles] of this.pending) {
+      if (source === undefined || queuedSource === undefined) continue;
+      if ((queuedSource === NOT_FOLLOWING_SOURCE) === incomingNotFollowing) continue;
+      for (const handle of handles) queuedHandles.delete(handle);
+      if (queuedHandles.size === 0) this.pending.delete(queuedSource);
+    }
     const queued = this.pending.get(source) ?? new Set<string>();
-    for (const handle of normalized) queued.add(handle);
+    for (const handle of handles) queued.add(handle);
     this.pending.set(source, queued);
   }
 

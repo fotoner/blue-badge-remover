@@ -3,6 +3,7 @@
 
 import type { PageType } from '@features/content-filter';
 import { X_HANDLE_PATTERN } from '@shared/constants';
+import { getViewerHandleHint } from './state';
 
 const RESERVED_PATHS = ['home', 'explore', 'search', 'notifications', 'messages', 'i', 'settings', 'compose'];
 
@@ -27,6 +28,30 @@ export function getAccountHandleFromDOM(): string | null {
   ];
   const handle = candidates.find((value) => value !== undefined && X_HANDLE_PATTERN.test(value));
   return handle ? handle.toLowerCase() : null;
+}
+
+// 앱 구별: xweb은 abs.twimg.com/x-web/x-web/entry-client*.js, rweb은 responsive-web/client-web/main.*.js (2026-11-23 실측, #142)
+const XWEB_SCRIPT_HOST = 'abs.twimg.com';
+const XWEB_SCRIPT_PATH_PREFIX = '/x-web/x-web/entry-client';
+
+/** 이 문서가 새 웹 앱(xweb)인지. 스크립트 주소의 호스트와 경로로 가른다 — 다른 호스트가 같은 경로를 흉내 내도 속지 않는다 (#142) */
+export function isXwebDocument(): boolean {
+  return Array.from(document.scripts).some((script) => {
+    try {
+      const { hostname, pathname } = new URL(script.src);
+      return hostname === XWEB_SCRIPT_HOST && pathname.startsWith(XWEB_SCRIPT_PATH_PREFIX);
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
+ * DOM에서 못 찾으면, xweb 문서에 한해 MAIN world가 알려 준 초기 데이터의 본인 핸들(소문자)로 대신한다.
+ * xweb에는 계정 전환 링크가 없다. rweb은 힌트를 받아 두어도 쓰지 않는다 (#142)
+ */
+export function getAccountHandle(): string | null {
+  return getAccountHandleFromDOM() ?? (isXwebDocument() ? getViewerHandleHint() : null);
 }
 
 const STATUS_PATH = /^\/([^/]+)\/status\/\d+/;
