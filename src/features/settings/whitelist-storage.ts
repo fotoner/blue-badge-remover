@@ -22,7 +22,7 @@ function normalizeWhitelistEntry(handle: string): string {
   return `@${stripped.toLowerCase()}`;
 }
 
-function dedupeNormalized(list: string[]): string[] {
+export function dedupeNormalized(list: string[]): string[] {
   const seen = new Set<string>();
   const result: string[] = [];
   for (const raw of list) {

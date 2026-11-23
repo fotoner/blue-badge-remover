@@ -40,9 +40,16 @@ export default defineBackground(() => {
   void cleanupOldStats();
 
   // content script → 설정 페이지 열기 요청 처리
-  browser.runtime.onMessage.addListener((message, sender) => {
+  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const type = (message as Record<string, unknown>).type;
-    if (type === MESSAGE_TYPES.WHITELIST) return handleWhitelistRequest(message);
+    if (type === MESSAGE_TYPES.WHITELIST) {
+      // 리스너가 돌려준 Promise를 응답으로 쓰는 것은 Chrome 148부터다. 그 전 규약을 따르는 브라우저에서도 답이 가도록 sendResponse로 보낸다 (#135)
+      void handleWhitelistRequest(message).then(sendResponse, (error: unknown) => {
+        logger.warn('Whitelist request failed', { error: String(error) });
+        sendResponse(undefined);
+      });
+      return true;
+    }
     if (type !== MESSAGE_TYPES.OPEN_SETTINGS) return;
     const settingsUrl = browser.runtime.getURL('/popup.html');
     if (isFirefoxAndroid && sender.tab?.id != null) {

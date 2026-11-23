@@ -40,6 +40,7 @@ const {
   updateSettings,
   initLanguageOnInstall,
   getWhitelist,
+  getStoredWhitelist,
   addToWhitelist,
   addManyToWhitelist,
   removeFromWhitelist,
@@ -268,5 +269,35 @@ describe('whitelist', () => {
     ]);
 
     expect(mockStorage['whitelist']).toEqual(['@bob']);
+  });
+});
+
+describe('getStoredWhitelist', () => {
+  // content script 시작용: background(sendMessage)를 거치지 않고 저장소에서 바로 읽는다
+  it('background에 묻지 않고 저장소 값을 정규화해 돌려준다', async () => {
+    mockStorage['whitelist'] = ['@Foo', 'foo', '@@Bar'];
+
+    const list = await getStoredWhitelist();
+
+    expect(list).toEqual(['@foo', '@bar']);
+    expect(mockSendMessage).not.toHaveBeenCalled();
+  });
+
+  it('정규화한 값을 저장소에 다시 쓰지 않는다', async () => {
+    mockStorage['whitelist'] = ['@Foo', '@foo'];
+    const before = (browser.storage.local.set as Mock).mock.calls.length;
+
+    await getStoredWhitelist();
+
+    expect((browser.storage.local.set as Mock).mock.calls.length - before).toBe(0);
+    expect(mockStorage['whitelist']).toEqual(['@Foo', '@foo']);
+  });
+
+  it('저장값이 문자열 배열이 아니면 문자열만 남긴다', async () => {
+    mockStorage['whitelist'] = ['@foo', 42, null];
+    expect(await getStoredWhitelist()).toEqual(['@foo']);
+
+    mockStorage['whitelist'] = 'foo';
+    expect(await getStoredWhitelist()).toEqual([]);
   });
 });

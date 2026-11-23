@@ -2,7 +2,7 @@
 // Content script 진입점. 초기화 + 모듈 연결만 담당.
 import { browser } from 'wxt/browser';
 import { FeedObserver, setTweetHiderLanguage } from '@features/content-filter';
-import { getSettings as loadSettings, getWhitelist, addToWhitelist } from '@features/settings';
+import { getSettings as loadSettings, getStoredWhitelist, addToWhitelist } from '@features/settings';
 import { MESSAGE_TYPES, STORAGE_KEYS, TIMINGS } from '@shared/constants';
 import { logger } from '@shared/utils/logger';
 import { showFadakProfileBanner, showFadakDetailBanner, removeFadakBanner } from './fadak-banner';
@@ -161,7 +161,8 @@ async function finishInitialSetup(): Promise<void> {
 
 async function init(): Promise<void> {
   listenForReloadProbe();
-  const [settings, whitelist] = await Promise.all([loadSettings(), getWhitelist()]);
+  // 화이트리스트는 저장소에서 바로 읽는다. background 응답을 기다리면 background가 응답하지 않을 때(예: iOS Orion 제보) 숨김이 시작되지 않는다 (#135)
+  const [settings, whitelist] = await Promise.all([loadSettings(), getStoredWhitelist()]);
   setSettings(settings);
   await loadFilterRules();
 

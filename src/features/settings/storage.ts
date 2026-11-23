@@ -2,7 +2,7 @@ import { browser } from 'wxt/browser';
 import type { Settings } from '@shared/types';
 import { DEFAULT_SETTINGS, MESSAGE_TYPES, STORAGE_KEYS } from '@shared/constants';
 import { detectLanguage, type Language } from '@shared/i18n';
-import type { WhitelistRequest, WhitelistResponse } from './whitelist-storage';
+import { dedupeNormalized, type WhitelistRequest, type WhitelistResponse } from './whitelist-storage';
 
 export type SettingsPatch = Partial<Omit<Settings, 'filter'>> & { filter?: Partial<Settings['filter']> };
 
@@ -64,6 +64,18 @@ export async function getWhitelist(): Promise<string[]> {
     operation: 'get',
   });
   return response.whitelist;
+}
+
+/**
+ * content script 시작용으로, background를 거치지 않고 저장소에서 바로 읽는다.
+ * getWhitelist()는 background가 응답하지 않으면(예: iOS Orion 제보) 실패하거나 끝나지 않아, 그 뒤의 숨김 시작까지 막는다 (#135).
+ * 정규화는 메모리에서만 하고 저장소에 다시 쓰지 않는다. 쓰기는 background 큐가 맡는다.
+ */
+export async function getStoredWhitelist(): Promise<string[]> {
+  const result = await browser.storage.local.get([STORAGE_KEYS.WHITELIST]);
+  const stored: unknown = result[STORAGE_KEYS.WHITELIST];
+  if (!Array.isArray(stored)) return [];
+  return dedupeNormalized(stored.filter((handle): handle is string => typeof handle === 'string'));
 }
 
 export async function addToWhitelist(handle: string): Promise<void> {
