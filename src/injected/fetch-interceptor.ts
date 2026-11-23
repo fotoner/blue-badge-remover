@@ -3,7 +3,7 @@
 // where extension module imports (chrome.runtime, @shared paths) are unavailable.
 // To keep them in sync, tests/injected/fetch-interceptor-constants.test.ts
 // asserts that these values match the shared constants.
-import { findUserObjects, extractFollowingFromUsers, extractNotFollowingFromUsers, extractFollowingListHandles, dedupeFollowHandles, extractProfileEntries, isFollowingEndpoint, type ProfileEntry } from './data-extractors';
+import { findUserObjects, extractFollowingFromUsers, extractNotFollowingFromUsers, extractFollowingListHandles, dedupeFollowHandles, extractProfileEntries, isFollowingEndpoint, isGraphqlRequestUrl, mergeProfileEntry, readInitialData, readViewerHandle, type ProfileEntry } from './data-extractors';
 import { FiberFollowObserver } from './fiber-follow-observer';
 import { FollowBridge, type FollowSource } from './follow-bridge';
 import { splitProfileBatches } from './profile-batches';
@@ -11,12 +11,9 @@ const MESSAGE_TYPES = {
   FOLLOW_DATA: 'BBR_FOLLOW_DATA',
   PROFILE_DATA: 'BBR_PROFILE_DATA',
   CONTENT_READY: 'BBR_CONTENT_READY',
+  VIEWER_HANDLE: 'BBR_VIEWER_HANDLE',
+  VIEWER_HANDLE_REQUEST: 'BBR_VIEWER_HANDLE_REQUEST',
 } as const;
-
-const X_GRAPHQL_ENDPOINTS = [
-  '/i/api/graphql/',
-  '/i/api/2/',
-] as const;
 
 let bbrDebugMode = false;
 
@@ -36,6 +33,40 @@ const fiberFollowObserver = new FiberFollowObserver((handles) => {
   followBridge.send(handles, 'inline');
 });
 
+// xweb은 화면에 계정 전환 링크가 없어 첫 화면 데이터의 viewerScreenName이 본인 계정의 유일한 출처다 (#142).
+// document_start에는 아직 없을 수 있어 DOM이 준비된 뒤에도 읽고, 기존 앱처럼 데이터가 없으면 아무것도 보내지 않는다
+function postViewerHandle(): void {
+  const handle = readViewerHandle(window);
+  if (handle) window.postMessage({ type: MESSAGE_TYPES.VIEWER_HANDLE, handle }, window.location.origin);
+}
+
+// 초기 데이터는 DOM이 준비될 때 읽는 스냅샷이라, 그보다 먼저 도착한 응답보다 오래된 값이다 (#142 리뷰 r5 S5-1).
+// 초기 데이터는 응답이 실제로 알려 준 값(팔로우 여부, 프로필의 각 필드)에만 양보하고, 응답에 없던 값은 그대로 쓴다(PR 리뷰).
+// 초기 데이터를 읽기 전에 응답이 팔로우 여부를 알려 준 핸들만 모은다. 읽은 뒤에는 쓸 일이 없어 더 모으지 않는다
+let initialDataRead = false;
+const followReportedBeforeInitialData = new Set<string>();
+
+// xweb 첫 화면 데이터에 들어 있는 사용자도 응답과 같은 경로로 읽는다 (#142 리뷰 r3 S1-1).
+// 첫 타임라인 응답이 오기 전에 화면에 그려진 작성자의 팔로우 여부를 content script가 알 수 있게 하기 위해서다.
+// 계정이 확정되기 전이면 follow-bridge 대기열에 쌓인다. 사용자 객체가 없거나 읽다 실패하면(순환 참조 등) 아무것도 보내지 않는다
+function extractInitialUsers(): void {
+  initialDataRead = true;
+  const initialData = readInitialData(window);
+  if (!initialData) return;
+  try {
+    extractUserData(initialData, 'initial-data', followBridge.getAccount(), true);
+  } catch {
+    // 실측 없는 데이터라 모양을 믿지 않는다 — 시작을 깨뜨리지 않는다
+  } finally {
+    followReportedBeforeInitialData.clear();
+  }
+}
+
+function onDomReady(): void {
+  postViewerHandle();
+  extractInitialUsers();
+}
+
 function postProfiles(profiles: ProfileEntry[]): void {
   for (const batch of splitProfileBatches(profiles)) {
     window.postMessage({ type: MESSAGE_TYPES.PROFILE_DATA, profiles: batch }, window.location.origin);
@@ -52,6 +83,10 @@ window.addEventListener('message', (event) => {
   if (data?.type === MESSAGE_TYPES.CONTENT_READY && cachedProfiles.size > 0) {
     postProfiles(Array.from(cachedProfiles.values()));
   }
+  // 본인 계정이 아직 없는 content script도 준비 신호를 보낸다 — 먼저 보낸 핸들 메시지를 놓쳤을 수 있어 다시 보낸다 (#142)
+  if (data?.type === MESSAGE_TYPES.CONTENT_READY) postViewerHandle();
+  // content script가 시작하자마자 핸들만 다시 달라고 한다. 프로필은 다시 보내지 않는다(받을 리스너가 아직 없다) (#142)
+  if (data?.type === MESSAGE_TYPES.VIEWER_HANDLE_REQUEST) postViewerHandle();
   if (data?.type === MESSAGE_TYPES.CONTENT_READY && typeof data['account'] === 'string') {
     followBridge.markReady(data['account']);
     fiberFollowObserver.markContentReady();
@@ -70,7 +105,7 @@ window.fetch = async function patchedFetch(
   const response = await originalFetch.call(window, input, init);
 
   // Intercept GraphQL responses
-  const isGraphQL = X_GRAPHQL_ENDPOINTS.some((ep) => url.includes(ep));
+  const isGraphQL = isGraphqlRequestUrl(url);
   if (isGraphQL) {
     try {
       const cloned = response.clone();
@@ -114,7 +149,7 @@ XMLHttpRequest.prototype.send = function patchedXhrSend(body?: Document | XMLHtt
   const xhr = this as XMLHttpRequest & { _bbrUrl?: string };
   const url = xhr._bbrUrl ?? '';
   const accountAtRequest = followBridge.getAccount();
-  const isGraphQL = X_GRAPHQL_ENDPOINTS.some((ep) => url.includes(ep));
+  const isGraphQL = isGraphqlRequestUrl(url);
   if (isGraphQL) {
     xhr.addEventListener('load', function () {
       try {
@@ -134,29 +169,37 @@ XMLHttpRequest.prototype.send = function patchedXhrSend(body?: Document | XMLHtt
   return origXhrSend.call(this, body);
 };
 
-function extractUserData(data: unknown, endpointHint?: string, account?: string | null): void {
+function extractUserData(data: unknown, endpointHint?: string, account?: string | null, fromInitialData = false): void {
   const users: Array<Record<string, unknown>> = [];
   findUserObjects(data, users);
   if (users.length === 0) return;
 
-  postProfileData(users, endpointHint);
-  postTimelineFollowData(users, endpointHint, account);
+  postProfileData(users, endpointHint, fromInitialData);
+  postTimelineFollowData(users, endpointHint, account, fromInitialData);
 }
 
-function postProfileData(users: Array<Record<string, unknown>>, endpointHint?: string): void {
-  // Derive profiles from already-collected users — avoids a second full traversal
-  const profiles = extractProfileEntries(users);
+// 준비 신호 때 다시 보낼 프로필은 사용자 ID 기준으로 합친다 (#142 리뷰 r4 S4-2).
+// 첫 응답(초기 데이터)에 자기소개·팔로워 수가 없고 뒤이은 GraphQL이 주더라도 재전송에 빠지지 않게 하기 위해서다.
+// 초기 데이터는 캐시보다 오래된 값이라 캐시에 없는 필드만 채운다 (#142 리뷰 r5 S5-1). 합친 값을 돌려준다
+function cacheProfile(profile: ProfileEntry, olderThanCache: boolean): ProfileEntry {
+  const earlier = cachedProfiles.get(profile.userId);
+  if (!earlier && cachedProfiles.size >= MAX_CACHED_PROFILES) {
+    const firstKey = cachedProfiles.keys().next().value;
+    if (firstKey !== undefined) cachedProfiles.delete(firstKey);
+  }
+  const merged = olderThanCache && earlier ? mergeProfileEntry(profile, earlier) : mergeProfileEntry(earlier, profile);
+  cachedProfiles.set(profile.userId, merged);
+  return merged;
+}
 
-  if (profiles.length > 0) {
-    for (const p of profiles) {
-      if (!cachedProfiles.has(p.userId)) {
-        if (cachedProfiles.size >= MAX_CACHED_PROFILES) {
-          const firstKey = cachedProfiles.keys().next().value;
-          if (firstKey !== undefined) cachedProfiles.delete(firstKey);
-        }
-        cachedProfiles.set(p.userId, p);
-      }
-    }
+function postProfileData(users: Array<Record<string, unknown>>, endpointHint?: string, fromInitialData = false): void {
+  // Derive profiles from already-collected users — avoids a second full traversal
+  const extracted = extractProfileEntries(users);
+
+  if (extracted.length > 0) {
+    const merged = extracted.map((p) => cacheProfile(p, fromInitialData));
+    // 초기 데이터는 합친 값을 보낸다 — 먼저 받은 응답의 필드를 content 쪽 캐시에서 덮지 않게 하기 위해서다
+    const profiles = fromInitialData ? merged : extracted;
     postProfiles(profiles);
 
     if (bbrDebugMode) {
@@ -174,13 +217,22 @@ function postProfileData(users: Array<Record<string, unknown>>, endpointHint?: s
 // ListLatestTweetsTimeline 등 모든 GraphQL 타임라인이 extractBadgeData를 거치므로 자동 커버.
 // 영구 메모 없음(Defect 1 수정) — 동일 핸들이 여러 응답에 걸쳐 반복 포스트될 수 있으며,
 // 이는 의도된 self-heal: content 측 followSet diff(message-handler.ts)가 흡수한다.
+// 초기 데이터에서는 먼저 도착한 응답이 팔로우 여부를 알려 준 핸들을 뺀다. 초기 데이터 전의 응답은 그 핸들을 기록한다 (#142 리뷰 r5 S5-1)
+function yieldToEarlierResponses(handles: string[], fromInitialData: boolean): string[] {
+  if (fromInitialData) return handles.filter((handle) => !followReportedBeforeInitialData.has(handle.toLowerCase()));
+  if (!initialDataRead) for (const handle of handles) followReportedBeforeInitialData.add(handle.toLowerCase());
+  return handles;
+}
+
 function postTimelineFollowData(
   users: Array<Record<string, unknown>>,
   endpointHint?: string,
   account?: string | null,
+  fromInitialData = false,
 ): void {
   const matches = extractFollowingFromUsers(users);
-  const handles = dedupeFollowHandles(matches);
+  const handles = yieldToEarlierResponses(dedupeFollowHandles(matches), fromInitialData);
+  const notFollowing = yieldToEarlierResponses(extractNotFollowingFromUsers(users), fromInitialData);
   if (bbrDebugMode) {
     const pathCounts: Record<string, number> = {};
     for (const m of matches) pathCounts[m.path] = (pathCounts[m.path] ?? 0) + 1;
@@ -190,10 +242,12 @@ function postTimelineFollowData(
     );
   }
   // 팔로우 안 함으로 확인된 핸들도 보내 오염된 목록을 정리한다 — content 측은 followSet에 있는 것만 지운다
-  followBridge.send(extractNotFollowingFromUsers(users), 'api-not-following', account);
+  // 초기 데이터는 대기열에 이미 있는 핸들을 건드리지 않는다 (#142 리뷰 r7 S7-2)
+  const send = fromInitialData ? followBridge.sendIfUnqueued.bind(followBridge) : followBridge.send.bind(followBridge);
+  send(notFollowing, 'api-not-following', account);
   if (handles.length === 0) return;
   fiberFollowObserver.markReported(handles);
-  followBridge.send(handles, 'api-timeline', account);
+  send(handles, 'api-timeline', account);
 }
 
 // extractViewerUserId / findViewerId 제거됨 — 수신 리스너 없는 죽은 코드
@@ -216,4 +270,10 @@ if (document.body) {
   startFiberFollowObserver();
 } else {
   document.addEventListener('DOMContentLoaded', startFiberFollowObserver, { once: true });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', onDomReady, { once: true });
+} else {
+  onDomReady();
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { classifyTweet, classifyQuote, resolveHideMode } from '../../src/content/tweet-classifier';
-import type { ClassifyInput, QuoteClassifyInput } from '../../src/content/tweet-classifier';
+import { classifyTweet, classifyQuote, resolveHideMode, shouldDeferHiding } from '../../src/content/tweet-classifier';
+import type { ClassifyInput, HidingDeferralInput, QuoteClassifyInput } from '../../src/content/tweet-classifier';
 import type { Settings } from '../../src/shared/types';
 
 const defaultSettings: Settings = {
@@ -572,5 +572,49 @@ describe('resolveHideMode', () => {
 
   it('숨김 방식이 접기면 어느 화면에서든 접는다', () => {
     expect(resolveHideMode({ ...defaultSettings, hideMode: 'collapse', collapseOnDetail: false }, 'replies')).toBe('collapse');
+  });
+});
+
+// #142 리뷰 r3 S1-1: 팔로우 예외가 빠진 채 파딱 판정이 먼저 나가지 않게, xweb 첫 방문에는 팔로우 여부를 아직 모르는 작성자의 숨김 판정을 미룬다
+describe('shouldDeferHiding', () => {
+  const unknownAuthor: HidingDeferralInput = {
+    isXweb: true,
+    hasFollowCache: false,
+    graceElapsed: false,
+    subjects: [{ inFollow: false, known: false }],
+  };
+
+  it('xweb이고 팔로우 캐시가 없고 유예가 남았고 작성자의 팔로우 여부를 모르면 미룬다', () => {
+    expect(shouldDeferHiding(unknownAuthor)).toBe(true);
+  });
+
+  it('기존 앱(rweb)은 미루지 않는다', () => {
+    expect(shouldDeferHiding({ ...unknownAuthor, isXweb: false })).toBe(false);
+  });
+
+  it('팔로우 캐시가 있는 계정은 미루지 않는다', () => {
+    expect(shouldDeferHiding({ ...unknownAuthor, hasFollowCache: true })).toBe(false);
+  });
+
+  it('유예 시간이 지났으면 미루지 않는다', () => {
+    expect(shouldDeferHiding({ ...unknownAuthor, graceElapsed: true })).toBe(false);
+  });
+
+  it('작성자가 팔로우 집합에 있으면 미루지 않는다', () => {
+    expect(shouldDeferHiding({ ...unknownAuthor, subjects: [{ inFollow: true, known: false }] })).toBe(false);
+  });
+
+  it('작성자의 팔로우 여부를 이미 알면(팔로우 안 함으로 확인됨) 미루지 않는다', () => {
+    expect(shouldDeferHiding({ ...unknownAuthor, subjects: [{ inFollow: false, known: true }] })).toBe(false);
+  });
+
+  it('리트윗이면 작성자를 알아도 리트위터의 팔로우 여부를 모르면 미룬다', () => {
+    const subjects = [{ inFollow: false, known: true }, { inFollow: false, known: false }];
+    expect(shouldDeferHiding({ ...unknownAuthor, subjects })).toBe(true);
+  });
+
+  it('리트윗이어도 작성자와 리트위터를 모두 알면 미루지 않는다', () => {
+    const subjects = [{ inFollow: false, known: true }, { inFollow: true, known: false }];
+    expect(shouldDeferHiding({ ...unknownAuthor, subjects })).toBe(false);
   });
 });

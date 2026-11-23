@@ -47,6 +47,20 @@ export const X_GRAPHQL_ENDPOINTS = [
   '/i/api/2/',
 ] as const;
 
+/** 새 웹 앱(xweb)이 GraphQL을 fetch하는 API 호스트. 경로는 `/graphql/`이다 (#142, 2026-11-23 실측). MAIN world 사본은 src/injected/data-extractors.ts */
+export const X_API_GRAPHQL_HOSTS = ['api.x.com', 'api.twitter.com'] as const;
+
+/**
+ * 트윗 article 선택자 한 곳 (#142).
+ * 기존 앱(rweb)은 article[data-testid="tweet"], 새 앱(xweb)은 testid가 없고 data-href 컨테이너의 직계 article이다.
+ * xweb에서 인용은 같은 꼴의 컨테이너에 data-slot="embedded-tweet-frame"이 붙은 것이라 트윗으로 잡지 않는다.
+ */
+export const TWEET_ARTICLE_SELECTOR =
+  'article[data-testid="tweet"], [data-href]:not([data-slot="embedded-tweet-frame"]) > article';
+
+/** xweb 인증 배지(svg > use)의 심볼 참조. 종류는 심볼 이름이 가른다: premium(파딱)·business·government (#142) */
+export const XWEB_BADGE_SELECTOR = 'use[href^="#icon-verified-"]';
+
 /** 타이밍 상수 (ms) */
 export const TIMINGS = {
   /** 계정 전환 감지 폴링 주기 */
@@ -75,12 +89,18 @@ export const TIMINGS = {
   REPROCESS_CHUNK_SIZE: 10,
   /** 팝업의 새로고침 확인 재시도 대기 — document_idle 주입이 탭 complete보다 조금 늦을 수 있다 (#121) */
   RELOAD_PROBE_RETRY: 1000,
+  /** xweb 첫 방문(팔로우 캐시 없음)에서 작성자의 팔로우 여부를 기다리며 파딱 숨김 판정을 미루는 최대 시간(첫 유예 시점부터). 팔로우 여부를 끝내 모르는 작성자는 이 시간이 지나야 숨긴다 (#142) */
+  FIRST_VISIT_FOLLOW_GRACE: 2000,
 } as const;
 
 export const MESSAGE_TYPES = {
   FOLLOW_DATA: 'BBR_FOLLOW_DATA',
   PROFILE_DATA: 'BBR_PROFILE_DATA',
   CONTENT_READY: 'BBR_CONTENT_READY',
+  /** MAIN world → content script: xweb 초기 데이터의 본인 계정 핸들 (#142) */
+  VIEWER_HANDLE: 'BBR_VIEWER_HANDLE',
+  /** content script → MAIN world: 본인 계정 핸들만 다시 보내 달라는 요청. 시작이 늦어 먼저 온 핸들을 놓쳤을 때 쓴다 (#142) */
+  VIEWER_HANDLE_REQUEST: 'BBR_VIEWER_HANDLE_REQUEST',
   OPEN_SETTINGS: 'BBR_OPEN_SETTINGS',
   WHITELIST: 'BBR_WHITELIST',
   /** 팝업 → content script: 이 탭에서 필터가 동작하는 상태인지 확인 (#121) */

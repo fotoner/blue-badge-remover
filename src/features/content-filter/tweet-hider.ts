@@ -43,6 +43,9 @@ const PLACEHOLDER_STYLES = `
     -webkit-user-select: none; min-height: 40px;
   }
   .bbr-quote-placeholder:hover { color: #1d9bf0; }
+  [data-href]:has(> article[data-bbr-original="hidden"]) {
+    padding-top: 0 !important; padding-bottom: 0 !important; border-bottom-width: 0 !important;
+  }
 `;
 
 export function setTweetHiderLanguage(lang: Language): void {
@@ -143,7 +146,8 @@ export function showExpandedTweet(
 }
 
 function insertExpandedActions(element: HTMLElement, actions: HTMLDivElement): void {
-  const replyButton = element.querySelector('[data-testid="reply"]');
+  // 새 웹 앱(xweb)의 반응 버튼은 testid 없이 data-engagement-action이다 (#142)
+  const replyButton = element.querySelector('[data-testid="reply"], [data-engagement-action="reply"]');
   const nativeActions = replyButton?.closest<HTMLElement>('[role="group"]');
   if (nativeActions) {
     nativeActions.insertAdjacentElement('beforebegin', actions);
@@ -172,6 +176,8 @@ export function hideTweet(
   if (element.hasAttribute(EXPANDED_ATTR)) return;
 
   if (mode === 'remove') {
+    // xweb은 바깥 [data-href] 칸에 세로 여백과 구분선이 있어 스타일 규칙으로 함께 접는다 (#142, CNT-5)
+    injectStyles();
     element.style.visibility = 'hidden';
     element.style.height = REMOVED_CELL_HEIGHT;
     element.style.overflow = 'hidden';

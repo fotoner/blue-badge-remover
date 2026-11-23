@@ -7,6 +7,7 @@ import {
   getFollowSet,
   getSettings,
   getProtectedKeywords,
+  getViewerHandleHint,
   getWhitelistSet,
   isHandleFollowed,
   isHandleWhitelisted,
@@ -14,6 +15,7 @@ import {
   setCurrentUserHandle,
   setFollowSet,
   setSettings,
+  setViewerHandleHint,
   setProtectedKeywords,
   setWhitelistSet,
 } from '../../src/content/state';
@@ -26,6 +28,7 @@ describe('content state', () => {
     setActiveFilterRules([]);
     setProtectedKeywords([]);
     setCurrentUserHandle(null);
+    setViewerHandleHint(null);
     getExpandedSet().clear();
   });
 
@@ -42,6 +45,14 @@ describe('content state', () => {
     expect(getSettings()).toEqual(DEFAULT_SETTINGS);
     expect(getActiveFilterRules()).toBe(rules);
     expect(getCurrentUserHandle()).toBe('owner');
+  });
+
+  it('MAIN world가 알려 준 본인 핸들 힌트를 보관한다 (#142)', () => {
+    expect(getViewerHandleHint()).toBeNull();
+
+    setViewerHandleHint('owner');
+
+    expect(getViewerHandleHint()).toBe('owner');
   });
 
   it('팔로우 핸들은 대소문자와 무관하게 조회한다', () => {

@@ -18,7 +18,7 @@ vi.mock('@shared/utils/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-vi.mock('@features/stats', () => ({ recordHide: vi.fn() }));
+vi.mock('@features/stats', () => ({ recordHide: vi.fn(), unrecordHide: vi.fn() }));
 vi.mock('@features/settings', () => ({ addToWhitelist: vi.fn() }));
 vi.mock('../../src/content/collector-buffer', () => ({
   bufferCollectedFadak: vi.fn(),

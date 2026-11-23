@@ -1,4 +1,5 @@
-const TWEET_SELECTOR = 'article[data-testid="tweet"]';
+import { TWEET_ARTICLE_SELECTOR as TWEET_SELECTOR } from '@shared/constants';
+
 const MAX_PROP_DEPTH = 20;
 const MAX_FIBER_DEPTH = 40;
 const MAX_REPORTED_HANDLES = 5000;

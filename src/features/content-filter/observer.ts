@@ -1,4 +1,5 @@
 // src/features/content-filter/observer.ts
+import { TWEET_ARTICLE_SELECTOR } from '@shared/constants';
 import { logger } from '@shared/utils/logger';
 
 type TweetCallback = (tweetElement: HTMLElement) => void;
@@ -21,9 +22,9 @@ export class FeedObserver {
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
           if (!(node instanceof HTMLElement)) continue;
-          const tweets = node.querySelectorAll('article[data-testid="tweet"]');
+          const tweets = node.querySelectorAll(TWEET_ARTICLE_SELECTOR);
           tweets.forEach((tweet) => this.pendingTweets.push(tweet as HTMLElement));
-          if (node.matches?.('article[data-testid="tweet"]')) {
+          if (node.matches?.(TWEET_ARTICLE_SELECTOR)) {
             this.pendingTweets.push(node);
           }
         }

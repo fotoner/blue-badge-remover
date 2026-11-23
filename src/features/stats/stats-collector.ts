@@ -17,6 +17,11 @@ let buffer: DailyStats = emptyBuffer();
 let flushTimerId: ReturnType<typeof setInterval> | null = null;
 const countedStatusPaths = new Set<string>();
 
+// 아직 저장소로 흘려보내지 않은 숨김의 분류·팩. 팔로우·화이트리스트 변경으로 복원된 트윗을 집계 버퍼에서 되돌릴 때 쓴다 (#142).
+// 키는 recordHide와 같다: statusPath가 있으면 그것, 없으면 트윗 요소. flush가 버퍼를 넘겨받을 때 함께 넘어간다
+interface BufferedHide { category?: string; packId?: string }
+let bufferedHides = new Map<string | HTMLElement, BufferedHide>();
+
 function localDateStr(): string {
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -43,6 +48,7 @@ export function recordHide(
     return;
   }
   tweetEl.setAttribute(COUNTED_ATTR, '1');
+  bufferedHides.set(statusPath || tweetEl, { category, packId });
 
   buffer.totalHidden++;
   if (category) {
@@ -51,6 +57,28 @@ export function recordHide(
   if (packId) {
     buffer.byPack[packId] = (buffer.byPack[packId] ?? 0) + 1;
   }
+}
+
+function subtractCount(target: Record<string, number>, key: string): void {
+  const remaining = (target[key] ?? 0) - 1;
+  if (remaining > 0) target[key] = remaining;
+  else delete target[key];
+}
+
+/**
+ * 숨겼다가 복원된 트윗 한 건을 집계 버퍼에서 되돌린다 (#142 리뷰 r4 S1-1). 이미 저장소로 흘려보낸 숨김은 건드리지 않는다.
+ * 복원된 트윗이 나중에 다시 숨겨지면 recordHide가 다시 센다.
+ */
+export function unrecordHide(tweetEl: HTMLElement, statusPath?: string | null): void {
+  const key = statusPath || tweetEl;
+  const hidden = bufferedHides.get(key);
+  if (!hidden) return;
+  bufferedHides.delete(key);
+  buffer.totalHidden--;
+  if (hidden.category) subtractCount(buffer.byCategory, hidden.category);
+  if (hidden.packId) subtractCount(buffer.byPack, hidden.packId);
+  if (statusPath) countedStatusPaths.delete(statusPath);
+  tweetEl.removeAttribute(COUNTED_ATTR);
 }
 
 function rememberStatusPath(statusPath: string): void {
@@ -94,6 +122,8 @@ async function flushPending(): Promise<void> {
   // 시작 시점에 버퍼를 넘겨받는다 — 이후 storage 왕복 중 기록은 새 버퍼에 쌓여 유실되지 않는다
   const pending = buffer;
   buffer = emptyBuffer();
+  const pendingHides = bufferedHides;
+  bufferedHides = new Map();
   try {
     // pending.date 기준으로 저장 — 자정 경계에서도 올바른 날짜에 귀속
     const today = await getTodayStats(pending.date);
@@ -103,6 +133,8 @@ async function flushPending(): Promise<void> {
     // 일별 저장 실패 시 다음 flush에서 재시도하도록 버퍼로 되돌린다 (날짜는 기록 시점 유지)
     mergeInto(pending, buffer);
     buffer = pending;
+    for (const [key, hidden] of bufferedHides) pendingHides.set(key, hidden);
+    bufferedHides = pendingHides;
     logger.warn('Stats flush failed', { error: String(error) });
     return;
   }

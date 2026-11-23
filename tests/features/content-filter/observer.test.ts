@@ -95,6 +95,46 @@ describe('FeedObserver', () => {
     expect(callback).toHaveBeenCalledWith(tweet2);
   });
 
+  // xweb(#142): 트윗은 data-href 컨테이너의 직계 article이다. 인용 프레임 안 article은 트윗이 아니다
+  function createXwebTweetContainer(): { container: HTMLElement; article: HTMLElement; frameArticle: HTMLElement } {
+    const containerEl = document.createElement('div');
+    containerEl.setAttribute('data-href', '/user_1/status/1');
+    const article = document.createElement('article');
+    const frame = document.createElement('div');
+    frame.setAttribute('data-href', '/user_2/status/2');
+    frame.setAttribute('data-slot', 'embedded-tweet-frame');
+    const frameArticle = document.createElement('article');
+    frame.appendChild(frameArticle);
+    article.appendChild(frame);
+    containerEl.appendChild(article);
+    return { container: containerEl, article, frameArticle };
+  }
+
+  it('xweb 컨테이너가 통째로 추가되면 최상위 article만 콜백으로 넘긴다 (인용 프레임 안 article 제외)', async () => {
+    feedObserver.observe(container);
+
+    const xweb = createXwebTweetContainer();
+    container.appendChild(xweb.container);
+    await flushMicrotasks();
+
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(callback).toHaveBeenCalledWith(xweb.article);
+    expect(callback).not.toHaveBeenCalledWith(xweb.frameArticle);
+  });
+
+  it('xweb article이 이미 있는 컨테이너에 직접 추가돼도 잡는다', async () => {
+    const parent = document.createElement('div');
+    parent.setAttribute('data-href', '/user_1/status/1');
+    container.appendChild(parent);
+    feedObserver.observe(container);
+
+    const article = document.createElement('article');
+    parent.appendChild(article);
+    await flushMicrotasks();
+
+    expect(callback).toHaveBeenCalledWith(article);
+  });
+
   it('should ignore non-HTMLElement nodes', async () => {
     feedObserver.observe(container);
 

@@ -82,6 +82,29 @@ describe('FiberFollowObserver', () => {
     expect(onHandles).toHaveBeenCalledWith(['alice', 'bob']);
   });
 
+  // xweb(#142): article에 data-testid가 없고 data-href 컨테이너의 직계 자식이다. fiber props 모양은 xweb에서 미실측이라 기존 모양으로 시험한다
+  it('xweb 컨테이너의 article도 스캔하고, 인용 프레임 안 article은 스캔하지 않는다', async () => {
+    observer.markContentReady();
+    const container = document.createElement('div');
+    container.setAttribute('data-href', '/user_1/status/1');
+    const article = makeFiberArticle('Alice');
+    article.removeAttribute('data-testid');
+    const frame = document.createElement('div');
+    frame.setAttribute('data-href', '/user_2/status/2');
+    frame.setAttribute('data-slot', 'embedded-tweet-frame');
+    const frameArticle = makeFiberArticle('Quoted');
+    frameArticle.removeAttribute('data-testid');
+    frame.appendChild(frameArticle);
+    article.appendChild(frame);
+    container.appendChild(article);
+    document.body.appendChild(container);
+    await flushMutations();
+    rafCallbacks.shift()?.(0);
+
+    expect(onHandles).toHaveBeenCalledOnce();
+    expect(onHandles).toHaveBeenCalledWith(['alice']);
+  });
+
   it('같은 article과 이미 보고한 핸들은 다시 post하지 않는다', async () => {
     observer.markContentReady();
     const first = makeFiberArticle('Alice');

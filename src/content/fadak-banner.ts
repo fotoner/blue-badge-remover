@@ -1,6 +1,6 @@
 // src/content/fadak-banner.ts
 import { t } from '@shared/i18n';
-import { TIMINGS } from '@shared/constants';
+import { TIMINGS, TWEET_ARTICLE_SELECTOR } from '@shared/constants';
 import type { Settings } from '@shared/types';
 import { isBlueBadgeElement } from '@features/badge-detection/svg-fallback';
 import { extractTweetStatusPath, findAuthorBadge } from './tweet-processing';
@@ -159,7 +159,7 @@ let detailBannerObserver: MutationObserver | null = null;
 
 function findCurrentStatusTweet(): HTMLElement | null {
   const currentPath = window.location.pathname;
-  const articles = document.querySelectorAll<HTMLElement>('article[data-testid="tweet"]');
+  const articles = document.querySelectorAll<HTMLElement>(TWEET_ARTICLE_SELECTOR);
   for (const article of articles) {
     const statusPath = extractTweetStatusPath(article);
     if (statusPath && currentPath.includes(statusPath)) return article;

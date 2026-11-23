@@ -13,6 +13,8 @@ let _whitelistSet = new Set<string>();
 let _activeFilterRules: FilterRule[] = [];
 let _protectedKeywords: string[] = [];
 let _currentUserHandle: string | null = null;
+// xweb: 화면에서 본인 계정을 못 찾을 때 MAIN world가 초기 데이터에서 읽어 보낸 핸들(소문자) (#142)
+let _viewerHandleHint: string | null = null;
 
 export function getSettings(): Settings { return _settings; }
 export function setSettings(s: Settings): void { _settings = s; }
@@ -31,6 +33,9 @@ export function setProtectedKeywords(keywords: string[]): void { _protectedKeywo
 
 export function getCurrentUserHandle(): string | null { return _currentUserHandle; }
 export function setCurrentUserHandle(h: string | null): void { _currentUserHandle = h; }
+
+export function getViewerHandleHint(): string | null { return _viewerHandleHint; }
+export function setViewerHandleHint(h: string | null): void { _viewerHandleHint = h; }
 
 // 사용자가 펼친 트윗의 status path (DOM 재생성 시에도 유지)
 const _expandedSet = new Set<string>();

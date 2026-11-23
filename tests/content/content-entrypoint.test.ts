@@ -38,3 +38,15 @@ describe('content reload probe', () => {
     expect(listen).toBeLessThan(firstAwait);
   });
 });
+
+describe('xweb 본인 계정 힌트 리스너 (#142)', () => {
+  // MAIN world가 DOM 준비 때 보낸 힌트를 초기 계정 판정 전에 받으려면 리스너를 init의 첫 await보다 앞에서 등록해야 한다
+  it('힌트 리스너를 init의 첫 await 앞에서 등록한다', () => {
+    const initStart = source.indexOf('async function init()');
+    const listen = source.indexOf('listenForViewerHandle(', initStart);
+    const firstAwait = source.indexOf('await ', initStart);
+
+    expect(listen).toBeGreaterThan(initStart);
+    expect(listen).toBeLessThan(firstAwait);
+  });
+});

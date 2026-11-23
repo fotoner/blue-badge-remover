@@ -1,6 +1,7 @@
 // tests/content/page-utils.test.ts
 import { describe, it, expect, beforeEach } from 'vitest';
-import { isProfilePage, getPageType, getAccountHandleFromDOM, getDetailAuthorHandle } from '../../src/content/page-utils';
+import { isProfilePage, getPageType, getAccountHandleFromDOM, getAccountHandle, getDetailAuthorHandle, isXwebDocument } from '../../src/content/page-utils';
+import { setViewerHandleHint } from '../../src/content/state';
 
 function setPath(path: string): void {
   Object.defineProperty(window, 'location', {
@@ -175,6 +176,72 @@ describe('getAccountHandleFromDOM', () => {
     addProfileLink('/i/flow/login');
     addAccountSwitcher('temi_illust');
     expect(getAccountHandleFromDOM()).toBe('temi_illust');
+  });
+});
+
+// xweb에는 계정 전환 버튼·프로필 링크가 없다. DOM에서 못 찾을 때만, xweb 문서에서만 초기 데이터의 viewerScreenName 힌트를 쓴다 (#142)
+const XWEB_SCRIPT = 'https://abs.twimg.com/x-web/x-web/entry-client.0123abcd.js';
+const RWEB_SCRIPT = 'https://abs.twimg.com/responsive-web/client-web/main.0123abcd.js';
+
+function setHeadScripts(...sources: string[]): void {
+  document.head.innerHTML = sources.map((src) => `<script src="${src}"></script>`).join('');
+}
+
+describe('isXwebDocument', () => {
+  beforeEach(() => { document.head.innerHTML = ''; });
+
+  it('xweb 스크립트(abs.twimg.com/x-web/x-web/entry-client)가 있으면 true', () => {
+    setHeadScripts(XWEB_SCRIPT);
+
+    expect(isXwebDocument()).toBe(true);
+  });
+
+  it('rweb 스크립트만 있으면 false', () => {
+    setHeadScripts(RWEB_SCRIPT);
+
+    expect(isXwebDocument()).toBe(false);
+  });
+
+  it('스크립트가 없으면 false', () => {
+    expect(isXwebDocument()).toBe(false);
+  });
+
+  it('다른 호스트가 같은 경로를 흉내 내도 false', () => {
+    setHeadScripts('https://evil.example/abs.twimg.com/x-web/x-web/entry-client.js');
+
+    expect(isXwebDocument()).toBe(false);
+  });
+});
+
+describe('getAccountHandle', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    setHeadScripts(XWEB_SCRIPT);
+    setViewerHandleHint(null);
+  });
+
+  it('DOM에서 계정을 찾으면 힌트보다 DOM을 따른다', () => {
+    document.body.innerHTML = '<a data-testid="AppTabBar_Profile_Link" href="/DomHandle"></a>';
+    setViewerHandleHint('hint_handle');
+
+    expect(getAccountHandle()).toBe('domhandle');
+  });
+
+  it('xweb 문서에서 DOM에서 못 찾으면 힌트를 소문자로 쓴다', () => {
+    setViewerHandleHint('hint_handle');
+
+    expect(getAccountHandle()).toBe('hint_handle');
+  });
+
+  it('xweb 문서가 아니면 힌트가 있어도 쓰지 않는다 (rweb은 DOM에서만 판정)', () => {
+    setHeadScripts(RWEB_SCRIPT);
+    setViewerHandleHint('hint_handle');
+
+    expect(getAccountHandle()).toBeNull();
+  });
+
+  it('DOM도 힌트도 없으면 null이다', () => {
+    expect(getAccountHandle()).toBeNull();
   });
 });
 

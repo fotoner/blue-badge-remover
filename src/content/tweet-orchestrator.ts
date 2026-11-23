@@ -1,14 +1,17 @@
 // src/content/tweet-orchestrator.ts
 // 트윗 처리 오케스트레이터: DOM에서 트윗 정보를 추출하고, classifier로 판정하고, DOM을 조작.
-import { detectBadgeSvg, isBlueBadgeElement } from '@features/badge-detection/svg-fallback';
+import { isBlueBadgeElement } from '@features/badge-detection/svg-fallback';
 import { hideTweet, hideQuoteBlock, showExpandedTweet, showTweet, showQuoteBlock } from '@features/content-filter';
-import { extractTweetAuthor, extractRetweeterName, extractRetweeterHandle, extractTweetStatusPath, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, formatUserLabel, addDebugLabel, findAuthorBadge } from './tweet-processing';
+import { extractTweetAuthor, extractRetweeterName, extractRetweeterHandle, extractTweetStatusPath, findQuoteBlock, extractQuoteAuthor, extractDisplayName, extractTweetText, formatUserLabel, addDebugLabel, findAuthorBadge, isQuoteAuthorFadak } from './tweet-processing';
 import { isProfilePage, isDetailPage, getPageType, getDetailAuthorHandle } from './page-utils';
 import { profileCache, getSettings, getWhitelistSet, getActiveFilterRules, getProtectedKeywords, getCurrentUserHandle, setCurrentUserHandle, isHandleFollowed, isHandleWhitelisted, isCurrentUserHandle, getExpandedSet } from './state';
 import { bufferCollectedFadak } from './collector-buffer';
+import { deferHidingForFollows } from './follow-grace';
+import { collectHiddenTweets, collectTweetsToRejudge, uncountHiddenTweet } from './tweet-rejudge';
 import { classifyTweet, classifyQuote, resolveHideMode } from './tweet-classifier';
 import type { ClassifyResult, QuoteClassifyResult } from './tweet-classifier';
 import { recordHide } from '@features/stats';
+import { TWEET_ARTICLE_SELECTOR } from '@shared/constants';
 import { logger } from '@shared/utils/logger';
 import { addToWhitelist } from '@features/settings';
 
@@ -123,12 +126,32 @@ function applyTweetResult(
   return true;
 }
 
+/**
+ * 유예로 건너뛴 트윗을 다시 판정한다 (#142). reprocessExistingTweets는 <main> 안만 훑으므로, 건너뛴 요소를 직접 받아
+ * <main> 밖(대화상자) 트윗도 놓치지 않는다. 판정은 processTweet이 그대로 하므로 아직 기다리는 작성자는 다시 미뤄진다.
+ */
+export function rejudgeTweets(tweets: Iterable<HTMLElement>): void {
+  for (const tweet of tweets) {
+    if (!tweet.isConnected) continue;
+    tweet.querySelector('[data-bbr-debug]')?.remove();
+    try {
+      processTweet(tweet);
+    } catch (error) {
+      if (getSettings().debugMode) logger.error('Tweet reprocess failed', { error: String(error) });
+    }
+  }
+}
+
 export function processTweet(tweetEl: HTMLElement): void {
   if (isProfilePage()) return;
   const author = extractTweetAuthor(tweetEl);
   if (!author) return;
   const { handle } = author;
   const currentUserHandle = getCurrentUserHandle();
+  const retweeter = getRetweeterContext(tweetEl, currentUserHandle);
+  // xweb 첫 방문: 작성자(리트윗이면 리트위터도)의 팔로우 여부를 API 응답으로 알기 전에는 판정을 건너뛴다.
+  // 팔로우 예외 없이 숨기면 팔로우한 글이 잠깐 숨겨진다. 건너뛴 트윗은 그 여부가 알려지거나 시한이 지날 때 rejudgeTweets가 다시 판정한다 (#142)
+  if (deferHidingForFollows(tweetEl, [handle, retweeter.handle], rejudgeTweets)) return;
   const statusPath = extractTweetStatusPath(tweetEl);
   if (shouldSkipTweet(tweetEl, handle, statusPath, currentUserHandle)) return;
   const settings = getSettings();
@@ -137,7 +160,6 @@ export function processTweet(tweetEl: HTMLElement): void {
   const userLabel = formatUserLabel(handle, displayName);
   const inFollow = isHandleFollowed(handle);
   const isDetailAuthor = getDetailAuthorHandle() === handle.toLowerCase();
-  const retweeter = getRetweeterContext(tweetEl, currentUserHandle);
   if (settings.debugMode) {
     const hasQuote = !!findQuoteBlock(tweetEl);
     addDebugLabel(tweetEl, { handle: `@${handle}`, isFadak, isRetweet: retweeter.isRetweet, hasQuote, inFollow, retweeter: retweeter.isRetweet ? (extractRetweeterName(tweetEl) ?? '?') : undefined });
@@ -166,7 +188,9 @@ export function processTweet(tweetEl: HTMLElement): void {
   if (settings.enabled) {
     quoteHidden = processQuoteBlock(tweetEl, { handle, inFollow, isDetailAuthor }, retweeter.exempt, settings, userLabel, statusPath);
   }
-  if (!authorHidden && !quoteHidden && statusPath && getExpandedSet().delete(statusPath)) {
+  if (!authorHidden && !quoteHidden) {
+    if (statusPath) getExpandedSet().delete(statusPath);
+    // 펼침 목록을 먼저 비우는 변경(화이트리스트 등)도 있어 요소의 표식으로 접기 버튼을 치운다 (#142 리뷰 r5 S5-4)
     if (tweetEl.hasAttribute('data-bbr-expanded')) showTweet(tweetEl);
   }
 }
@@ -190,8 +214,8 @@ function processQuoteBlock(
 
   const quoteAuthor = extractQuoteAuthor(quoteBlock);
   const quotedHandle = quoteAuthor?.handle ?? null;
-  // 인용 카드는 그 자체가 뱃지 스코프 — 작성자 영역 스코프(checkFadak) 대신 요소 전체 판정 유지
-  const quotedIsFadak = detectBadgeSvg(quoteBlock);
+  // 인용 카드는 그 자체가 뱃지 스코프 — 작성자 영역 스코프(checkFadak) 대신 카드 단위로 판정한다. xweb은 프레임의 작성자 머리글 배지만 본다 (#142)
+  const quotedIsFadak = isQuoteAuthorFadak(quoteBlock);
 
   const result: QuoteClassifyResult = classifyQuote({
     quotedHandle, quotedIsFadak,
@@ -232,13 +256,17 @@ function processQuoteBlock(
   return false;
 }
 
-export function restoreHiddenTweets(): void {
+/**
+ * options.uncountHides: 화이트리스트처럼 숨김 판정을 처음부터 다시 하는 변경은 숨긴 트윗을 숨김 통계에서 먼저 뺀다.
+ * 복원된 채로 남는 트윗은 통계에서 빠지고, 계속 숨기는 트윗은 뒤이은 재판정이 다시 센다 (#142 리뷰 r4 S1-1)
+ */
+export function restoreHiddenTweets(options: { uncountHides?: boolean } = {}): void {
   getExpandedSet().clear();
+  if (options.uncountHides) collectHiddenTweets().forEach(uncountHiddenTweet);
   const feed = document.querySelector('main') ?? document.body;
   // 펼쳐진 트윗도 showTweet으로 정리 — 속성만 지우면 펼침 액션 버튼이 남아 재숨김을 유발한다
-  const hiddenOrExpanded = 'article[data-testid="tweet"][data-bbr-original], article[data-testid="tweet"][data-bbr-expanded]';
-  feed.querySelectorAll(hiddenOrExpanded).forEach((tweet) => {
-    showTweet(tweet as HTMLElement);
+  feed.querySelectorAll<HTMLElement>(TWEET_ARTICLE_SELECTOR).forEach((tweet) => {
+    if (tweet.hasAttribute('data-bbr-original') || tweet.hasAttribute('data-bbr-expanded')) showTweet(tweet);
   });
   feed.querySelectorAll('[data-bbr-hidden-quote]').forEach((quote) => {
     showQuoteBlock(quote as HTMLElement);
@@ -267,11 +295,11 @@ export function reprocessExistingTweets(): void {
   requestAnimationFrame(() => {
     reprocessScheduled = false;
     const settings = getSettings();
-    const feed = document.querySelector('main') ?? document.body;
-    feed.querySelectorAll('article[data-testid="tweet"]').forEach((tweet) => {
+    // <main> 밖에서 숨긴 트윗도 다시 판정한다 — 화이트리스트가 바뀌어도 대화상자의 숨김 트윗이 복원되게 한다 (#142 리뷰 r4 S4-3)
+    collectTweetsToRejudge().forEach((tweet) => {
       tweet.querySelector('[data-bbr-debug]')?.remove();
       try {
-        processTweet(tweet as HTMLElement);
+        processTweet(tweet);
       } catch (error) {
         if (settings.debugMode) logger.error('Tweet reprocess failed', { error: String(error) });
       }

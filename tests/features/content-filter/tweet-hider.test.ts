@@ -1,4 +1,6 @@
 // tests/features/content-filter/tweet-hider.test.ts
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { hideTweet, hideQuoteBlock, showExpandedTweet, showTweet, showQuoteBlock, setTweetHiderLanguage } from '@features/content-filter/tweet-hider';
 import { t, type Language } from '@shared/i18n';
@@ -305,3 +307,64 @@ describe('hideTweet — 리트위터 표시 이름이 없을 때', () => {
     expect(collapsedLabel()).toBe(t('hiddenTweetRetweet', lang, { handle: '@fadakuser', retweetedBy: '@rt_user' }));
   });
 });
+
+// xweb 실측 픽스처(#142): 반응 버튼이 data-testid 없이 data-engagement-action이다.
+// 펼친 트윗의 액션(화이트리스트·접기)은 반응 줄 바로 위에 들어가야 한다. 못 찾으면 내용 가로줄(flex row)에 끼어 옆으로 밀린다
+describe('showExpandedTweet — xweb 트윗 (#142)', () => {
+  it('액션을 반응 줄(role=group) 바로 앞에 넣는다', () => {
+    document.body.innerHTML = readFileSync(resolve(process.cwd(), 'tests/fixtures/x-dom/xweb-quote-tweet.html'), 'utf8');
+    const article = document.querySelector<HTMLElement>('[data-href] > article');
+    if (!article) throw new Error('fixture has no xweb tweet article');
+
+    showExpandedTweet(article, { reason: 'fadak', handle: '@user_1' }, undefined);
+
+    const actions = article.querySelector('[data-bbr-expanded-actions]');
+    const group = article.querySelector('[data-engagement-action="reply"]')?.closest('[role="group"]');
+    expect(actions).not.toBeNull();
+    expect(group).not.toBeNull();
+    expect(actions?.nextElementSibling).toBe(group);
+  });
+});
+
+// #142 PR 리뷰(CNT-5): xweb은 바깥 [data-href] 칸에 세로 여백과 구분선이 있다. 안쪽 article만 높이 0으로 접으면 숨긴 자리마다 빈 줄이 남는다
+describe('hideTweet — xweb 완전 제거 (#142)', () => {
+  function xwebArticle(): HTMLElement {
+    const article = document.querySelector<HTMLElement>('[data-href]:not([data-slot]) > article');
+    if (!article) throw new Error('fixture has no xweb tweet article');
+    return article;
+  }
+
+  /** 주입한 스타일에서 바깥 칸의 세로 여백·구분선을 0으로 만드는 규칙의 선택자 */
+  function containerRuleSelector(): string | null {
+    const css = document.querySelector('[data-bbr-styles]')?.textContent ?? '';
+    const rule = /([^{}]+)\{[^}]*padding-top:\s*0 !important;[^}]*border-bottom-width:\s*0 !important;[^}]*\}/.exec(css);
+    return rule?.[1]?.trim() ?? null;
+  }
+
+  beforeEach(() => {
+    document.head.querySelectorAll('[data-bbr-styles]').forEach((style) => style.remove());
+    document.body.innerHTML = readFileSync(resolve(process.cwd(), 'tests/fixtures/x-dom/xweb-quote-tweet.html'), 'utf8');
+  });
+
+  it('숨긴 트윗의 바깥 칸만 세로 여백과 구분선을 접고, 복원하면 규칙에서 빠진다', () => {
+    const article = xwebArticle();
+    hideTweet(article, 'remove');
+
+    const selector = containerRuleSelector();
+    expect(selector).not.toBeNull();
+    expect(Array.from(document.querySelectorAll(selector!))).toEqual([article.parentElement]);
+
+    showTweet(article);
+    expect(document.querySelectorAll(selector!)).toHaveLength(0);
+  });
+
+  it('접기 모드의 자리표시 칸에는 규칙이 맞지 않는다', () => {
+    const article = xwebArticle();
+    hideTweet(article, 'collapse');
+
+    const selector = containerRuleSelector();
+    expect(selector).not.toBeNull();
+    expect(document.querySelectorAll(selector!)).toHaveLength(0);
+  });
+});
+

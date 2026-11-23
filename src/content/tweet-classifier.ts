@@ -58,6 +58,37 @@ export interface QuoteClassifyResult {
   reason?: string;
 }
 
+/** 숨김 판정에 쓰이는 사람(작성자, 리트윗이면 리트위터) 한 명의 팔로우 정보 (#142) */
+export interface DeferralSubject {
+  /** 현재 계정의 팔로우 집합에 있는지 */
+  inFollow: boolean;
+  /** 이 탭이 API 응답으로 이 핸들의 팔로우 여부(팔로우 또는 팔로우 안 함)를 이미 알게 됐는지 */
+  known: boolean;
+}
+
+/** 숨김 판정을 미룰지 가르는 입력 (#142) */
+export interface HidingDeferralInput {
+  /** xweb 문서인지 */
+  isXweb: boolean;
+  /** 저장된 팔로우 캐시가 있는지. 이 탭이 응답으로 받아 넣은 핸들은 세지 않는다 */
+  hasFollowCache: boolean;
+  /** 팔로우 정보를 기다리는 유예 시간이 지났는지 */
+  graceElapsed: boolean;
+  /** 판정에 팔로우 여부가 필요한 사람들. 리트윗이면 작성자와 리트위터다 */
+  subjects: readonly DeferralSubject[];
+}
+
+/**
+ * xweb 첫 방문에는 팔로우 여부를 아직 모르는 작성자의 숨김 판정을 미룬다 (순수 함수, #142).
+ * xweb에는 팔로우 버튼 클릭 감지가 없어 팔로우는 API 응답으로만 알 수 있고, 트윗이 팔로우 정보보다 먼저 올 수 있다.
+ * 다른 작성자의 정보가 먼저 와도 이 작성자는 계속 기다린다 — 팔로우한 사람의 글이 잠깐 숨겨졌다 복원되는 일을 막는다.
+ * 기존 앱(rweb)과 팔로우 캐시가 있는 계정은 지금 동작 그대로 바로 판정한다.
+ */
+export function shouldDeferHiding(input: HidingDeferralInput): boolean {
+  if (!input.isXweb || input.hasFollowCache || input.graceElapsed) return false;
+  return input.subjects.some((subject) => !subject.inFollow && !subject.known);
+}
+
 /** 일반 트윗/리트윗 분류 (순수 함수, DOM 접근 없음) */
 export function classifyTweet(input: ClassifyInput): ClassifyResult {
   const { handle, isFadak, inFollow, isRetweet, isWhitelisted, retweeterIsWhitelisted, retweeterIsCurrentUser, settings, activeFilterRules, profile, tweetText, pageType } = input;
