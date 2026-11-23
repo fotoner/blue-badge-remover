@@ -1,6 +1,6 @@
 export const DEFAULT_FILTER_LIST = `! Blue Badge Remover - 기본 필터 리스트 (Beta)
 ! 악성 파딱 키워드 필터
-! 업데이트 날짜 2026년 5월 20일 03:37 GMT+9
+! 업데이트 날짜 2026년 11월 23일 15:18 GMT+9
 
 ! 정치 및 테슬라
 🇰🇷
@@ -10,7 +10,6 @@ premium
 단결
 반국가
 공산당
-자유
 트럼
 럼프
 한미일
@@ -25,15 +24,15 @@ freedom
 곰돌이
 진핑
 FSD
-국민
-정부
 중국
 작작
 
 ! 경제
 BTC
 ETH
+Ethereum
 DOGE
+Dogecoin
 LUNA
 ADA
 BNB
@@ -89,7 +88,6 @@ Invest
 드가자
 쉽게
 듯..
-결국
 마저
 아님
 감찰
@@ -98,7 +96,6 @@ Invest
 완전히
 재정의
 의미하는
-실제
 업계
 옛날엔
 고객
@@ -106,6 +103,7 @@ Invest
 ! IT / AI - 로컬 모델 어그로
 맥미니
 Mac
+MacBook
 로컬
 중고
 아티클

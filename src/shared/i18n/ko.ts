@@ -125,7 +125,7 @@ export const ko = {
   protectedKeywordsPlaceholder: '예: 원신\n예: 버튜버',
   syntaxGuide: '문법 가이드',
   syntaxKeywordExample: '키워드',
-  syntaxKeyword: '대소문자 무시, 바이오/본문에서 검색',
+  syntaxKeyword: '대소문자 무시, 바이오/본문에서 검색 (4자 이하 영문은 단어 단위로 일치)',
   syntaxWildcard: '와일드카드 패턴 매칭',
   syntaxException: '이 계정은 필터링에서 제외',
   syntaxCommentExample: '! 주석',

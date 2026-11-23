@@ -56,6 +56,7 @@ src/
 ├── shared/
 │   ├── types/                공통 타입 (Settings, FilterRule, etc.)
 │   ├── utils/                로거, 팝업 원래 탭 ID, 새로고침 확인 응답 검증
+│   ├── text/                 텍스트 정규화·라틴 단어 경계 (키워드 매칭·수집기 공용)
 │   ├── constants/            기본 설정, 메시지 타입, 스토리지 키
 │   └── i18n/                 다국어 (ko/en/ja, 키는 세 언어가 같다)
 ├── popup/ dashboard/ options/ whitelist/ collector/   화면별 로직·스타일 (HTML은 entrypoints/)
