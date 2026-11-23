@@ -125,7 +125,7 @@ export const ja: Translations = {
   protectedKeywordsPlaceholder: '例: 原神\n例: VTuber',
   syntaxGuide: '書き方ガイド',
   syntaxKeywordExample: 'キーワード',
-  syntaxKeyword: '大文字小文字を区別せず、プロフィールと本文から検索',
+  syntaxKeyword: '大文字小文字を区別せず、プロフィールと本文から検索（4文字以下の英字は単語単位で一致）',
   syntaxWildcard: 'ワイルドカードでパターン一致',
   syntaxException: 'このアカウントをフィルターから除外',
   syntaxCommentExample: '! コメント',

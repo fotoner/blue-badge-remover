@@ -125,7 +125,7 @@ export const en: Translations = {
   protectedKeywordsPlaceholder: 'e.g. genshin\ne.g. vtuber',
   syntaxGuide: 'Syntax guide',
   syntaxKeywordExample: 'keyword',
-  syntaxKeyword: 'Case-insensitive, matched in bio and tweet text',
+  syntaxKeyword: 'Case-insensitive, matched in bio and tweet text (English keywords of 4 letters or fewer match whole words only)',
   syntaxWildcard: 'Wildcard pattern match',
   syntaxException: 'Exclude this account from filtering',
   syntaxCommentExample: '! comment',
