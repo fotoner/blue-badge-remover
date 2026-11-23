@@ -325,3 +325,46 @@ describe('showExpandedTweet — xweb 트윗 (#142)', () => {
     expect(actions?.nextElementSibling).toBe(group);
   });
 });
+
+// #142 PR 리뷰(CNT-5): xweb은 바깥 [data-href] 칸에 세로 여백과 구분선이 있다. 안쪽 article만 높이 0으로 접으면 숨긴 자리마다 빈 줄이 남는다
+describe('hideTweet — xweb 완전 제거 (#142)', () => {
+  function xwebArticle(): HTMLElement {
+    const article = document.querySelector<HTMLElement>('[data-href]:not([data-slot]) > article');
+    if (!article) throw new Error('fixture has no xweb tweet article');
+    return article;
+  }
+
+  /** 주입한 스타일에서 바깥 칸의 세로 여백·구분선을 0으로 만드는 규칙의 선택자 */
+  function containerRuleSelector(): string | null {
+    const css = document.querySelector('[data-bbr-styles]')?.textContent ?? '';
+    const rule = /([^{}]+)\{[^}]*padding-top:\s*0 !important;[^}]*border-bottom-width:\s*0 !important;[^}]*\}/.exec(css);
+    return rule?.[1]?.trim() ?? null;
+  }
+
+  beforeEach(() => {
+    document.head.querySelectorAll('[data-bbr-styles]').forEach((style) => style.remove());
+    document.body.innerHTML = readFileSync(resolve(process.cwd(), 'tests/fixtures/x-dom/xweb-quote-tweet.html'), 'utf8');
+  });
+
+  it('숨긴 트윗의 바깥 칸만 세로 여백과 구분선을 접고, 복원하면 규칙에서 빠진다', () => {
+    const article = xwebArticle();
+    hideTweet(article, 'remove');
+
+    const selector = containerRuleSelector();
+    expect(selector).not.toBeNull();
+    expect(Array.from(document.querySelectorAll(selector!))).toEqual([article.parentElement]);
+
+    showTweet(article);
+    expect(document.querySelectorAll(selector!)).toHaveLength(0);
+  });
+
+  it('접기 모드의 자리표시 칸에는 규칙이 맞지 않는다', () => {
+    const article = xwebArticle();
+    hideTweet(article, 'collapse');
+
+    const selector = containerRuleSelector();
+    expect(selector).not.toBeNull();
+    expect(document.querySelectorAll(selector!)).toHaveLength(0);
+  });
+});
+

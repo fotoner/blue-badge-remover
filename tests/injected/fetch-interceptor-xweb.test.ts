@@ -359,6 +359,22 @@ describe('fetch-interceptor — 준비 전에 같은 사용자의 값이 거듭 
     expect(profilesOf('Same_Fadak')).toEqual([{ userId: '11', handle: 'Same_Fadak', displayName: '파딱', bio: '새 소개' }]);
   });
 
+  // PR 리뷰: 응답이 사용자를 담았더라도 팔로우 여부·자기소개 등 일부 필드가 없으면, 그 필드는 초기 데이터의 값을 써야 한다
+  it('S5-1: DOM 준비 전 응답에 없던 팔로우 여부·프로필 필드는 초기 데이터의 값을 쓴다', async () => {
+    setInitialData(userNode({ relationship_perspectives: { following: true }, relationship_counts: { followers: 7 } }));
+    const readyState = vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
+    await loadInterceptor({ data: { home: { entries: [userNode({ profile_bio: { description: '새 소개' } })] } } });
+    await callFetch('https://api.x.com/graphql/hash123/HomeTimeline');
+    readyState.mockReturnValue('interactive');
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    posted.length = 0;
+
+    contentReady('my_handle');
+
+    expect(followMessages('api-timeline')).toEqual(['same_fadak']);
+    expect(profilesOf('Same_Fadak')).toEqual([{ userId: '11', handle: 'Same_Fadak', displayName: '파딱', bio: '새 소개', followersCount: 7 }]);
+  });
+
   it('S5-1: 응답으로 받지 않은 사용자는 초기 데이터에서 그대로 읽는다', async () => {
     setInitialData({ ...userNode({ relationship_perspectives: { following: true } }), rest_id: '13', core: { name: '처음', screen_name: 'Only_Initial' } });
     const readyState = vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
