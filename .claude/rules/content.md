@@ -25,7 +25,6 @@ content script(ISOLATED world)와 MAIN world 스크립트를 고칠 때 지키�
 ## MAIN world와 메시지
 - **CNT-7** MAIN world(`src/injected/`)에는 확장 API가 없다. ISOLATED와는 `postMessage`로만 주고받고, 받는 쪽(`src/content/message-handler.ts`)에서 형식을 검증한다.
 - **CNT-8** MAIN world의 fetch 가로채기는 `document_start`에 시작해야 X 응답을 놓치지 않는다. 이미 열린 탭에 content script를 다시 주입해 해결하지 않는다(#121).
-- **CNT-9** `scripting.executeScript({ func })`로 넣는 함수는 본문만 페이지로 직렬화된다. 본문 밖의 import 값·모듈 상수를 쓰지 않는다. 함수 본문만 떼어 실행하는 시험으로 확인한다(`tests/content/reload-toast.test.ts`).
 
 ## X 계정
 - **CNT-10** 확장은 X에 글·좋아요·팔로우 요청을 보내지 않는다. 읽기만 한다.

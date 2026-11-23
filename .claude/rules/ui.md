@@ -5,21 +5,22 @@ paths:
   - "entrypoints/options/**"
   - "entrypoints/whitelist/**"
   - "entrypoints/collector/**"
+  - "entrypoints/welcome/**"
   - "src/popup/**"
   - "src/dashboard/**"
   - "src/options/**"
   - "src/whitelist/**"
   - "src/collector/**"
+  - "src/welcome/**"
   - "src/shared/i18n/**"
   - "src/content/milestone-banner.ts"
   - "src/content/fadak-banner.ts"
   - "src/content/settings-shortcut.ts"
-  - "src/content/reload-toast.ts"
 ---
 
 # 확장 화면과 X 화면에 넣는 요소
 
-팝업·대시보드·설정 화면과, X 화면에 넣는 배너·토스트를 고칠 때 지키는 규칙이다. 리뷰는 규칙을 ID로 가리킨다.
+팝업·대시보드·설정·환영 화면과, X 화면에 넣는 배너를 고칠 때 지키는 규칙이다. 리뷰는 규칙을 ID로 가리킨다.
 
 ## 확장 화면
 - **UI-1** 색·글꼴·간격·border/radius는 `docs/DESIGN.md`를 따른다. border가 있으면 radius 0, radius가 있으면 border 없음이다.

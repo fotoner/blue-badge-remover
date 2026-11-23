@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // 설치 직후 이미 열린 X 탭 확인 (스킬 browser-qa, #121).
-// 임시 프로필 Chromium에서 x.com을 먼저 열고, 그 뒤 확장을 새로 설치해(onInstalled install) 토스트를 확인한다.
+// 임시 프로필 Chromium에서 x.com을 먼저 열고, 그 뒤 확장을 새로 설치해(onInstalled install) 환영 페이지가 열리는지,
+// 그 페이지의 새로고침 버튼이 열려 있던 X 탭을 새로고침해 확장이 동작하게 하는지 확인한다.
 // 사용자 프로필을 쓰지 않는다(AGENTS.md SAFE-1). 로그아웃 상태의 x.com만 연다.
 // 사용: node scripts/qa/install-check.mjs <확장 폴더(dist/chrome-mv3)> [언어=ko] [light|dark=dark]
 //   실행 파일은 CHROMIUM 환경 변수, 없으면 Playwright의 Chromium(`npx playwright install chromium`)
-// 종료 코드: 0 토스트 확인·새로고침 뒤 사라짐, 1 실패, 2 사용법 오류
+// 종료 코드: 0 환영 페이지에 X 탭 1개 새로고침 안내 → 누른 뒤 그 탭에서 확장 시작, 1 실패, 2 사용법 오류
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -60,35 +61,60 @@ async function evaluate(sessionId, expression) {
   return result.value;
 }
 
-const TOAST = `(() => {
-  const box = document.getElementById('bbr-reload-toast')?.shadowRoot?.querySelector('[role=status]');
-  return box ? JSON.stringify({ text: box.querySelector('span').textContent, theme: box.dataset.theme,
-    buttons: [...box.querySelectorAll('button')].map((b) => b.textContent) }) : null;
-})()`;
+const WELCOME = `JSON.stringify({
+  lang: document.documentElement.lang,
+  ready: document.documentElement.dataset.i18nReady ?? null,
+  reloadHidden: document.getElementById('step-reload').hidden,
+  button: document.getElementById('reload-tabs').textContent,
+  disabled: document.getElementById('reload-tabs').disabled,
+  now: document.querySelector('.step.now')?.id ?? null,
+  steps: [...document.querySelectorAll('.step')].filter((step) => !step.hidden).map((step) => step.id),
+})`;
 const MAIN_START = `document.documentElement.getAttribute('data-bbr-main-ready-state')`;
+
+async function screenshot(sessionId, name) {
+  const shot = join(tmpdir(), `bbr-welcome-${lang}-${scheme}-${name}.png`);
+  writeFileSync(shot, Buffer.from((await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true }, sessionId)).data, 'base64'));
+  console.log('캡처:', shot);
+}
+
+async function attachWelcome() {
+  for (let tries = 0; tries < 20; tries += 1) {
+    const { targetInfos } = await send('Target.getTargets');
+    const target = targetInfos.find((info) => info.type === 'page' && info.url.endsWith('/welcome.html'));
+    if (target) return (await send('Target.attachToTarget', { targetId: target.targetId, flatten: true })).sessionId;
+    await sleep(500);
+  }
+  return null;
+}
 
 let code = 1;
 try {
   const { targetId } = await send('Target.createTarget', { url: 'about:blank' });
-  const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true });
-  await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] }, sessionId);
-  await send('Page.navigate', { url: 'https://x.com/' }, sessionId);
+  const { sessionId: xTab } = await send('Target.attachToTarget', { targetId, flatten: true });
+  await send('Page.navigate', { url: 'https://x.com/' }, xTab);
   await sleep(10000);
-  console.log('x.com 열림:', await evaluate(sessionId, 'location.href + " " + document.readyState'));
+  console.log('x.com 열림:', await evaluate(xTab, 'location.href + " " + document.readyState'));
   console.log('설치:', (await send('Extensions.loadUnpacked', { path: extPath })).id);
-  await sleep(6000);
-  const toast = await evaluate(sessionId, TOAST);
-  console.log('토스트:', toast);
-  const shot = join(tmpdir(), `bbr-install-${lang}-${scheme}.png`);
-  writeFileSync(shot, Buffer.from((await send('Page.captureScreenshot', { format: 'png' }, sessionId)).data, 'base64'));
-  console.log('캡처:', shot);
-  if (toast) {
-    await evaluate(sessionId, `document.getElementById('bbr-reload-toast').shadowRoot.querySelector('.reload').click(); true`);
+  const welcome = await attachWelcome();
+  if (!welcome) throw new Error('환영 페이지가 열리지 않았습니다');
+  await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] }, welcome);
+  await sleep(4000);
+  const before = JSON.parse(await evaluate(welcome, WELCOME));
+  console.log('환영 페이지:', JSON.stringify(before));
+  await screenshot(welcome, 'desktop');
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true }, welcome);
+  await sleep(500);
+  await screenshot(welcome, 'mobile');
+  await send('Emulation.clearDeviceMetricsOverride', {}, welcome);
+  if (!before.reloadHidden) {
+    await evaluate(welcome, `document.getElementById('reload-tabs').click(); true`);
     await sleep(10000);
-    const gone = !(await evaluate(sessionId, `!!document.getElementById('bbr-reload-toast')`));
-    const start = await evaluate(sessionId, MAIN_START);
-    console.log('새로고침 뒤: 토스트 사라짐', gone, '· MAIN world 시작', start);
-    code = gone && start === 'loading' ? 0 : 1;
+    const after = JSON.parse(await evaluate(welcome, WELCOME));
+    const start = await evaluate(xTab, MAIN_START);
+    console.log('새로고침 뒤:', JSON.stringify(after), '· X 탭 MAIN world 시작', start);
+    await screenshot(welcome, 'after-reload');
+    code = before.ready === 'true' && after.disabled && after.now === 'step-follow' && start === 'loading' ? 0 : 1;
   }
 } catch (error) {
   console.error('실패:', error.message);

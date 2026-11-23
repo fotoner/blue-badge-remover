@@ -15,14 +15,15 @@ Feature-Based Architecture
 
 ```
 entrypoints/  (WXT 진입점)
-├── background.ts         Service Worker (설치·업데이트 처리, 열린 X 탭 새로고침 안내)
+├── background.ts         Service Worker (설치·업데이트 처리, 설치 때 환영 페이지 열기)
 ├── content.ts            Content Script (ISOLATED world)
 ├── injected.content.ts   Content Script (MAIN world, fetch 인터셉트)
 ├── popup/                Popup UI
 ├── dashboard/            Dashboard (설정 + 통계)
 ├── options/              고급 필터 설정
 ├── whitelist/            화이트리스트 관리
-└── collector/            키워드 수집기
+├── collector/            키워드 수집기
+└── welcome/              설치 직후 환영·안내 페이지 (열린 X 탭 새로고침, FAQ)
 
 src/
 ├── content/              Content Script 오케스트레이션
@@ -42,15 +43,14 @@ src/
 │   ├── page-utils.ts         페이지 유형 판별
 │   ├── settings-shortcut.ts  사이드바 설정 바로가기 주입
 │   ├── fadak-banner.ts       프로필/상세 경고 배너
-│   ├── reload-probe.ts       팝업의 새로고침 확인 메시지에 응답
-│   └── reload-toast.ts       열린 X 탭에 넣는 새로고침 안내 (background가 주입)
+│   └── reload-probe.ts       팝업·환영 페이지의 새로고침 확인 메시지에 응답
 ├── features/
 │   ├── badge-detection/      D1: SVG 뱃지 감지
 │   ├── content-filter/       D2: 콘텐츠 필터링 (숨김 판정 + DOM 조작)
 │   ├── keyword-filter/       D5: 키워드 필터 (매칭, 파서, 캐시)
 │   ├── keyword-collector/    키워드 수집기 스토리지
 │   ├── filter-pack/          필터 팩 관리 (로더 + 스토리지)
-│   ├── reload-notice/        설치·업데이트 직후 열린 탭 확인 + 안내 주입
+│   ├── reload-notice/        설치·업데이트 직후 열린 X 탭 확인·새로고침 (팝업·환영 페이지)
 │   ├── stats/                숨김 통계 수집/저장
 │   └── settings/             D4: 설정 관리
 ├── shared/
@@ -58,7 +58,7 @@ src/
 │   ├── utils/                로거, 팝업 원래 탭 ID, 새로고침 확인 응답 검증
 │   ├── constants/            기본 설정, 메시지 타입, 스토리지 키
 │   └── i18n/                 다국어 (ko/en/ja, 키는 세 언어가 같다)
-├── popup/ dashboard/ options/ whitelist/ collector/   화면별 로직·스타일 (HTML은 entrypoints/)
+├── popup/ dashboard/ options/ whitelist/ collector/ welcome/   화면별 로직·스타일 (HTML은 entrypoints/)
 └── injected/
     ├── fetch-interceptor.ts      MAIN world에서 X API fetch/XHR 인터셉트
     ├── data-extractors.ts        API 응답 데이터 추출
