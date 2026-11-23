@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import {
   extractTweetAuthor,
@@ -50,22 +50,37 @@ describe('extractTweetAuthor', () => {
     expect(result).toEqual({ handle: 'test_user' });
   });
 
-  it('리트윗 표시 링크는 건너뜀', () => {
+  // 계약 변경(#111): 리트위터 링크를 문구('재게시함'·'Retweeted')로 거르던 폴백을 없애고,
+  // 트윗 자신의 User-Name 영역 링크를 먼저 읽는다. 아래 DOM은 손으로 만든 것이다(실측 아님)
+  it('testid 없는 리트위터 문구 링크가 있어도 User-Name 링크를 작성자로 본다 (일본어)', () => {
     const el = html(`
       <article data-testid="tweet">
-        <a role="link" href="/retweeter">재게시함</a>
-        <a role="link" href="/original_author">@original_author</a>
+        <a role="link" href="/retweeter">リポストしました</a>
+        <div data-testid="User-Name"><a role="link" href="/original_author">이름</a></div>
       </article>
     `);
-    const result = extractTweetAuthor(el);
-    expect(result?.handle).toBe('original_author');
+    expect(extractTweetAuthor(el)?.handle).toBe('original_author');
   });
 
-  it('영문 Retweeted도 건너뜀', () => {
+  it('인용 카드 안 User-Name은 작성자로 보지 않고 바깥 링크 탐색으로 넘어간다', () => {
     const el = html(`
       <article data-testid="tweet">
-        <a role="link" href="/someone">Retweeted</a>
         <a role="link" href="/real_user">@real_user</a>
+        <div role="link" tabindex="0">
+          <div data-testid="User-Name"><a role="link" href="/quoted_user">인용된 사람</a></div>
+        </div>
+      </article>
+    `);
+    expect(extractTweetAuthor(el)?.handle).toBe('real_user');
+  });
+
+  it('User-Name과 인용 카드가 함께 있으면 첫 비인용 User-Name의 링크가 작성자다', () => {
+    const el = html(`
+      <article data-testid="tweet">
+        <div data-testid="User-Name"><a role="link" href="/real_user">이름</a></div>
+        <div role="link" tabindex="0">
+          <div data-testid="User-Name"><a role="link" href="/quoted_user">인용된 사람</a></div>
+        </div>
       </article>
     `);
     expect(extractTweetAuthor(el)?.handle).toBe('real_user');
@@ -132,6 +147,98 @@ describe('extractTweetAuthor', () => {
     const el = html(wrappedRepost('NASA', 'NASAさんがリポストしました', 'Nasdaq', 'Nasdaq'));
     expect(extractTweetAuthor(el)?.handle).toBe('Nasdaq');
   });
+
+  // 아래 세 시험의 DOM은 손으로 만든 것이다(실측 아님). User-Name이 없어 전체 링크를 훑는 폴백 경로를 시험한다 (#111)
+  it('폴백: socialContext·User-Name 없이 /retweeter 링크 뒤에 @original_author 링크가 오면 정확히 @핸들인 링크를 작성자로 본다', () => {
+    const el = html(`
+      <article data-testid="tweet">
+        <a role="link" href="/retweeter">リポストしました</a>
+        <a role="link" href="/original_author">@original_author</a>
+      </article>
+    `);
+    expect(extractTweetAuthor(el)?.handle).toBe('original_author');
+  });
+
+  it('폴백: 인용 카드 안 링크는 카드가 작성자 링크보다 앞에 있어도 건너뛴다', () => {
+    const el = html(`
+      <article data-testid="tweet">
+        <div role="link" tabindex="0">
+          <div data-testid="User-Name"><a role="link" href="/quoted_user">인용된 사람</a></div>
+        </div>
+        <a role="link" href="/real_user">@real_user</a>
+      </article>
+    `);
+    expect(extractTweetAuthor(el)?.handle).toBe('real_user');
+  });
+
+  it('폴백: 본문 멘션(@handle 텍스트)이 첫 링크인 작성자 아바타 링크를 앞지르지 않는다', () => {
+    const el = html(`
+      <article data-testid="tweet">
+        <a role="link" href="/avatar_author"></a>
+        <div data-testid="tweetText"><a role="link" href="/mentioned">@mentioned</a></div>
+      </article>
+    `);
+    expect(extractTweetAuthor(el)?.handle).toBe('avatar_author');
+  });
+
+  // 일반 트윗은 findQuoteBlock의 TreeWalker 폴백을 돌리지 않아야 한다. #111 이전에는 작성자·표시 이름 추출이 순회하지 않았다.
+  // jsdom의 셀렉터 엔진도 createTreeWalker를 부르므로(whatToShow가 SHOW_CONTAINER 등) findQuoteBlock이 쓰는 SHOW_ELEMENT 호출만 센다
+  function countQuoteFallbackWalks(spy: { mock: { calls: unknown[][] } }): number {
+    return spy.mock.calls.filter((call) => call[1] === NodeFilter.SHOW_ELEMENT).length;
+  }
+
+  it('User-Name이 하나뿐인 일반 트윗은 TreeWalker 순회 없이 작성자와 표시 이름을 읽는다', () => {
+    const el = html(`
+      <article data-testid="tweet">
+        <div data-testid="User-Name">
+          <a role="link" href="/plain_user">이름</a>
+          <a role="link" href="/plain_user">@plain_user</a>
+        </div>
+        <div data-testid="tweetText">본문</div>
+      </article>
+    `);
+    const walkerSpy = vi.spyOn(doc, 'createTreeWalker');
+    expect(extractTweetAuthor(el)?.handle).toBe('plain_user');
+    expect(extractDisplayName(el, 'plain_user')).toBe('이름');
+    expect(countQuoteFallbackWalks(walkerSpy)).toBe(0);
+  });
+
+  it('User-Name이 하나뿐이고 인용 카드 안에 있으면 작성자 영역으로 보지 않는다 (TreeWalker 없이)', () => {
+    const el = html(`
+      <article data-testid="tweet">
+        <a role="link" href="/real_user">@real_user</a>
+        <div role="link" tabindex="0">
+          <div data-testid="User-Name"><a role="link" href="/quoted_user">인용된 사람</a></div>
+        </div>
+      </article>
+    `);
+    const walkerSpy = vi.spyOn(doc, 'createTreeWalker');
+    expect(extractTweetAuthor(el)?.handle).toBe('real_user');
+    expect(countQuoteFallbackWalks(walkerSpy)).toBe(0);
+  });
+
+  // 손으로 만든 DOM(실측 아님): role 없는 인용 카드는 라벨 폴백으로만 찾는다. User-Name이 카드 안에 하나뿐이어도 작성자로 보지 않는다 (#111 컨실 r2)
+  it('User-Name이 하나뿐이고 라벨 다음 인용 블록 안에 있으면 바깥 링크를 작성자로 읽는다', () => {
+    const el = html(`
+      <article data-testid="tweet">
+        <a role="link" href="/outer">@outer</a>
+        <div><span>Quote</span><div><div data-testid="User-Name"><a role="link" href="/inner">@inner</a></div></div></div>
+      </article>
+    `);
+    expect(extractTweetAuthor(el)?.handle).toBe('outer');
+  });
+
+  // 손으로 만든 DOM(실측 아님): 라벨이 둘이면 findQuoteBlock은 '인용'을 먼저 고른다. 작성자 영역 앞의 'Quote'만으로 작성자를 버리지 않는다 (#111 컨실 r3)
+  it('라벨이 여럿이면 findQuoteBlock이 고른 블록 밖의 User-Name을 작성자로 읽는다', () => {
+    const el = html(`
+      <article data-testid="tweet">
+        <a role="link" href="/other">@other</a>
+        <div><span>Quote</span><div><div data-testid="User-Name"><a role="link" href="/author">@author</a></div></div></div>
+        <div><span>인용</span><div><span>인용된 글</span></div></div>
+      </article>
+    `);
+    expect(extractTweetAuthor(el)?.handle).toBe('author');
+  });
 });
 
 // --- extractRetweeterName ---
@@ -148,13 +255,37 @@ describe('extractRetweeterName', () => {
     expect(extractRetweeterName(el)).toBe('리트윗한사람');
   });
 
-  it('링크 없이 텍스트만 있는 경우', () => {
+  // 계약 변경(#111): 문구 정규식으로 이름을 잘라내던 폴백을 없앴다. 이름 span·링크 같은 구조 신호가 없으면 추정하지 않는다
+  it('이름 span·링크 없이 문구 텍스트만 있으면 이름을 추정하지 않고 null', () => {
     const el = html(`
       <article>
         <div data-testid="socialContext">SomeUser Retweeted</div>
       </article>
     `);
-    expect(extractRetweeterName(el)).toBe('SomeUser');
+    expect(extractRetweeterName(el)).toBeNull();
+  });
+
+  // 2026-10 실측 구조(리트위터 링크가 socialContext를 감싸고 이름은 span[dir] 안)에 문구만 일본어로 바꾼 손으로 만든 DOM이다(실측 아님)
+  it.each([
+    ['일본어', 'さんがリポストしました', 'NASA'],
+    ['영어', ' reposted', 'Some User'],
+    ['한국어', ' 님이 재게시함', '표시 이름'],
+  ])('%s 문구가 이름 뒤에 붙어도 이름 span만 읽는다', (_lang, phrase, name) => {
+    const el = html(`
+      <article data-testid="tweet">
+        <a href="/user_1" dir="ltr" role="link"><span data-testid="socialContext"><span dir="ltr"><span>${name}</span></span>${phrase}</span></a>
+      </article>
+    `);
+    expect(extractRetweeterName(el)).toBe(name);
+  });
+
+  it('고정 문구처럼 이름 span이 없는 socialContext는 null', () => {
+    const el = html(`
+      <article data-testid="tweet">
+        <a href="/i/pinned"><span data-testid="socialContext">고정됨</span></a>
+      </article>
+    `);
+    expect(extractRetweeterName(el)).toBeNull();
   });
 
   it('socialContext 없으면 null', () => {
@@ -427,14 +558,15 @@ describe('extractDisplayName', () => {
     expect(extractDisplayName(el, 'test_user')).toBeNull();
   });
 
-  it('리트윗 텍스트 포함 링크는 무시', () => {
+  // 계약 변경(#111): 리트윗 문구('재게시함' 등) 정규식 폴백을 없애고 User-Name 링크를 먼저 읽는다. 손으로 만든 DOM(실측 아님)
+  it('testid 없는 리트윗 문구 링크가 있어도 User-Name 링크에서 이름을 읽는다 (일본어)', () => {
     const el = html(`
-      <article>
-        <a role="link" href="/someone">재게시함</a>
-        <a role="link" href="/someone">표시이름</a>
+      <article data-testid="tweet">
+        <a role="link" href="/someone">NASAさんがリポストしました</a>
+        <div data-testid="User-Name"><a role="link" href="/someone">表示名</a></div>
       </article>
     `);
-    expect(extractDisplayName(el, 'someone')).toBe('표시이름');
+    expect(extractDisplayName(el, 'someone')).toBe('表示名');
   });
 
   it('"비공개 계정" 접미사 제거', () => {

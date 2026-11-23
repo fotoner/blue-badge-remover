@@ -14,20 +14,77 @@ function isSocialContextLink(link: Element): boolean {
   return link.closest(SOCIAL_CONTEXT_SELECTOR) !== null || link.querySelector(SOCIAL_CONTEXT_SELECTOR) !== null;
 }
 
-export function extractTweetAuthor(tweetEl: HTMLElement): { handle: string } | null {
-  const allLinks = tweetEl.querySelectorAll('a[role="link"][href^="/"]');
-  for (const link of allLinks) {
-    // socialContext 링크는 로케일과 무관하게 제외; 텍스트 정규식은 testid 없는 DOM 변형 폴백
-    if (isSocialContextLink(link)) continue;
-    const text = link.textContent ?? '';
-    if (/재게시함|Retweeted|reposted/i.test(text)) continue;
-    const href = link.getAttribute('href');
-    if (!href) continue;
-    const handle = href.slice(1).split('/')[0];
-    if (!handle || handle === 'i' || handle === 'hashtag' || href.includes('/status/') || href.includes('/photo/')) continue;
-    return { handle };
+const USER_NAME_SELECTOR = '[data-testid="User-Name"]';
+const TWEET_TEXT_SELECTOR = '[data-testid="tweetText"]';
+const QUOTE_CARD_SELECTOR = 'div[role="link"]';
+const AUTHOR_LINK_SELECTOR = 'a[role="link"][href^="/"]';
+
+/**
+ * 인용 카드 밖 첫 User-Name — 트윗 자신의 작성자 영역 (findAuthorBadge와 같은 기준).
+ * 리트위터·고정 문구 링크는 이 안에 없으므로 문구 정규식 없이 작성자 링크를 가려낼 수 있다 (#111).
+ */
+function findAuthorUserName(tweetEl: HTMLElement): Element | null {
+  const userNames = tweetEl.querySelectorAll(USER_NAME_SELECTOR);
+  const first = userNames[0];
+  if (!first) return null;
+  if (userNames.length === 1) {
+    // 일반 트윗은 User-Name이 하나뿐이다. findQuoteBlock의 문구 폴백은 트윗 전체를 순회하므로 부르지 않고,
+    // 인용 카드 구조(User-Name을 품은 div[role="link"])만 바로 확인한다 (#111)
+    // 라벨 폴백 구조(role 없는 인용 카드)도 조상만 확인해 놓치지 않는다
+    const card = first.closest(QUOTE_CARD_SELECTOR);
+    if (card && tweetEl.contains(card)) return null;
+    // 라벨 후보가 있을 때만 findQuoteBlock이 실제로 고르는 블록인지 확인한다(라벨이 여럿이면 우선순위가 다르다, #111 컨실 r3)
+    if (!isInsideLabeledQuote(first, tweetEl)) return first;
+    return findQuoteBlock(tweetEl)?.contains(first) ? null : first;
+  }
+  const quoteBlock = findQuoteBlock(tweetEl);
+  for (const userName of userNames) {
+    if (!quoteBlock?.contains(userName)) return userName;
   }
   return null;
+}
+
+function handleFromLink(link: Element): string | null {
+  // socialContext 링크는 화면 언어와 무관하게 testid로 제외한다
+  if (isSocialContextLink(link)) return null;
+  const href = link.getAttribute('href');
+  if (!href) return null;
+  const handle = href.slice(1).split('/')[0];
+  if (!handle || handle === 'i' || handle === 'hashtag' || href.includes('/status/') || href.includes('/photo/')) return null;
+  return handle;
+}
+
+function authorHandleFromLinks(links: Iterable<Element>): string | null {
+  for (const link of links) {
+    const handle = handleFromLink(link);
+    if (handle) return handle;
+  }
+  return null;
+}
+
+/**
+ * User-Name에서 작성자를 못 찾았을 때 트윗 전체 링크에서 찾는 폴백.
+ * 인용 카드 안 링크는 건너뛰고, 정확히 `@핸들`인 텍스트의 링크(CNT-4)를 먼저 본다. 본문 멘션은 그 신호가 아니다 (#111).
+ */
+function fallbackAuthorHandle(tweetEl: HTMLElement): string | null {
+  const quoteBlock = findQuoteBlock(tweetEl);
+  const candidates: { handle: string; link: Element }[] = [];
+  for (const link of tweetEl.querySelectorAll(AUTHOR_LINK_SELECTOR)) {
+    if (quoteBlock?.contains(link)) continue;
+    const handle = handleFromLink(link);
+    if (handle) candidates.push({ handle, link });
+  }
+  const exact = candidates.find(({ handle, link }) =>
+    link.textContent?.trim().toLowerCase() === `@${handle.toLowerCase()}` && !link.closest(TWEET_TEXT_SELECTOR));
+  return (exact ?? candidates[0])?.handle ?? null;
+}
+
+export function extractTweetAuthor(tweetEl: HTMLElement): { handle: string } | null {
+  // 주 경로: 작성자 영역(User-Name) 안 링크. 없으면 트윗 전체 링크에서 찾는다
+  const userName = findAuthorUserName(tweetEl);
+  const handle = (userName && authorHandleFromLinks(userName.querySelectorAll(AUTHOR_LINK_SELECTOR)))
+    ?? fallbackAuthorHandle(tweetEl);
+  return handle ? { handle } : null;
 }
 
 export function extractTweetStatusPath(tweetEl: HTMLElement): string | null {
@@ -43,15 +100,16 @@ export function extractTweetStatusPath(tweetEl: HTMLElement): string | null {
   return null;
 }
 
+/**
+ * 리트위터 표시 이름 — 화면 언어와 무관하게 구조로 읽는다 (#111).
+ * 2026-10 실측: socialContext 안 첫 span[dir]이 이름만 담고, "님이 재게시함"·「さんがリポストしました」 같은 문구는 그 바깥 텍스트다.
+ * 이름 span이 없는 구조(고정 문구 등)에서는 문구 텍스트에서 이름을 잘라내지 않고 null을 돌려준다.
+ */
 export function extractRetweeterName(tweetEl: HTMLElement): string | null {
-  const socialContext = tweetEl.querySelector('[data-testid="socialContext"]');
+  const socialContext = tweetEl.querySelector(SOCIAL_CONTEXT_SELECTOR);
   if (!socialContext) return null;
-  const link = socialContext.querySelector('a[href^="/"]');
-  if (link) {
-    return link.textContent?.trim() ?? null;
-  }
-  const text = socialContext.textContent ?? '';
-  return text.replace(/\s*(Retweeted|reposted|님이\s*재게시함|님이\s*리트윗함|님이\s*리포스트함|님이\s*리트윗.*|님이\s*리포스트.*).*/i, '').trim() || null;
+  const nameEl = socialContext.querySelector('[dir]') ?? socialContext.querySelector('a[href^="/"]');
+  return nameEl?.textContent?.trim() || null;
 }
 
 /**
@@ -75,24 +133,42 @@ export function findQuoteBlock(tweetEl: HTMLElement): HTMLElement | null {
   for (const card of tweetEl.querySelectorAll<HTMLElement>('div[role="link"]')) {
     if (card.querySelector('[data-testid="User-Name"]')) return card;
   }
-  // 폴백: '인용'/'Quote' 라벨 다음 형제 — 위 구조가 없는 DOM 변형용
+  // 폴백: '인용'/'Quote' 라벨 다음 형제 — 위 구조가 없는 DOM 변형용.
+  // 화면 문구에 기대므로 일본어 등에서는 동작하지 않는다. 구조 신호가 없어 남긴다 (#111, tests/harness/ui-text-patterns.test.ts 허용 목록)
   const ownerDoc = tweetEl.ownerDocument;
   const walker = ownerDoc.createTreeWalker(tweetEl, NodeFilter.SHOW_ELEMENT);
   let enFallback: HTMLElement | null = null;
   let node: Node | null;
   while ((node = walker.nextNode())) {
     const el = node as HTMLElement;
-    if ((el.tagName !== 'DIV' && el.tagName !== 'SPAN') || el.childNodes.length !== 1) continue;
-    const text = el.textContent?.trim();
-    if (text === '인용') {
+    const label = quoteLabelKind(el);
+    if (label === 'ko') {
       const next = el.nextElementSibling as HTMLElement | null;
       if (next) return next;
     }
-    if (text === 'Quote' && !enFallback) {
+    if (label === 'en' && !enFallback) {
       enFallback = el.nextElementSibling as HTMLElement | null;
     }
   }
   return enFallback;
+}
+
+/** findQuoteBlock 폴백이 쓰는 인용 라벨 판정. 화면 문구에 기대는 곳을 한 군데로 모은다 (#111) */
+function quoteLabelKind(el: Element): 'ko' | 'en' | null {
+  if ((el.tagName !== 'DIV' && el.tagName !== 'SPAN') || el.childNodes.length !== 1) return null;
+  const text = el.textContent?.trim();
+  if (text === '인용') return 'ko';
+  if (text === 'Quote') return 'en';
+  return null;
+}
+
+/** 요소가 인용 라벨 바로 다음 형제(=findQuoteBlock 폴백이 고르는 인용 블록) 안에 있는지. 조상만 거슬러 올라가 트윗 전체를 순회하지 않는다 */
+function isInsideLabeledQuote(el: Element, tweetEl: HTMLElement): boolean {
+  for (let node: Element | null = el; node && node !== tweetEl; node = node.parentElement) {
+    const prev = node.previousElementSibling;
+    if (prev && quoteLabelKind(prev)) return true;
+  }
+  return false;
 }
 
 /**
@@ -129,7 +205,6 @@ export interface QuoteAuthorInfo {
 const QUOTE_AVATAR_TESTID_PREFIX = 'UserAvatar-Container-';
 const QUOTE_AVATAR_SELECTOR = `[data-testid^="${QUOTE_AVATAR_TESTID_PREFIX}"]`;
 const UNKNOWN_AVATAR_HANDLE = 'unknown';
-const USER_NAME_SELECTOR = '[data-testid="User-Name"]';
 const AT_HANDLE_TEXT_PATTERN = /^@([A-Za-z0-9_]{1,15})$/;
 const QUOTE_TEXT_AUTHOR_PATTERN = /^(.+?)@([A-Za-z0-9_]+)/;
 
@@ -183,20 +258,23 @@ export function extractTweetText(tweetEl: HTMLElement): string {
 }
 
 
-export function extractDisplayName(tweetEl: HTMLElement, handle: string): string | null {
-  const links = tweetEl.querySelectorAll('a[role="link"]');
+function displayNameFromLinks(links: Iterable<Element>, handle: string): string | null {
   for (const link of links) {
-    // socialContext 링크는 로케일과 무관하게 표시 이름 후보에서 제외
+    // socialContext 링크는 화면 언어와 무관하게 표시 이름 후보에서 제외
     if (isSocialContextLink(link)) continue;
-    const href = link.getAttribute('href') ?? '';
-    if (href === `/${handle}` && !link.textContent?.startsWith('@')) {
-      const name = link.textContent?.trim();
-      if (name && !/재게시함|Retweeted|reposted/i.test(name)) {
-        return name.replace(/\s*(비공개 계정|인증된 계정)$/g, '').trim() || null;
-      }
-    }
+    if (link.getAttribute('href') !== `/${handle}` || link.textContent?.startsWith('@')) continue;
+    // 접미사 문구 제거는 구조 신호가 없어 남긴 폴백이다 (tests/harness/ui-text-patterns.test.ts 허용 목록)
+    const name = link.textContent?.trim().replace(/\s*(비공개 계정|인증된 계정)$/g, '').trim();
+    if (name) return name;
   }
   return null;
+}
+
+export function extractDisplayName(tweetEl: HTMLElement, handle: string): string | null {
+  // 주 경로: 작성자 영역(User-Name) 안 링크라 리트윗 문구 링크와 섞이지 않는다 (#111)
+  const userName = findAuthorUserName(tweetEl);
+  return (userName && displayNameFromLinks(userName.querySelectorAll('a[role="link"]'), handle))
+    ?? displayNameFromLinks(tweetEl.querySelectorAll('a[role="link"]'), handle);
 }
 
 /**

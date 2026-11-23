@@ -1,6 +1,7 @@
 // tests/features/content-filter/tweet-hider.test.ts
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { hideTweet, hideQuoteBlock, showExpandedTweet, showTweet, showQuoteBlock } from '@features/content-filter/tweet-hider';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { hideTweet, hideQuoteBlock, showExpandedTweet, showTweet, showQuoteBlock, setTweetHiderLanguage } from '@features/content-filter/tweet-hider';
+import { t, type Language } from '@shared/i18n';
 
 describe('hideTweet', () => {
   let tweetEl: HTMLElement;
@@ -264,5 +265,43 @@ describe('showQuoteBlock', () => {
     expect(quoteEl.hasAttribute('data-bbr-hidden-quote')).toBe(false);
     expect(quoteEl.querySelector('[data-bbr-collapsed]')).toBeNull();
     expect(child.style.display).toBe('');
+  });
+});
+
+// 리트위터 표시 이름을 읽지 못하면 주어가 빈 문구('님이 …', 'Retweeted by  from …')가 되지 않아야 한다 (#111)
+describe('hideTweet — 리트위터 표시 이름이 없을 때', () => {
+  let tweetEl: HTMLElement;
+
+  beforeEach(() => {
+    tweetEl = document.createElement('article');
+    tweetEl.textContent = 'original tweet content';
+    document.body.appendChild(tweetEl);
+  });
+
+  afterEach(() => {
+    setTweetHiderLanguage('ko');
+  });
+
+  function collapsedLabel(): string | undefined {
+    return tweetEl.querySelector('[data-bbr-collapsed]')?.textContent ?? undefined;
+  }
+
+  it.each<Language>(['ko', 'en', 'ja'])('%s: retweetedBy가 없으면 빈 주어 문구 대신 파딱 작성자 문구를 쓴다', (lang) => {
+    setTweetHiderLanguage(lang);
+    hideTweet(tweetEl, 'collapse', { reason: 'retweet', handle: '@fadakuser' });
+    expect(collapsedLabel()).toBe(t('hiddenTweetFadak', lang, { handle: '@fadakuser' }));
+    expect(collapsedLabel()).not.toBe(t('hiddenTweetRetweet', lang, { handle: '@fadakuser', retweetedBy: '' }));
+  });
+
+  it.each<Language>(['ko', 'en', 'ja'])('%s: retweetedBy가 공백뿐이어도 파딱 작성자 문구를 쓴다', (lang) => {
+    setTweetHiderLanguage(lang);
+    hideTweet(tweetEl, 'collapse', { reason: 'retweet', handle: '@fadakuser', retweetedBy: '  ' });
+    expect(collapsedLabel()).toBe(t('hiddenTweetFadak', lang, { handle: '@fadakuser' }));
+  });
+
+  it.each<Language>(['ko', 'en', 'ja'])('%s: retweetedBy가 있으면 리트위트 문구를 그대로 쓴다', (lang) => {
+    setTweetHiderLanguage(lang);
+    hideTweet(tweetEl, 'collapse', { reason: 'retweet', handle: '@fadakuser', retweetedBy: '@rt_user' });
+    expect(collapsedLabel()).toBe(t('hiddenTweetRetweet', lang, { handle: '@fadakuser', retweetedBy: '@rt_user' }));
   });
 });

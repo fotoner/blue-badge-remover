@@ -667,6 +667,36 @@ describe('processTweet — 리트위터 링크가 socialContext를 감싼 DOM', 
 
     expect(mockHideTweet).not.toHaveBeenCalled();
   });
+
+  // 아래 세 시험은 접힘 문구에 넘기는 리트위터 이름을 본다 (#111). 이름 span이 없는 socialContext는 손으로 만든 DOM이다(실측 아님)
+  it('이름 span이 없는 socialContext는 리트위터 핸들(@handle)을 retweetedBy로 넘긴다', () => {
+    const tweet = createWrappedRepost('fadak_author', 'friend');
+    doc.querySelector('main')!.appendChild(tweet);
+
+    processTweet(tweet);
+
+    expect(mockHideTweet.mock.calls[0]![2]).toMatchObject({ reason: 'retweet', retweetedBy: '@friend' });
+  });
+
+  it('이름 span이 있으면 핸들 대신 표시 이름을 retweetedBy로 넘긴다', () => {
+    const tweet = createWrappedRepost('fadak_author', 'friend');
+    tweet.querySelector('[data-testid="socialContext"]')!.innerHTML = '<span dir="ltr"><span>친구 이름</span></span>さんがリポストしました';
+    doc.querySelector('main')!.appendChild(tweet);
+
+    processTweet(tweet);
+
+    expect(mockHideTweet.mock.calls[0]![2]).toMatchObject({ reason: 'retweet', retweetedBy: '친구 이름' });
+  });
+
+  it('이름도 리트위터 핸들도 읽을 수 없으면 retweetedBy를 비운다', () => {
+    const tweet = createTweetEl('fadak_author', { retweet: true, badge: true });
+    doc.querySelector('main')!.appendChild(tweet);
+
+    processTweet(tweet);
+
+    expect(mockHideTweet.mock.calls[0]![2]).toMatchObject({ reason: 'retweet' });
+    expect(mockHideTweet.mock.calls[0]![2].retweetedBy).toBeUndefined();
+  });
 });
 
 describe('restoreHiddenTweets', () => {
